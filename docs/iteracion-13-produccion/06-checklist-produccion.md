@@ -15,7 +15,7 @@
 - [ ] Backups automatizados de PostgreSQL + prueba de restauración.
 - [ ] **Particionamiento** de `attendance_records`/`audit_logs`: job que crea particiones futuras (`fn_create_monthly_partition`) y política de retención.
 - [ ] **Outbox**: monitoreo del backlog y de `status='FAILED'` (dead-letter); ShedLock para el relay en multi-réplica.
-- [ ] Idempotencia y limpieza por TTL de `idempotency_keys` / `qr_nonce_consumed`.
+- [ ] Idempotencia y limpieza por TTL de `idempotency_keys`.
 
 ## Escalabilidad / rendimiento
 - [ ] HPA del backend configurado; pruebas de carga del endpoint de registro (p95 < 400 ms, RNF-01).

@@ -39,12 +39,11 @@ Resumen de tablas por bounded context. El detalle autoritativo (columnas, tipos,
 |---|---|---|
 | `geofences` | Geocerca circular/poligonal | `type`, `center`+`radius_m` / `area`, `is_active` |
 | `site_qr_tokens` | QR firmado (ADR-006) | `nonce`, `key_id`, `expires_at`, `is_active` |
-| `qr_nonce_consumed` | Anti-replay durable (RN-26) | `nonce`(UK/tenant) |
 
 ## Attendance / Anti-Fraud / Sync (BC-06/07/08)
 | Tabla | Propósito | Columnas clave |
 |---|---|---|
-| `attendance_records` | Registros (**particionada** por `server_time`) | `event_type`, `status`, `rejection_reason`, `location`, `gps_accuracy_m`, `operation_uuid`, `source`, `validations_json` |
+| `attendance_records` | Registros (**particionada** por `server_time`) | `event_type`, `status`, `rejection_reason`, `location`, `gps_accuracy_m`, `qr_nonce` (traza), `operation_uuid`, `source`, `validations_json` |
 | `idempotency_keys` | Idempotencia/offline (ADR-004) | `operation_uuid`(UK/tenant), `response_status` |
 | `fraud_flags` | Banderas antifraude (RN-28) | `flag_type`, `is_blocking`, FK compuesta a asistencia |
 | `work_days` | Read-model de jornada | `worked/overtime/late_minutes`, `status` |

@@ -19,7 +19,7 @@
 - [ ] Esquema normalizado (3FN) con integridad referencial y restricciones de dominio (CHECK).
 - [ ] Soporte geoespacial (PostGIS, GIST) para geocercas y ubicaciones.
 - [ ] Particionamiento de tablas de alto volumen (`attendance_records`, `audit_logs`).
-- [ ] Idempotencia y anti-replay modelados (`idempotency_keys`, `qr_nonce_consumed`).
+- [ ] Idempotencia modelada (`idempotency_keys`); el nonce del QR queda como traza en `attendance_records.qr_nonce` (RN-26).
 - [ ] Auditoría inmutable (append-only) y outbox para event-driven.
 - [ ] Migraciones Flyway versionadas y coherentes; catálogo RBAC sembrado.
 - [ ] Verificación de ejecución del SQL (pendiente: requiere Docker/PostGIS activo).

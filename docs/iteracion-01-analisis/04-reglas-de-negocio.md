@@ -25,7 +25,7 @@ Reglas expresadas de forma **verificable**. Cada una será cubierta por pruebas 
 | **RN-23** | Se detecta la presencia de **apps de spoofing de GPS** conocidas; si están activas, se marca `FRAUD_GPS_SPOOF_APP`. |
 | **RN-24** | Un registro con **precisión insuficiente** no puede aprobarse automáticamente (ver RN-14). |
 | **RN-25** | El **QR del centro no es un valor estático**: incorpora un secreto firmado + `nonce` + vigencia. Un QR **expirado** o con firma inválida → `INVALID_QR`. |
-| **RN-26** | **Reutilización fraudulenta de QR / replay:** cada registro incluye un identificador único de operación (client-generated UUID) + nonce del QR; el servidor **rechaza duplicados** (idempotencia) y registros con nonce ya consumido fuera de ventana → `REPLAY_DETECTED`. |
+| **RN-26** | **Reutilización fraudulenta de QR / replay:** cada registro incluye un identificador único de operación (client-generated UUID); el servidor **rechaza duplicados** por ese UUID (idempotencia, RN-51) y descarta las secuencias incoherentes (RN-12). El QR de centro lleva un nonce fijo durante toda su vigencia y **debe servir para todos los eventos de la jornada**, así que no se "consume": se persiste en el registro (`attendance_records.qr_nonce`) como traza de auditoría. Frente a un QR fotografiado, las barreras son la geocerca (RN-13), el antifraude (RN-20..RN-28) y el device binding (RN-27). |
 | **RN-27** | **Device binding (RF-28):** un colaborador opera con dispositivo(s) registrado(s); un dispositivo no reconocido genera verificación adicional o bloqueo según política. |
 | **RN-28** | Toda **bandera antifraude** queda registrada en el evento y visible para el supervisor, independientemente de si bloqueó o no el registro. |
 

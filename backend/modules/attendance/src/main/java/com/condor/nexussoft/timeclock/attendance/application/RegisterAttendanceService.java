@@ -10,8 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,16 +18,19 @@ import java.util.stream.Collectors;
 
 /**
  * Núcleo del sistema (CU-02). Aplica, en orden, las validaciones de:
- * idempotencia → QR firmado → antifraude → geocerca/precisión → anti-replay (nonce),
- * fija la hora de servidor (RN-11), persiste el registro (aceptado o rechazado con motivo)
- * y publica el evento de dominio.
+ * idempotencia → QR firmado → antifraude → device binding → geocerca/precisión → horario →
+ * secuencia de jornada → evidencia/biometría, fija la hora de servidor (RN-11), persiste el
+ * registro (aceptado o rechazado con motivo) y publica el evento de dominio.
+ *
+ * <p>El anti-replay (RN-26) descansa en la idempotencia por {@code operation_uuid} (RN-51) y en la
+ * secuencia coherente (RN-12), no en consumir el nonce del QR: el QR de centro lleva un nonce fijo
+ * durante toda su vigencia y debe servir para todos los eventos de la jornada.</p>
  */
 @Service
 public class RegisterAttendanceService implements RegisterAttendanceUseCase {
 
     private final AttendanceRepositoryPort attendance;
     private final IdempotencyStorePort idempotency;
-    private final NonceGuardPort nonceGuard;
     private final QrValidationPort qrValidation;
     private final GeofenceCheckPort geofenceCheck;
     private final FraudCheckPort fraudCheck;
@@ -42,7 +43,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
     private final Clock clock;
 
     public RegisterAttendanceService(AttendanceRepositoryPort attendance, IdempotencyStorePort idempotency,
-                                     NonceGuardPort nonceGuard, QrValidationPort qrValidation,
+                                     QrValidationPort qrValidation,
                                      GeofenceCheckPort geofenceCheck, FraudCheckPort fraudCheck,
                                      DeviceRecognitionPort deviceRecognition,
                                      WorkSitePolicyPort sitePolicy, SchedulePolicyPort schedulePolicy,
@@ -51,7 +52,6 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
                                      Clock clock) {
         this.attendance = attendance;
         this.idempotency = idempotency;
-        this.nonceGuard = nonceGuard;
         this.qrValidation = qrValidation;
         this.geofenceCheck = geofenceCheck;
         this.fraudCheck = fraudCheck;
@@ -168,16 +168,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
             reason = RejectionReason.BIOMETRIC_REQUIRED;
         }
 
-        // 4) Anti-replay: consumir el nonce del QR (RN-26).
-        if (reason == null) {
-            LocalDate today = LocalDate.ofInstant(now, ZoneOffset.UTC);
-            boolean consumed = nonceGuard.tryConsume(tenantId, cmd.workSiteId(), qr.nonce(), userId, today, recordId);
-            if (!consumed) {
-                reason = RejectionReason.REPLAY_DETECTED;
-            }
-        }
-
-        // 5) Retardo (RN-16): ENTRADA aceptada tras la tolerancia del turno. No rechaza (RN-15);
+        // 4) Retardo (RN-16): ENTRADA aceptada tras la tolerancia del turno. No rechaza (RN-15);
         //    marca el registro con el flag LATE + minutos para reporte/incidencia (RETARDO).
         int lateMinutes = 0;
         if (reason == null && eventType == AttendanceEventType.ENTRADA

@@ -38,7 +38,7 @@ public class AttendancePersistenceAdapter implements AttendanceRepositoryPort {
                 GeoSupport.point(r.gps().latitude(), r.gps().longitude()),
                 r.gps().accuracyM(), r.distanceToSiteM(),
                 null,                       // device_id (uuid) — no resuelto en esta iteración
-                r.deviceTime(), r.timeSkewSeconds(), r.operationUuid(), r.source(),
+                r.deviceTime(), r.timeSkewSeconds(), r.qrNonce(), r.operationUuid(), r.source(),
                 r.biometricVerified(),
                 e == null ? null : e.bucket(), e == null ? null : e.key(), e == null ? null : e.hash(),
                 r.validationsJson()));

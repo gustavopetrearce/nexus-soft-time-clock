@@ -21,7 +21,6 @@ erDiagram
 
     work_sites ||--o{ geofences : "delimita"
     work_sites ||--o{ site_qr_tokens : "emite"
-    work_sites ||--o{ qr_nonce_consumed : ""
     projects ||--o{ project_work_sites : ""
     work_sites ||--o{ project_work_sites : ""
 
@@ -90,6 +89,7 @@ erDiagram
         varchar rejection_reason
         geography location
         numeric gps_accuracy_m
+        varchar qr_nonce
         uuid operation_uuid
         varchar source
     }

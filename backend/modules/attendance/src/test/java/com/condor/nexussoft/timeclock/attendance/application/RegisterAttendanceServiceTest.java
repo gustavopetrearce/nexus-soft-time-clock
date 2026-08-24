@@ -27,7 +27,6 @@ class RegisterAttendanceServiceTest {
 
     @Mock AttendanceRepositoryPort attendance;
     @Mock IdempotencyStorePort idempotency;
-    @Mock NonceGuardPort nonceGuard;
     @Mock QrValidationPort qrValidation;
     @Mock GeofenceCheckPort geofenceCheck;
     @Mock FraudCheckPort fraudCheck;
@@ -47,7 +46,7 @@ class RegisterAttendanceServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RegisterAttendanceService(attendance, idempotency, nonceGuard, qrValidation,
+        service = new RegisterAttendanceService(attendance, idempotency, qrValidation,
                 geofenceCheck, fraudCheck, deviceRecognition, sitePolicy, schedulePolicy,
                 eventTypeConfig, evidenceStorage, events, clock);
         // Por defecto el dispositivo es reconocido (device binding no interfiere). Lenient: el caso de
@@ -138,7 +137,6 @@ class RegisterAttendanceServiceTest {
                 .thenReturn(new FraudCheckPort.FraudCheckResult(List.of(), false, null));
         when(geofenceCheck.check(eq(tenantId), eq(siteId), anyDouble(), anyDouble()))
                 .thenReturn(new GeofenceCheckPort.GeofenceCheck(true, true, 12.0, 50.0));
-        when(nonceGuard.tryConsume(eq(tenantId), eq(siteId), eq("nonce-1"), eq(userId), any(), any())).thenReturn(true);
         permissiveSiteStub();
         noScheduleStub();
     }
@@ -172,7 +170,6 @@ class RegisterAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("REJECTED");
         assertThat(result.rejectionReason()).isEqualTo("OUT_OF_GEOFENCE");
-        verify(nonceGuard, never()).tryConsume(any(), any(), any(), any(), any(), any());  // no se consume nonce si ya rechazado
     }
 
     @Test
@@ -189,23 +186,26 @@ class RegisterAttendanceServiceTest {
         verify(qrValidation, never()).verify(any());
     }
 
+    /**
+     * El QR de centro lleva un nonce fijo durante toda su vigencia: debe servir para todos los
+     * eventos de la jornada. Antes, "consumir" el nonce rechazaba el segundo evento del día como
+     * REPLAY_DETECTED; ahora el orden lo gobierna solo la secuencia (RN-12).
+     */
     @Test
-    void nonceReutilizado_esReplay() {
-        when(idempotency.find(eq(tenantId), any())).thenReturn(Optional.empty());
-        when(qrValidation.verify("qr"))
-                .thenReturn(new QrValidationPort.QrCheck(true, false, tenantId, siteId, "nonce-1"));
-        when(fraudCheck.evaluate(anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
-                .thenReturn(new FraudCheckPort.FraudCheckResult(List.of(), false, null));
-        when(geofenceCheck.check(eq(tenantId), eq(siteId), anyDouble(), anyDouble()))
-                .thenReturn(new GeofenceCheckPort.GeofenceCheck(true, true, 12.0, 50.0));
-        when(nonceGuard.tryConsume(eq(tenantId), eq(siteId), eq("nonce-1"), eq(userId), any(), any())).thenReturn(false);
-        permissiveSiteStub();
-        noScheduleStub();
+    void mismoQr_sirveParaEventosSucesivosDelMismoDia() {
+        happyPathStubs();
+        allEventTypesEnabledStub();
+        when(attendance.findLastAcceptedEvent(tenantId, userId))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
 
-        AttendanceResult result = service.register(tenantId, userId, cmd());
+        AttendanceResult entrada = service.register(tenantId, userId, cmd("ENTRADA"));
+        AttendanceResult descanso = service.register(tenantId, userId, cmd("INICIO_DESCANSO"));
 
-        assertThat(result.status()).isEqualTo("REJECTED");
-        assertThat(result.rejectionReason()).isEqualTo("REPLAY_DETECTED");
+        assertThat(entrada.status()).isEqualTo("ACCEPTED");
+        assertThat(descanso.status()).isEqualTo("ACCEPTED");
+        // Ambos registros conservan el nonce del mismo QR como traza de auditoría.
+        verify(attendance, times(2)).save(argThat(r -> "nonce-1".equals(r.qrNonce())));
     }
 
     @Test
@@ -235,7 +235,6 @@ class RegisterAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("REJECTED");
         assertThat(result.rejectionReason()).isEqualTo("INVALID_SEQUENCE");
-        verify(nonceGuard, never()).tryConsume(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -243,7 +242,6 @@ class RegisterAttendanceServiceTest {
         validationsUpToSequenceStubs();
         when(attendance.findLastAcceptedEvent(tenantId, userId))
                 .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
-        when(nonceGuard.tryConsume(eq(tenantId), eq(siteId), eq("nonce-1"), eq(userId), any(), any())).thenReturn(true);
 
         AttendanceResult result = service.register(tenantId, userId, cmd("SALIDA"));
 
@@ -285,7 +283,6 @@ class RegisterAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("REJECTED");
         assertThat(result.rejectionReason()).isEqualTo("LOW_GPS_ACCURACY");
-        verify(nonceGuard, never()).tryConsume(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -298,7 +295,6 @@ class RegisterAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("REJECTED");
         assertThat(result.rejectionReason()).isEqualTo("PHOTO_REQUIRED");
-        verify(nonceGuard, never()).tryConsume(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -306,7 +302,6 @@ class RegisterAttendanceServiceTest {
         baseStubsWithPolicy(new WorkSitePolicyPort.SitePolicy(null, true, false));
         noScheduleStub();
         when(attendance.findLastAcceptedEvent(tenantId, userId)).thenReturn(Optional.empty());
-        when(nonceGuard.tryConsume(eq(tenantId), eq(siteId), eq("nonce-1"), eq(userId), any(), any())).thenReturn(true);
         evidenceStub(EvidenceStoragePort.Outcome.VALID);
 
         AttendanceResult result = service.register(tenantId, userId, cmdWithEvidence(VALID_KEY));
@@ -433,7 +428,6 @@ class RegisterAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("REJECTED");
         assertThat(result.rejectionReason()).isEqualTo("EVENT_TYPE_DISABLED");
-        verify(nonceGuard, never()).tryConsume(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -446,13 +440,11 @@ class RegisterAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("REJECTED");
         assertThat(result.rejectionReason()).isEqualTo("OUT_OF_SCHEDULE");
-        verify(nonceGuard, never()).tryConsume(any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void entrada_dentroDeVentana_trasTolerancia_esAceptadaYMarcadaComoRetardo() {
         baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
-        when(nonceGuard.tryConsume(eq(tenantId), eq(siteId), eq("nonce-1"), eq(userId), any(), any())).thenReturn(true);
         withinWindowStub(12);   // 12 min tras la tolerancia
 
         AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));
@@ -466,7 +458,6 @@ class RegisterAttendanceServiceTest {
     @Test
     void entrada_dentroDeTolerancia_esAceptadaSinRetardo() {
         baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
-        when(nonceGuard.tryConsume(eq(tenantId), eq(siteId), eq("nonce-1"), eq(userId), any(), any())).thenReturn(true);
         withinWindowStub(0);    // puntual (dentro de tolerancia)
 
         AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));
@@ -481,7 +472,6 @@ class RegisterAttendanceServiceTest {
         baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
         when(attendance.findLastAcceptedEvent(tenantId, userId))
                 .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
-        when(nonceGuard.tryConsume(eq(tenantId), eq(siteId), eq("nonce-1"), eq(userId), any(), any())).thenReturn(true);
         withinWindowStub(30);   // el retardo solo aplica a ENTRADA (RN-16)
 
         AttendanceResult result = service.register(tenantId, userId, cmd("SALIDA"));
@@ -501,7 +491,6 @@ class RegisterAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("REJECTED");
         assertThat(result.rejectionReason()).isEqualTo("UNTRUSTED_DEVICE");
-        verify(nonceGuard, never()).tryConsume(any(), any(), any(), any(), any(), any());
     }
 
     @Test

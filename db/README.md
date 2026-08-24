@@ -10,7 +10,7 @@ Esquema PostgreSQL + PostGIS y migraciones **Flyway** (baseline de la Iteración
 | V2 | `identity_rbac.sql` | `users`, `permissions`, `roles`, `role_permissions`, `user_roles`, `devices`, `refresh_tokens`, `user_work_site_scope` |
 | V3 | `organization.sql` | `work_sites` (índice GIST), `projects`, `project_work_sites` |
 | V4 | `scheduling.sql` | `schedules`, `shifts`, `shift_assignments` |
-| V5 | `geofencing.sql` | `geofences` (GIST), `site_qr_tokens`, `qr_nonce_consumed` |
+| V5 | `geofencing.sql` | `geofences` (GIST), `site_qr_tokens`, `qr_nonce_consumed` (eliminada en V22) |
 | V6 | `attendance.sql` | `attendance_records` (**particionada** por `server_time`), `idempotency_keys`, `fraud_flags`, `work_days` |
 | V7 | `incidents.sql` | `incidents` |
 | V8 | `audit_outbox_notifications.sql` | `audit_logs` (**particionada**, inmutable), `outbox_events`, `notifications` |

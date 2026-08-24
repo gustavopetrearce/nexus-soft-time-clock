@@ -62,6 +62,10 @@ public class AttendanceRecordJpaEntity {
     @Column(name = "time_skew_seconds")
     private Integer timeSkewSeconds;
 
+    /** Nonce del QR usado en el registro: traza de auditoría (RN-26), sin unicidad asociada. */
+    @Column(name = "qr_nonce")
+    private String qrNonce;
+
     @Column(name = "operation_uuid", nullable = false)
     private UUID operationUuid;
 
@@ -91,7 +95,7 @@ public class AttendanceRecordJpaEntity {
     public AttendanceRecordJpaEntity(UUID id, UUID tenantId, Instant serverTime, UUID userId, UUID workSiteId,
                                      String eventType, String status, String rejectionReason, Point location,
                                      Double gpsAccuracyM, Double distanceToSiteM, UUID deviceId, Instant deviceTime,
-                                     Integer timeSkewSeconds, UUID operationUuid, String source,
+                                     Integer timeSkewSeconds, String qrNonce, UUID operationUuid, String source,
                                      boolean biometricVerified, String evidenceBucket, String evidenceKey,
                                      String evidenceHash, String validationsJson) {
         this.id = id;
@@ -108,6 +112,7 @@ public class AttendanceRecordJpaEntity {
         this.deviceId = deviceId;
         this.deviceTime = deviceTime;
         this.timeSkewSeconds = timeSkewSeconds;
+        this.qrNonce = qrNonce;
         this.operationUuid = operationUuid;
         this.source = source;
         this.biometricVerified = biometricVerified;

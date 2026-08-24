@@ -87,7 +87,7 @@ classDiagram
     Geofence --> "0..1" GeoPoint : center
 ```
 
-**Invariantes:** una geocerca CIRCLE requiere `center`+`radiusM`; POLYGON requiere `area` (CHECK `ck_geofence_shape`). Solo una geocerca **activa** por centro. Un `SiteQrToken` es válido si firma correcta + no expirado + nonce no consumido (RN-25, RN-26).
+**Invariantes:** una geocerca CIRCLE requiere `center`+`radiusM`; POLYGON requiere `area` (CHECK `ck_geofence_shape`). Solo una geocerca **activa** por centro. Un `SiteQrToken` es válido si firma correcta + no expirado (RN-25); su `nonce` no se consume — el mismo QR sirve para todos los eventos de la jornada y queda como traza en el registro (RN-26).
 
 ## 1.3 Identity & Access (BC-01)
 

@@ -13,7 +13,7 @@
 2. **QR firmado** (RN-25): verifica firma + vigencia + coincidencia tenant/centro (delegado a Geofencing).
 3. **Antifraude** (RN-20..RN-28): recoge banderas; bloquea si la política lo indica.
 4. **Geocerca + precisión** (RN-13, RN-14): distancia geodésica (haversine) ≤ radio y precisión ≤ umbral.
-5. **Anti-replay** (RN-26): consume el `nonce` del QR (`ON CONFLICT DO NOTHING`); duplicado → `REPLAY_DETECTED`.
+5. **Anti-replay** (RN-26): lo cubren la idempotencia por `operation_uuid` (RN-51) y la secuencia de jornada (RN-12); el `nonce` del QR solo se guarda como traza en `attendance_records.qr_nonce`.
 6. **Hora de servidor** (RN-11) fija el timestamp oficial.
 7. Persiste el registro (aceptado o rechazado con motivo) y **publica evento** `AttendanceRegistered`/`AttendanceRejected`.
 
