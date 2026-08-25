@@ -136,6 +136,24 @@
                 </configuration>
             </plugin>
 
+            <!--
+                Las pruebas *IT levantan PostGIS con Testcontainers y ejercitan la app contra el
+                esquema Flyway real. Surefire no las recoge (su patrón son *Test), así que sin
+                failsafe nunca llegaban a ejecutarse, ni siquiera en el `mvn verify` de CI.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Fuente única de las migraciones: copia db/migration del repo a resources en build. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

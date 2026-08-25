@@ -35,6 +35,7 @@ class RegisterAttendanceServiceTest {
     @Mock SchedulePolicyPort schedulePolicy;
     @Mock EventTypeConfigPort eventTypeConfig;
     @Mock EvidenceStoragePort evidenceStorage;
+    @Mock CompanyPolicyPort companyPolicy;
     @Mock AttendanceEventPublisherPort events;
 
     RegisterAttendanceService service;
@@ -42,13 +43,18 @@ class RegisterAttendanceServiceTest {
     final UUID tenantId = UUID.randomUUID();
     final UUID userId = UUID.randomUUID();
     final UUID siteId = UUID.randomUUID();
-    final Clock clock = Clock.fixed(Instant.parse("2026-07-21T10:00:00Z"), ZoneOffset.UTC);
+    final Instant serverNow = Instant.parse("2026-07-21T10:00:00Z");
+    final Clock clock = Clock.fixed(serverNow, ZoneOffset.UTC);
+    static final int OPEN_SHIFT_HOURS = 16;
+    static final long OFFLINE_MAX_AGE_HOURS = 72;
 
     @BeforeEach
     void setUp() {
         service = new RegisterAttendanceService(attendance, idempotency, qrValidation,
                 geofenceCheck, fraudCheck, deviceRecognition, sitePolicy, schedulePolicy,
-                eventTypeConfig, evidenceStorage, events, clock);
+                eventTypeConfig, evidenceStorage, companyPolicy, events, clock, OFFLINE_MAX_AGE_HOURS);
+        lenient().when(companyPolicy.find(tenantId)).thenReturn(
+                new CompanyPolicyPort.CompanyPolicy(null, false, false, OPEN_SHIFT_HOURS));
         // Por defecto el dispositivo es reconocido (device binding no interfiere). Lenient: el caso de
         // idempotencia corta antes de llegar a la validación de dispositivo.
         lenient().when(deviceRecognition.resolve(any(), any(), any(), any(), any(), any()))
@@ -84,6 +90,14 @@ class RegisterAttendanceServiceTest {
     private RegisterAttendanceCommand cmd(String eventType) {
         return new RegisterAttendanceCommand(UUID.randomUUID(), siteId, "qr", 19.4326, -99.1332, 10.0,
                 eventType, "dev-1", null, "ONLINE", false, false, false, false, true, false,
+                null, null, null, "ANDROID", "Pixel 7", "14");
+    }
+
+    /** Fichaje capturado sin red en {@code punchedAt} y enviado más tarde por el lote de sync. */
+    private RegisterAttendanceCommand offlineCmd(Instant punchedAt) {
+        return new RegisterAttendanceCommand(UUID.randomUUID(), siteId, "qr", 19.4326, -99.1332, 10.0,
+                "ENTRADA", "dev-1", punchedAt.toEpochMilli(), "OFFLINE_SYNC",
+                false, false, false, false, true, false,
                 null, null, null, "ANDROID", "Pixel 7", "14");
     }
 
@@ -195,7 +209,7 @@ class RegisterAttendanceServiceTest {
     void mismoQr_sirveParaEventosSucesivosDelMismoDia() {
         happyPathStubs();
         allEventTypesEnabledStub();
-        when(attendance.findLastAcceptedEvent(tenantId, userId))
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
                 .thenReturn(Optional.empty())
                 .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
 
@@ -229,7 +243,7 @@ class RegisterAttendanceServiceTest {
     @Test
     void salida_sinEntradaAbierta_esRechazadaPorSecuencia() {
         validationsUpToSequenceStubs();
-        when(attendance.findLastAcceptedEvent(tenantId, userId)).thenReturn(Optional.empty());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any())).thenReturn(Optional.empty());
 
         AttendanceResult result = service.register(tenantId, userId, cmd("SALIDA"));
 
@@ -240,7 +254,7 @@ class RegisterAttendanceServiceTest {
     @Test
     void salida_conEntradaAbierta_mismoCentro_esAceptada() {
         validationsUpToSequenceStubs();
-        when(attendance.findLastAcceptedEvent(tenantId, userId))
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
                 .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
 
         AttendanceResult result = service.register(tenantId, userId, cmd("SALIDA"));
@@ -249,11 +263,122 @@ class RegisterAttendanceServiceTest {
         assertThat(result.rejectionReason()).isNull();
     }
 
+    /**
+     * Segundo turno del mismo día: tras cerrar la jornada se puede volver a entrar, y con el MISMO
+     * QR de centro —que no está ligado a usuario, turno ni fecha (RN-26)—.
+     */
+    @Test
+    void entradaTrasSalida_mismoDia_conElMismoQr_esAceptada() {
+        validationsUpToSequenceStubs();
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.SALIDA, siteId)));
+
+        AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        verify(attendance).save(argThat(r -> "nonce-1".equals(r.qrNonce())));
+    }
+
+    /**
+     * La jornada abierta se consulta acotada a open_shift_max_hours: sin esa cota, una ENTRADA sin
+     * su SALIDA dejaría al colaborador rechazado con INVALID_SEQUENCE para siempre.
+     */
+    @Test
+    void secuencia_seConsultaAcotadaALaVentanaDeJornadaAbierta() {
+        validationsUpToSequenceStubs();
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.empty());
+
+        service.register(tenantId, userId, cmd("ENTRADA"));
+
+        var since = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        verify(attendance).findLastAcceptedEvent(eq(tenantId), eq(userId), since.capture());
+        assertThat(since.getValue())
+                .isEqualTo(serverNow.minus(OPEN_SHIFT_HOURS, java.time.temporal.ChronoUnit.HOURS));
+    }
+
+    /** Fuera de la ventana no hay jornada que cerrar: la SALIDA tardía es incoherente. */
+    @Test
+    void salidaTardia_conJornadaYaCaducada_esRechazadaPorSecuencia() {
+        validationsUpToSequenceStubs();
+        // El repositorio ya aplica la cota: una ENTRADA anterior a `since` no se devuelve.
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.empty());
+
+        AttendanceResult result = service.register(tenantId, userId, cmd("SALIDA"));
+
+        assertThat(result.status()).isEqualTo("REJECTED");
+        assertThat(result.rejectionReason()).isEqualTo("INVALID_SEQUENCE");
+    }
+
+    /**
+     * El descanso pertenece a la jornada, y la jornada a un centro: sin CAMBIO_SITIO de por medio,
+     * terminarlo en otro centro la arrastraría y permitiría cerrarla allí.
+     */
+    @Test
+    void finDescanso_enOtroCentro_esRechazadoPorSecuencia() {
+        validationsUpToSequenceStubs();
+        allEventTypesEnabledStub();
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.INICIO_DESCANSO, UUID.randomUUID())));
+
+        AttendanceResult result = service.register(tenantId, userId, cmd("FIN_DESCANSO"));
+
+        assertThat(result.status()).isEqualTo("REJECTED");
+        assertThat(result.rejectionReason()).isEqualTo("INVALID_SEQUENCE");
+    }
+
+    /**
+     * Un fichaje offline sincronizado horas después debe contrastarse con la hora a la que ocurrió,
+     * no con la de llegada; si no, cae siempre fuera de la ventana del turno.
+     */
+    @Test
+    void offlineSync_evaluaVentanaDeTurnoConLaHoraDelDispositivo() {
+        validationsUpToSequenceStubs();
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any())).thenReturn(Optional.empty());
+        Instant punchedAt = serverNow.minus(9, java.time.temporal.ChronoUnit.HOURS);
+
+        AttendanceResult result = service.register(tenantId, userId, offlineCmd(punchedAt));
+
+        verify(schedulePolicy).check(tenantId, userId, siteId, punchedAt);
+        assertThat(result.flags()).contains("OFFLINE_DEVICE_TIME_USED");
+    }
+
+    /** Un reloj de dispositivo absurdo no gobierna la ventana: se cae a la hora de servidor. */
+    @Test
+    void offlineSync_conHoraDeDispositivoDemasiadoAntigua_usaLaDelServidor() {
+        validationsUpToSequenceStubs();
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any())).thenReturn(Optional.empty());
+        Instant tooOld = serverNow.minus(OFFLINE_MAX_AGE_HOURS + 1, java.time.temporal.ChronoUnit.HOURS);
+
+        AttendanceResult result = service.register(tenantId, userId, offlineCmd(tooOld));
+
+        verify(schedulePolicy).check(tenantId, userId, siteId, serverNow);
+        assertThat(result.flags()).doesNotContain("OFFLINE_DEVICE_TIME_USED");
+    }
+
+    /** Un QR caducado se rechaza como INVALID_QR, pero deja traza de por qué. */
+    @Test
+    void qrExpirado_dejaBanderaDistinguible() {
+        when(idempotency.find(eq(tenantId), any())).thenReturn(Optional.empty());
+        when(qrValidation.verify("qr")).thenReturn(QrValidationPort.QrCheck.expiredToken());
+        when(fraudCheck.evaluate(anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(new FraudCheckPort.FraudCheckResult(List.of(), false, null));
+        when(geofenceCheck.check(eq(tenantId), eq(siteId), anyDouble(), anyDouble()))
+                .thenReturn(new GeofenceCheckPort.GeofenceCheck(true, true, 12.0, 50.0));
+        permissiveSiteStub();
+
+        AttendanceResult result = service.register(tenantId, userId, cmd());
+
+        assertThat(result.rejectionReason()).isEqualTo("INVALID_QR");
+        assertThat(result.flags()).contains("QR_EXPIRED");
+    }
+
     @Test
     void dobleInicioDescanso_esRechazadoPorSecuencia() {
         validationsUpToSequenceStubs();
         allEventTypesEnabledStub();
-        when(attendance.findLastAcceptedEvent(tenantId, userId))
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
                 .thenReturn(Optional.of(new LastEvent(AttendanceEventType.INICIO_DESCANSO, siteId)));
 
         AttendanceResult result = service.register(tenantId, userId, cmd("INICIO_DESCANSO"));
@@ -289,7 +414,7 @@ class RegisterAttendanceServiceTest {
     void fotoObligatoria_sinEvidencia_esRechazada() {
         baseStubsWithPolicy(new WorkSitePolicyPort.SitePolicy(null, true, false));
         noScheduleStub();
-        when(attendance.findLastAcceptedEvent(tenantId, userId)).thenReturn(Optional.empty());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any())).thenReturn(Optional.empty());
 
         AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));  // sin evidenceKey
 
@@ -301,7 +426,7 @@ class RegisterAttendanceServiceTest {
     void fotoObligatoria_conEvidenciaVerificada_esAceptada() {
         baseStubsWithPolicy(new WorkSitePolicyPort.SitePolicy(null, true, false));
         noScheduleStub();
-        when(attendance.findLastAcceptedEvent(tenantId, userId)).thenReturn(Optional.empty());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any())).thenReturn(Optional.empty());
         evidenceStub(EvidenceStoragePort.Outcome.VALID);
 
         AttendanceResult result = service.register(tenantId, userId, cmdWithEvidence(VALID_KEY));
@@ -320,7 +445,7 @@ class RegisterAttendanceServiceTest {
     void fotoObligatoria_conClaveInventada_esRechazada() {
         baseStubsWithPolicy(new WorkSitePolicyPort.SitePolicy(null, true, false));
         noScheduleStub();
-        when(attendance.findLastAcceptedEvent(tenantId, userId)).thenReturn(Optional.empty());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any())).thenReturn(Optional.empty());
         evidenceStub(EvidenceStoragePort.Outcome.MISSING);
 
         AttendanceResult result = service.register(tenantId, userId, cmdWithEvidence("inventada"));
@@ -334,7 +459,7 @@ class RegisterAttendanceServiceTest {
     void fotoObligatoria_conClaveDeOtroUsuario_esRechazada() {
         baseStubsWithPolicy(new WorkSitePolicyPort.SitePolicy(null, true, false));
         noScheduleStub();
-        when(attendance.findLastAcceptedEvent(tenantId, userId)).thenReturn(Optional.empty());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any())).thenReturn(Optional.empty());
         evidenceStub(EvidenceStoragePort.Outcome.FOREIGN_PREFIX);
 
         AttendanceResult result = service.register(tenantId, userId, cmdWithEvidence("t/otro/s/x/u/y/z.jpg"));
@@ -348,7 +473,7 @@ class RegisterAttendanceServiceTest {
     void fotoObligatoria_conAlmacenamientoCaido_esRechazada() {
         baseStubsWithPolicy(new WorkSitePolicyPort.SitePolicy(null, true, false));
         noScheduleStub();
-        when(attendance.findLastAcceptedEvent(tenantId, userId)).thenReturn(Optional.empty());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any())).thenReturn(Optional.empty());
         evidenceStub(EvidenceStoragePort.Outcome.UNAVAILABLE);
 
         AttendanceResult result = service.register(tenantId, userId, cmdWithEvidence(VALID_KEY));
@@ -364,7 +489,7 @@ class RegisterAttendanceServiceTest {
     @Test
     void fotoOpcional_conEvidenciaInvalida_seAceptaSinEvidencia() {
         happyPathStubs();
-        when(attendance.findLastAcceptedEvent(tenantId, userId)).thenReturn(Optional.empty());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any())).thenReturn(Optional.empty());
         evidenceStub(EvidenceStoragePort.Outcome.MISSING);
 
         AttendanceResult result = service.register(tenantId, userId, cmdWithEvidence("inventada"));
@@ -400,7 +525,7 @@ class RegisterAttendanceServiceTest {
     void biometriaObligatoria_sinVerificacion_esRechazada() {
         baseStubsWithPolicy(new WorkSitePolicyPort.SitePolicy(null, false, true));
         noScheduleStub();
-        when(attendance.findLastAcceptedEvent(tenantId, userId)).thenReturn(Optional.empty());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any())).thenReturn(Optional.empty());
 
         AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));  // biometricVerified=false
 
@@ -470,7 +595,7 @@ class RegisterAttendanceServiceTest {
     @Test
     void salida_trasTolerancia_noGeneraRetardo() {
         baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
-        when(attendance.findLastAcceptedEvent(tenantId, userId))
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
                 .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
         withinWindowStub(30);   // el retardo solo aplica a ENTRADA (RN-16)
 

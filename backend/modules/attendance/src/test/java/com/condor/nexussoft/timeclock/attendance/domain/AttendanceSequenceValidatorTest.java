@@ -72,4 +72,29 @@ class AttendanceSequenceValidatorTest {
         assertThat(validate(ENTRADA, CAMBIO_SITIO, site)).isEmpty();
         assertThat(validate(INICIO_DESCANSO, CAMBIO_SITIO, site)).contains(RejectionReason.INVALID_SEQUENCE);
     }
+
+    @Test
+    void inicioDescanso_enOtroCentro_esRechazado() {
+        assertThat(validate(ENTRADA, INICIO_DESCANSO, otherSite)).contains(RejectionReason.INVALID_SEQUENCE);
+    }
+
+    /**
+     * Sin esta comprobación la jornada "salta" de centro sin registrar el CAMBIO_SITIO, y la SALIDA
+     * posterior se acepta en el centro equivocado porque compara contra el último evento.
+     */
+    @Test
+    void finDescanso_enOtroCentro_esRechazado() {
+        assertThat(validate(INICIO_DESCANSO, FIN_DESCANSO, otherSite)).contains(RejectionReason.INVALID_SEQUENCE);
+    }
+
+    /** CAMBIO_SITIO es el único evento que puede mover la jornada de centro: ese es su cometido. */
+    @Test
+    void cambioSitio_aOtroCentro_esValido_yTrasladaLaJornada() {
+        assertThat(validate(ENTRADA, CAMBIO_SITIO, otherSite)).isEmpty();
+
+        Optional<LastEvent> tras = Optional.of(new LastEvent(CAMBIO_SITIO, otherSite));
+        assertThat(AttendanceSequenceValidator.validate(tras, SALIDA, otherSite)).isEmpty();
+        assertThat(AttendanceSequenceValidator.validate(tras, SALIDA, site))
+                .contains(RejectionReason.INVALID_SEQUENCE);
+    }
 }

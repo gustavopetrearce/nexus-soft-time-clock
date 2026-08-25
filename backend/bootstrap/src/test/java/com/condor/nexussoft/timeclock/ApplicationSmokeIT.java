@@ -33,7 +33,11 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "outbox.relay-delay-ms=60000",
                 // Sin MinIO en el humo: el contexto debe arrancar igual con el almacenamiento
                 // desactivado, así que esta prueba también cubre ese camino.
-                "storage.minio.enabled=false"
+                "storage.minio.enabled=false",
+                // Sin servidor SMTP en CI, MailHealthIndicator deja /actuator/health en DOWN y el
+                // endpoint responde 503. El stack de producción hace lo mismo por variable de
+                // entorno (MANAGEMENT_HEALTH_MAIL_ENABLED=false, infra/portainer-stack.yml).
+                "management.health.mail.enabled=false"
         })
 class ApplicationSmokeIT {
 

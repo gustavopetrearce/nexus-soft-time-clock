@@ -45,9 +45,10 @@ public class AttendancePersistenceAdapter implements AttendanceRepositoryPort {
     }
 
     @Override
-    public Optional<LastEvent> findLastAcceptedEvent(UUID tenantId, UUID userId) {
-        return jpa.findFirstByTenantIdAndUserIdAndStatusOrderByServerTimeDesc(
-                        tenantId, userId, AttendanceStatus.ACCEPTED.name())
+    public Optional<LastEvent> findLastAcceptedEvent(UUID tenantId, UUID userId, Instant since) {
+        // La cota por server_time acota la jornada (RN-12) y además permite podar particiones.
+        return jpa.findFirstByTenantIdAndUserIdAndStatusAndServerTimeGreaterThanEqualOrderByServerTimeDesc(
+                        tenantId, userId, AttendanceStatus.ACCEPTED.name(), since)
                 .map(e -> new LastEvent(AttendanceEventType.valueOf(e.getEventType()), e.getWorkSiteId()));
     }
 

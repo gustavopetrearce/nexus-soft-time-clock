@@ -12,7 +12,7 @@
 `geofence:manage`. Base `/api/v1/work-sites/{workSiteId}`:
 - `PUT/GET /geofence` — geocerca **circular** (centro PostGIS + radio), upsert de la geocerca activa (RN-13)
 - `POST /qr` — genera/rota el **QR firmado** (HMAC-SHA256, `body = tenant|site|nonce|exp`), desactiva el QR previo y devuelve `{token, expiresAt}` (ADR-006, RN-25)
-- `verifyQr(token)` (uso interno, lo consumirá el registro de asistencia en la It. 8): valida firma + vigencia; el consumo del nonce (anti-replay) ocurre al registrar.
+- `verifyQr(token)` (uso interno, lo consume el registro de asistencia en la It. 8): valida firma y vigencia. El `nonce` **no se consume** (V22, addendum de ADR-006): el mismo QR debe servir para todos los eventos de la jornada y para todos los turnos del día, y queda como traza en `attendance_records.qr_nonce`. Un token caducado se distingue del alterado por el código `QR_EXPIRED`, aunque ambos acaben en el mismo rechazo.
 
 ## Estado de verificación
 

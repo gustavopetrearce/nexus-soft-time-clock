@@ -22,8 +22,9 @@ public class QrValidationAdapter implements QrValidationPort {
             QrPayload p = geofencing.verifyQr(qrToken);
             return new QrCheck(true, false, p.tenantId(), p.workSiteId(), p.nonce());
         } catch (DomainException e) {
-            // INVALID_QR (firma inválida o expirado) → tratado como QR inválido por el núcleo.
-            return QrCheck.invalid();
+            // Ambos casos son INVALID_QR para el núcleo; se distinguen solo para dejar traza de que
+            // el QR estaba caducado, que es el fallo típico de un lote offline.
+            return "QR_EXPIRED".equals(e.getCode()) ? QrCheck.expiredToken() : QrCheck.invalid();
         }
     }
 }

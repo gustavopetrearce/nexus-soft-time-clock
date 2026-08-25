@@ -8,9 +8,12 @@ import java.util.UUID;
  * <ul>
  *   <li>SALIDA/descanso/cambio de sitio requieren una ENTRADA abierta (HU-11 CA1).</li>
  *   <li>No se admiten dos INICIO_DESCANSO seguidos ni un FIN_DESCANSO sin descanso abierto (HU-12 CA2).</li>
- *   <li>La SALIDA debe registrarse en el mismo centro donde está abierta la jornada.</li>
+ *   <li>La jornada transcurre en un mismo centro: SALIDA y descansos deben registrarse donde está
+ *       abierta. CAMBIO_SITIO es el <b>único</b> evento que mueve ese centro de referencia; sin él,
+ *       un descanso terminado en otro centro arrastraría la jornada entera y permitiría cerrarla allí.</li>
  * </ul>
- * El estado se deriva del <b>último evento aceptado</b> del usuario; los rechazados no alteran la jornada.
+ * El estado se deriva del <b>último evento aceptado</b> del usuario dentro de la ventana de jornada
+ * abierta ({@code company_settings.open_shift_max_hours}); los rechazados no alteran la jornada.
  */
 public final class AttendanceSequenceValidator {
 
@@ -33,10 +36,13 @@ public final class AttendanceSequenceValidator {
             case ENTRADA -> prev == null || prev == AttendanceEventType.SALIDA;
             // Solo se puede salir si hay jornada abierta y en el mismo centro donde está abierta.
             case SALIDA -> isWorking(prev) && sameSite(last, requestedSite);
-            // Iniciar descanso o cambiar de sitio exige estar trabajando (no en descanso).
-            case INICIO_DESCANSO, CAMBIO_SITIO -> isWorking(prev);
-            // Terminar descanso exige un descanso abierto.
-            case FIN_DESCANSO -> prev == AttendanceEventType.INICIO_DESCANSO;
+            // Iniciar descanso exige estar trabajando (no en descanso) y en el centro de la jornada.
+            case INICIO_DESCANSO -> isWorking(prev) && sameSite(last, requestedSite);
+            // Terminar descanso exige un descanso abierto, en el centro donde se inició.
+            case FIN_DESCANSO ->
+                    prev == AttendanceEventType.INICIO_DESCANSO && sameSite(last, requestedSite);
+            // Cambiar de sitio exige estar trabajando; es el evento que traslada la jornada.
+            case CAMBIO_SITIO -> isWorking(prev);
         };
         return ok ? Optional.empty() : Optional.of(RejectionReason.INVALID_SEQUENCE);
     }

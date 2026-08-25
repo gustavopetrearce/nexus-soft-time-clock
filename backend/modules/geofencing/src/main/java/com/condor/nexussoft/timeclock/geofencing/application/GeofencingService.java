@@ -105,7 +105,9 @@ public class GeofencingService implements GeofencingUseCase {
         QrPayload payload = signer.verify(token)
                 .orElseThrow(() -> new DomainException("INVALID_QR", "QR inválido o alterado"));
         if (payload.expiresAt().isBefore(clock.instant())) {
-            throw new DomainException("INVALID_QR", "QR expirado");
+            // Código propio: para quien registra asistencia, un QR caducado y uno falsificado
+            // acaban en el mismo rechazo, pero solo el primero se resuelve renovando el cartel.
+            throw new DomainException("QR_EXPIRED", "QR expirado");
         }
         return payload;
     }

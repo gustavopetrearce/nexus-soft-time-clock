@@ -81,6 +81,14 @@ storage:
     sse: ${STORAGE_MINIO_SSE:SSE_S3}
     retention-days: ${STORAGE_MINIO_RETENTION_DAYS:400}
 
+# Registro de asistencia (BC-06)
+attendance:
+  offline:
+    # Antigüedad máxima de un fichaje offline para evaluar su ventana de turno con la hora del
+    # dispositivo en lugar de la de llegada (RN-15). Sin esto, un lote sincronizado horas después
+    # caería siempre en OUT_OF_SCHEDULE. La hora oficial del registro sigue siendo la del servidor.
+    max-age-hours: ${ATTENDANCE_OFFLINE_MAX_AGE_HOURS:72}
+
 # Observabilidad (Prometheus/Grafana, RNF-11)
 management:
   endpoints:

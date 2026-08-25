@@ -26,17 +26,23 @@ public class CompanyPolicyAdapter implements CompanyPolicyPort {
             return CompanyPolicy.defaults();
         }
         return jdbc.query(
-                "SELECT default_gps_accuracy_max_m, require_photo, require_biometric FROM company_settings "
-                        + "WHERE company_id = ? LIMIT 1",
+                "SELECT default_gps_accuracy_max_m, require_photo, require_biometric, open_shift_max_hours "
+                        + "FROM company_settings WHERE company_id = ? LIMIT 1",
                 rs -> {
                     if (!rs.next()) {
                         return CompanyPolicy.defaults();
                     }
                     int accuracy = rs.getInt("default_gps_accuracy_max_m");
+                    boolean accuracyNull = rs.wasNull();
+                    int openShiftHours = rs.getInt("open_shift_max_hours");
+                    if (rs.wasNull() || openShiftHours <= 0) {
+                        openShiftHours = DEFAULT_OPEN_SHIFT_MAX_HOURS;
+                    }
                     return new CompanyPolicy(
-                            rs.wasNull() ? null : accuracy,
+                            accuracyNull ? null : accuracy,
                             rs.getBoolean("require_photo"),
-                            rs.getBoolean("require_biometric"));
+                            rs.getBoolean("require_biometric"),
+                            openShiftHours);
                 },
                 tenantId);
     }

@@ -9,7 +9,7 @@
 | S-03 | Precisión GPS máxima por defecto | 50 m (configurable por centro). |
 | S-04 | Tolerancia de retardo por defecto | 10 min (configurable por turno). |
 | S-05 | TTL de tokens | accessToken 15 min, refreshToken 30 días rotatorio (configurable). |
-| S-06 | Vigencia del QR de centro | QR dinámico con `nonce` + ventana corta (p.ej. 60–120 s) o rotación programada; se decide en Iteración 7. |
+| S-06 | Vigencia del QR de centro | ~~QR dinámico con `nonce` + ventana corta (p.ej. 60–120 s)~~ **Superado** por el addendum de [ADR-006](../iteracion-02-arquitectura/adr/ADR-006-qr-firmado.md): se admiten vigencias largas (días/semanas/meses) para el cartel impreso del centro, y el `nonce` deja de consumirse. La barrera principal pasa a ser la ubicación física (geocerca) más antifraude y device binding. |
 | S-07 | Política antifraude por defecto | Mock location y GPS spoofing → **rechazo**; root/jailbreak → **marcar** para revisión (configurable por tenant). |
 | S-08 | Almacenamiento de evidencias | MinIO (S3-compatible), objetos cifrados, URLs firmadas de vida corta. |
 | S-09 | Idioma base | Español (i18n habilitado para agregar más). |
