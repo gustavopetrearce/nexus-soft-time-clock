@@ -5,6 +5,7 @@ import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRegister
 import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRejected;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.*;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +25,8 @@ import java.util.stream.Collectors;
  *
  * <p>El anti-replay (RN-26) descansa en la idempotencia por {@code operation_uuid} (RN-51) y en la
  * secuencia coherente (RN-12), no en consumir el nonce del QR: el QR de centro lleva un nonce fijo
- * durante toda su vigencia y debe servir para todos los eventos de la jornada.</p>
+ * durante toda su vigencia y debe servir para todos los eventos de la jornada, y para todos los
+ * turnos del día.</p>
  */
 @Service
 public class RegisterAttendanceService implements RegisterAttendanceUseCase {
@@ -39,8 +41,15 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
     private final SchedulePolicyPort schedulePolicy;
     private final EventTypeConfigPort eventTypeConfig;
     private final EvidenceStoragePort evidenceStorage;
+    private final CompanyPolicyPort companyPolicy;
     private final AttendanceEventPublisherPort events;
     private final Clock clock;
+
+    /**
+     * Antigüedad máxima de un fichaje offline para evaluar su ventana de turno con la hora del
+     * dispositivo en lugar de la de llegada. Más allá, se usa la del servidor.
+     */
+    private final long offlineMaxAgeHours;
 
     public RegisterAttendanceService(AttendanceRepositoryPort attendance, IdempotencyStorePort idempotency,
                                      QrValidationPort qrValidation,
@@ -48,8 +57,10 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
                                      DeviceRecognitionPort deviceRecognition,
                                      WorkSitePolicyPort sitePolicy, SchedulePolicyPort schedulePolicy,
                                      EventTypeConfigPort eventTypeConfig, EvidenceStoragePort evidenceStorage,
+                                     CompanyPolicyPort companyPolicy,
                                      AttendanceEventPublisherPort events,
-                                     Clock clock) {
+                                     Clock clock,
+                                     @Value("${attendance.offline.max-age-hours:72}") long offlineMaxAgeHours) {
         this.attendance = attendance;
         this.idempotency = idempotency;
         this.qrValidation = qrValidation;
@@ -60,8 +71,10 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         this.schedulePolicy = schedulePolicy;
         this.eventTypeConfig = eventTypeConfig;
         this.evidenceStorage = evidenceStorage;
+        this.companyPolicy = companyPolicy;
         this.events = events;
         this.clock = clock;
+        this.offlineMaxAgeHours = offlineMaxAgeHours;
     }
 
     @Override
@@ -76,13 +89,30 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         Instant now = clock.instant();              // hora de servidor autoritativa (RN-11)
         UUID recordId = UUID.randomUUID();
         AttendanceEventType eventType = AttendanceEventType.valueOf(cmd.eventType());
+        String source = normalizeSource(cmd.source());
         List<String> flags = new ArrayList<>();
         RejectionReason reason = null;
+
+        // Momento con el que se contrasta la ventana de turno. Para un lote offline sincronizado
+        // horas después, la hora de llegada caería sistemáticamente fuera de ventana (OUT_OF_SCHEDULE
+        // espurio), así que se usa la del dispositivo. Es un dato manipulable, pero se acota al
+        // pasado y en antigüedad, queda marcado con una bandera visible para el supervisor y el
+        // resto de barreras (geocerca, antifraude, device binding) siguen actuando. La hora oficial
+        // del registro sigue siendo la del servidor (RN-11).
+        Instant effectiveTime = effectiveTime(cmd, source, now);
+        if (!effectiveTime.equals(now)) {
+            flags.add("OFFLINE_DEVICE_TIME_USED");
+        }
 
         // 1) QR firmado + vigencia + coincidencia de tenant/centro (RN-25).
         QrValidationPort.QrCheck qr = qrValidation.verify(cmd.qrToken());
         boolean qrOk = qr.valid() && !qr.expired()
                 && tenantId.equals(qr.tenantId()) && cmd.workSiteId().equals(qr.workSiteId());
+        if (qr.expired()) {
+            // Mismo motivo de rechazo, pero distinguible en la traza: es el fallo más probable de un
+            // lote offline contra un QR de vigencia corta.
+            flags.add("QR_EXPIRED");
+        }
         if (!qrOk) {
             reason = RejectionReason.INVALID_QR;
         }
@@ -129,7 +159,8 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         }
 
         // 3.4) Ventana de horario del turno asignado (RN-15, HU-10 CA1). Sin turno vigente no restringe.
-        SchedulePolicyPort.ScheduleDecision schedule = schedulePolicy.check(tenantId, userId, cmd.workSiteId(), now);
+        SchedulePolicyPort.ScheduleDecision schedule =
+                schedulePolicy.check(tenantId, userId, cmd.workSiteId(), effectiveTime);
         if (reason == null && schedule.outcome() == SchedulePolicyPort.Outcome.OUT_OF_WINDOW) {
             reason = RejectionReason.OUT_OF_SCHEDULE;
         }
@@ -137,8 +168,14 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         // 3.5) Secuencia coherente de la jornada (RN-12): entrada/salida emparejadas en el mismo
         //       centro (HU-11 CA1), sin dobles descansos ni eventos fuera de orden (HU-12 CA2).
         if (reason == null) {
+            // La jornada abierta caduca: sin cota, una ENTRADA sin su SALIDA bloquearía al
+            // colaborador para siempre (INVALID_SEQUENCE en cada intento posterior), porque nada
+            // cierra las jornadas huérfanas. Ventana deslizante —no día natural— para no partir en
+            // dos un turno nocturno.
+            Instant since = now.minus(companyPolicy.find(tenantId).openShiftMaxHours(), ChronoUnit.HOURS);
             reason = AttendanceSequenceValidator
-                    .validate(attendance.findLastAcceptedEvent(tenantId, userId), eventType, cmd.workSiteId())
+                    .validate(attendance.findLastAcceptedEvent(tenantId, userId, since),
+                            eventType, cmd.workSiteId())
                     .orElse(null);
         }
 
@@ -182,7 +219,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         // La evidencia verificada se persiste aunque el registro se rechace por otro motivo: es la
         // prueba de un intento real (útil para incidencias) y hace exacta la regla de huérfanos.
         AttendanceRecord record = buildRecord(recordId, tenantId, userId, cmd, now, status, reason,
-                qrOk ? qr.nonce() : null, distance, flags, lateMinutes, evidence);
+                qrOk ? qr.nonce() : null, distance, flags, lateMinutes, evidence, source);
         attendance.save(record);
 
         AttendanceResult result = new AttendanceResult(recordId, status.name(),
@@ -205,7 +242,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
     private AttendanceRecord buildRecord(UUID recordId, UUID tenantId, UUID userId, RegisterAttendanceCommand cmd,
                                          Instant now, AttendanceStatus status, RejectionReason reason,
                                          String nonce, Double distance, List<String> flags, int lateMinutes,
-                                         Evidence evidence) {
+                                         Evidence evidence, String source) {
         Instant deviceTime = cmd.deviceTimeEpochMs() == null ? null : Instant.ofEpochMilli(cmd.deviceTimeEpochMs());
         Integer skew = deviceTime == null ? null : (int) (now.getEpochSecond() - deviceTime.getEpochSecond());
         GpsFix gps = new GpsFix(cmd.latitude(), cmd.longitude(), cmd.accuracyM());
@@ -213,7 +250,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         return new AttendanceRecord(recordId, tenantId, now, userId, cmd.workSiteId(),
                 AttendanceEventType.valueOf(cmd.eventType()), status, reason, gps, distance,
                 cmd.deviceId(), deviceTime, skew, nonce, cmd.operationUuid(),
-                normalizeSource(cmd.source()), cmd.biometricVerified(), evidence,
+                source, cmd.biometricVerified(), evidence,
                 buildValidationsJson(flags, reason, distance, lateMinutes));
     }
 
@@ -225,6 +262,20 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
             events.publish(AttendanceRejected.of(record.tenantId(), record.id(), record.userId(),
                     reason.name(), now));
         }
+    }
+
+    /**
+     * Hora con la que se evalúa la ventana de turno: la del dispositivo para un fichaje offline
+     * reciente y coherente (anterior a la llegada), la del servidor en cualquier otro caso.
+     */
+    private Instant effectiveTime(RegisterAttendanceCommand cmd, String source, Instant now) {
+        if (!"OFFLINE_SYNC".equals(source) || cmd.deviceTimeEpochMs() == null) {
+            return now;
+        }
+        Instant deviceTime = Instant.ofEpochMilli(cmd.deviceTimeEpochMs());
+        boolean usable = deviceTime.isBefore(now)
+                && !deviceTime.isBefore(now.minus(offlineMaxAgeHours, ChronoUnit.HOURS));
+        return usable ? deviceTime : now;
     }
 
     private String normalizeSource(String source) {

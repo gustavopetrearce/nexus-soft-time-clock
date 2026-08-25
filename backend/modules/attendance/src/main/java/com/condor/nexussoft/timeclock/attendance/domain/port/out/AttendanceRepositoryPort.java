@@ -19,6 +19,12 @@ public interface AttendanceRepositoryPort {
      */
     List<AttendanceSummary> findRecentByUser(UUID tenantId, UUID userId, Instant from, Instant toExclusive, int limit);
 
-    /** Último evento <b>aceptado</b> del usuario, que define el estado de su jornada (RN-12). */
-    Optional<LastEvent> findLastAcceptedEvent(UUID tenantId, UUID userId);
+    /**
+     * Último evento <b>aceptado</b> del usuario, que define el estado de su jornada (RN-12).
+     *
+     * @param since cota inferior sobre la hora de servidor: los eventos anteriores ya no cuentan como
+     *              jornada abierta ({@code company_settings.open_shift_max_hours}, V23). Sin ella, una
+     *              ENTRADA sin su SALIDA bloquearía al colaborador indefinidamente.
+     */
+    Optional<LastEvent> findLastAcceptedEvent(UUID tenantId, UUID userId, Instant since);
 }

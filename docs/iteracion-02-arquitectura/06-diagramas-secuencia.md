@@ -47,7 +47,7 @@ sequenceDiagram
     participant GEO as Geofencing
     participant SCH as Scheduling
     participant FR as Anti-Fraud
-    participant R as Redis (nonce)
+    participant R as Idempotencia (operation_uuid)
     participant DB as PostgreSQL
     participant OB as Outbox/EventBus
 
@@ -60,16 +60,17 @@ sequenceDiagram
     M->>L: Persistir operación (UUID) [offline-first]
     M->>GW: POST /api/v1/attendance {UUID, qr, gps, ...}  (Idempotency-Key: UUID)
     GW->>AT: forward (JWT → tenant, RN-31)
-    AT->>R: ¿UUID/nonce ya usado? (idempotencia/replay RN-26)
-    alt duplicado / replay
-        AT-->>M: 200 (resultado previo) / REPLAY_DETECTED
+    AT->>R: ¿operation_uuid ya procesado? (idempotencia RN-51)
+    alt duplicado
+        AT-->>M: 200 (resultado previo, sin reprocesar)
     else nuevo
         AT->>GEO: validar QR firmado + geocerca (RN-13, RN-25)
         AT->>SCH: validar horario/turno (RN-15, RN-16)
         AT->>FR: evaluar banderas antifraude (RN-20..RN-28)
+        AT->>DB: leer último evento aceptado → validar secuencia (RN-12)
         AT->>AT: fijar hora de servidor (RN-11) + resolver resultado
-        AT->>DB: persistir AttendanceRecord (aceptado/rechazado+motivo)
-        AT->>R: marcar nonce/UUID consumido
+        AT->>DB: persistir AttendanceRecord (aceptado/rechazado+motivo, con qr_nonce)
+        AT->>R: guardar resultado por operation_uuid
         AT->>OB: publicar AttendanceRegistered (transaccional)
         AT-->>M: 200 {resultado, serverTime, motivo?}
     end
