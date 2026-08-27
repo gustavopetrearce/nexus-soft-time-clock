@@ -4,16 +4,11 @@ import com.condor.nexussoft.timeclock.attendance.domain.port.in.AttendanceResult
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.RegisterAttendanceCommand;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.RegisterAttendanceUseCase;
 import com.condor.nexussoft.timeclock.geofencing.domain.port.in.GeofencingUseCase;
+import com.condor.nexussoft.timeclock.support.PostgisIntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -32,24 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * él, y que <b>un único QR de centro</b> sirve para todos esos eventos y también para un segundo
  * turno del mismo día.</p>
  */
-@Testcontainers
-@SpringBootTest(properties = {
-        "spring.cache.type=none",
-        "spring.autoconfigure.exclude="
-                + "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,"
-                + "org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration",
-        "outbox.relay-delay-ms=60000",
-        "storage.minio.enabled=false"
-})
-class AttendanceSequenceIT {
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGIS = new PostgreSQLContainer<>(
-            DockerImageName.parse("postgis/postgis:16-3.4").asCompatibleSubstituteFor("postgres"))
-            .withDatabaseName("nexus")
-            .withUsername("nexus")
-            .withPassword("nexus");
+class AttendanceSequenceIT extends PostgisIntegrationTest {
 
     private static final double LAT = 19.4326;
     private static final double LON = -99.1332;
