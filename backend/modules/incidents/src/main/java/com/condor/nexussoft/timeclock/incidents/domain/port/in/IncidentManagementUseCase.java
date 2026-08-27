@@ -17,4 +17,7 @@ public interface IncidentManagementUseCase {
 
     /** Alta automática de incidencia por ENTRADA con retardo (consumida de un evento, RN-16). */
     Incident openForLateArrival(UUID tenantId, UUID userId, UUID attendanceId, int minutesLate);
+
+    /** Alta automática por marca aceptada fuera de la ventana del turno (consumida de un evento, RN-15). */
+    Incident openForOutOfWindow(UUID tenantId, UUID userId, UUID attendanceId, String eventKind);
 }

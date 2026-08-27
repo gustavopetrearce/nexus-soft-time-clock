@@ -159,9 +159,17 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         }
 
         // 3.4) Ventana de horario del turno asignado (RN-15, HU-10 CA1). Sin turno vigente no restringe.
+        //      La ventana gobierna CUÁNDO se puede abrir la jornada, así que solo rechaza la ENTRADA:
+        //      rechazar una SALIDA tardía dejaba al colaborador sin poder cerrar, con la jornada
+        //      abierta hasta que caducara por open_shift_max_hours (RN-12). El resto de eventos se
+        //      aceptan marcados, y esa marca abre una incidencia FUERA_DE_VENTANA.
         SchedulePolicyPort.ScheduleDecision schedule =
-                schedulePolicy.check(tenantId, userId, cmd.workSiteId(), effectiveTime);
-        if (reason == null && schedule.outcome() == SchedulePolicyPort.Outcome.OUT_OF_WINDOW) {
+                schedulePolicy.check(tenantId, userId, cmd.workSiteId(), eventType, effectiveTime);
+        boolean outOfWindow = schedule.outcome() == SchedulePolicyPort.Outcome.OUT_OF_WINDOW;
+        if (outOfWindow) {
+            flags.add("OUT_OF_SCHEDULE");
+        }
+        if (reason == null && outOfWindow && eventType == AttendanceEventType.ENTRADA) {
             reason = RejectionReason.OUT_OF_SCHEDULE;
         }
 
@@ -219,14 +227,14 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         // La evidencia verificada se persiste aunque el registro se rechace por otro motivo: es la
         // prueba de un intento real (útil para incidencias) y hace exacta la regla de huérfanos.
         AttendanceRecord record = buildRecord(recordId, tenantId, userId, cmd, now, status, reason,
-                qrOk ? qr.nonce() : null, distance, flags, lateMinutes, evidence, source);
+                qrOk ? qr.nonce() : null, distance, flags, lateMinutes, evidence, source, schedule.shiftId());
         attendance.save(record);
 
         AttendanceResult result = new AttendanceResult(recordId, status.name(),
                 reason == null ? null : reason.name(), now, distance, flags, lateMinutes);
         idempotency.save(tenantId, cmd.operationUuid(), result);
 
-        publishEvent(record, reason, lateMinutes, now);
+        publishEvent(record, reason, lateMinutes, outOfWindow, now);
         return result;
     }
 
@@ -242,22 +250,23 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
     private AttendanceRecord buildRecord(UUID recordId, UUID tenantId, UUID userId, RegisterAttendanceCommand cmd,
                                          Instant now, AttendanceStatus status, RejectionReason reason,
                                          String nonce, Double distance, List<String> flags, int lateMinutes,
-                                         Evidence evidence, String source) {
+                                         Evidence evidence, String source, UUID shiftId) {
         Instant deviceTime = cmd.deviceTimeEpochMs() == null ? null : Instant.ofEpochMilli(cmd.deviceTimeEpochMs());
         Integer skew = deviceTime == null ? null : (int) (now.getEpochSecond() - deviceTime.getEpochSecond());
         GpsFix gps = new GpsFix(cmd.latitude(), cmd.longitude(), cmd.accuracyM());
 
-        return new AttendanceRecord(recordId, tenantId, now, userId, cmd.workSiteId(),
+        return new AttendanceRecord(recordId, tenantId, now, userId, cmd.workSiteId(), shiftId,
                 AttendanceEventType.valueOf(cmd.eventType()), status, reason, gps, distance,
                 cmd.deviceId(), deviceTime, skew, nonce, cmd.operationUuid(),
                 source, cmd.biometricVerified(), evidence,
                 buildValidationsJson(flags, reason, distance, lateMinutes));
     }
 
-    private void publishEvent(AttendanceRecord record, RejectionReason reason, int lateMinutes, Instant now) {
+    private void publishEvent(AttendanceRecord record, RejectionReason reason, int lateMinutes,
+                              boolean outOfWindow, Instant now) {
         if (record.isAccepted()) {
             events.publish(AttendanceRegistered.of(record.tenantId(), record.id(), record.userId(),
-                    record.workSiteId(), record.eventType().name(), lateMinutes, now));
+                    record.workSiteId(), record.eventType().name(), lateMinutes, outOfWindow, now));
         } else {
             events.publish(AttendanceRejected.of(record.tenantId(), record.id(), record.userId(),
                     reason.name(), now));

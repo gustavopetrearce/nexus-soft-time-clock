@@ -7,5 +7,9 @@ import java.util.UUID;
 
 public interface ShiftAssignmentJpaRepository extends JpaRepository<ShiftAssignmentJpaEntity, UUID> {
 
-    List<ShiftAssignmentJpaEntity> findByUserIdAndTenantId(UUID userId, UUID tenantId);
+    /**
+     * Orden explícito: sin él Postgres devuelve las filas en el orden que le conviene y la respuesta
+     * de {@code GET /api/v1/shift-assignments} varía entre llamadas. La vigencia más reciente primero.
+     */
+    List<ShiftAssignmentJpaEntity> findByUserIdAndTenantIdOrderByValidFromDescIdAsc(UUID userId, UUID tenantId);
 }

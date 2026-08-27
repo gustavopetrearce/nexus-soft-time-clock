@@ -7,7 +7,8 @@ import java.util.UUID;
 /** Incidencia (RF-09): situación que requiere atención (retardo, falta, rechazo, permiso…). */
 public class Incident {
 
-    public enum Type { RETARDO, FALTA, REGISTRO_RECHAZADO, PERMISO, JUSTIFICACION, FRAUDE, OTRO }
+    public enum Type { RETARDO, FALTA, REGISTRO_RECHAZADO, PERMISO, JUSTIFICACION, FRAUDE,
+                       FUERA_DE_VENTANA, OTRO }
 
     public enum Status { OPEN, APPROVED, REJECTED, RESOLVED }
 
@@ -53,6 +54,17 @@ public class Incident {
     public static Incident openForLateArrival(UUID tenantId, UUID userId, UUID attendanceId, int minutesLate) {
         return new Incident(UUID.randomUUID(), tenantId, userId, Type.RETARDO, Status.OPEN,
                 "LOW", LocalDate.now(), attendanceId, "Retardo de " + minutesLate + " min",
+                null, null, null, Instant.now());
+    }
+
+    /**
+     * Alta automática por marca aceptada fuera de la ventana del turno (RN-15). No es un RETARDO: ese
+     * mide la ENTRADA tardía <b>dentro</b> de la ventana (RN-16). El registro sigue aceptado — la
+     * ventana no puede impedir cerrar una jornada ya abierta—, pero el supervisor lo ve.
+     */
+    public static Incident openForOutOfWindow(UUID tenantId, UUID userId, UUID attendanceId, String eventKind) {
+        return new Incident(UUID.randomUUID(), tenantId, userId, Type.FUERA_DE_VENTANA, Status.OPEN,
+                "LOW", LocalDate.now(), attendanceId, eventKind + " fuera de la ventana del turno",
                 null, null, null, Instant.now());
     }
 

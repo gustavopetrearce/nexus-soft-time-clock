@@ -35,6 +35,10 @@ public class AttendanceRecordJpaEntity {
     @Column(name = "work_site_id", nullable = false)
     private UUID workSiteId;
 
+    /** Turno al que se atribuye la marca (RN-15); nulo si ninguno la reclama. */
+    @Column(name = "shift_id")
+    private UUID shiftId;
+
     @Column(name = "event_type", nullable = false)
     private String eventType;
 
@@ -93,6 +97,7 @@ public class AttendanceRecordJpaEntity {
 
     // Constructor de creación (todos los campos relevantes).
     public AttendanceRecordJpaEntity(UUID id, UUID tenantId, Instant serverTime, UUID userId, UUID workSiteId,
+                                     UUID shiftId,
                                      String eventType, String status, String rejectionReason, Point location,
                                      Double gpsAccuracyM, Double distanceToSiteM, UUID deviceId, Instant deviceTime,
                                      Integer timeSkewSeconds, String qrNonce, UUID operationUuid, String source,
@@ -103,6 +108,7 @@ public class AttendanceRecordJpaEntity {
         this.serverTime = serverTime;
         this.userId = userId;
         this.workSiteId = workSiteId;
+        this.shiftId = shiftId;
         this.eventType = eventType;
         this.status = status;
         this.rejectionReason = rejectionReason;
@@ -124,6 +130,7 @@ public class AttendanceRecordJpaEntity {
 
     public UUID getId() { return id; }
     public UUID getWorkSiteId() { return workSiteId; }
+    public UUID getShiftId() { return shiftId; }
     public String getEventType() { return eventType; }
     public String getStatus() { return status; }
     public String getRejectionReason() { return rejectionReason; }

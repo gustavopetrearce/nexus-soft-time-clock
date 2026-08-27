@@ -48,4 +48,10 @@ public class IncidentService implements IncidentManagementUseCase {
     public Incident openForLateArrival(UUID tenantId, UUID userId, UUID attendanceId, int minutesLate) {
         return incidents.save(Incident.openForLateArrival(tenantId, userId, attendanceId, minutesLate));
     }
+
+    @Override
+    @Transactional
+    public Incident openForOutOfWindow(UUID tenantId, UUID userId, UUID attendanceId, String eventKind) {
+        return incidents.save(Incident.openForOutOfWindow(tenantId, userId, attendanceId, eventKind));
+    }
 }

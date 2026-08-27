@@ -1,12 +1,19 @@
 package com.condor.nexussoft.timeclock.attendance.domain.port.out;
 
+import com.condor.nexussoft.timeclock.attendance.domain.AttendanceEventType;
+
 import java.time.Instant;
 import java.util.UUID;
 
 /** Evalúa si el registro cae dentro de la ventana del turno asignado al colaborador (RN-15). */
 public interface SchedulePolicyPort {
 
-    ScheduleDecision check(UUID tenantId, UUID userId, UUID workSiteId, Instant at);
+    /**
+     * @param eventType decide contra qué borde del turno se mide la marca cuando varias ventanas se
+     *                  solapan: la ENTRADA contra el inicio, la SALIDA contra el fin, los
+     *                  intermedios contra el cuerpo.
+     */
+    ScheduleDecision check(UUID tenantId, UUID userId, UUID workSiteId, AttendanceEventType eventType, Instant at);
 
     enum Outcome {
         /** El colaborador no tiene turno asignado vigente en ese centro → sin restricción horaria. */
@@ -21,19 +28,21 @@ public interface SchedulePolicyPort {
      * Resultado de la evaluación horaria. {@code minutesLate} es la tardanza sobre
      * {@code inicio_turno + tolerancia} de la ocurrencia que casó la ventana (RN-16); es 0 salvo
      * que la marca sea posterior a la tolerancia. Solo tiene sentido para ENTRADA dentro de ventana.
+     * {@code shiftId} es el turno al que se atribuye la marca, y es {@code null} cuando no hay
+     * ninguno que la reclame.
      */
-    record ScheduleDecision(Outcome outcome, int minutesLate) {
+    record ScheduleDecision(Outcome outcome, int minutesLate, UUID shiftId) {
 
         public static ScheduleDecision noSchedule() {
-            return new ScheduleDecision(Outcome.NO_SCHEDULE, 0);
+            return new ScheduleDecision(Outcome.NO_SCHEDULE, 0, null);
         }
 
         public static ScheduleDecision outOfWindow() {
-            return new ScheduleDecision(Outcome.OUT_OF_WINDOW, 0);
+            return new ScheduleDecision(Outcome.OUT_OF_WINDOW, 0, null);
         }
 
-        public static ScheduleDecision withinWindow(int minutesLate) {
-            return new ScheduleDecision(Outcome.WITHIN_WINDOW, Math.max(0, minutesLate));
+        public static ScheduleDecision withinWindow(int minutesLate, UUID shiftId) {
+            return new ScheduleDecision(Outcome.WITHIN_WINDOW, Math.max(0, minutesLate), shiftId);
         }
     }
 }

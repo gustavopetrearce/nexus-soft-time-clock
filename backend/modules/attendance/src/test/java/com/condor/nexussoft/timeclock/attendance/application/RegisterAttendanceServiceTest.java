@@ -43,6 +43,7 @@ class RegisterAttendanceServiceTest {
     final UUID tenantId = UUID.randomUUID();
     final UUID userId = UUID.randomUUID();
     final UUID siteId = UUID.randomUUID();
+    final UUID shiftId = UUID.randomUUID();
     final Instant serverNow = Instant.parse("2026-07-21T10:00:00Z");
     final Clock clock = Clock.fixed(serverNow, ZoneOffset.UTC);
     static final int OPEN_SHIFT_HOURS = 16;
@@ -59,6 +60,11 @@ class RegisterAttendanceServiceTest {
         // idempotencia corta antes de llegar a la validación de dispositivo.
         lenient().when(deviceRecognition.resolve(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new DeviceRecognitionPort.DeviceRecognition(true, DeviceRecognitionPort.Action.ALLOW));
+        // Por defecto, sin turno vigente. La decisión se consulta siempre —el turno elegido se graba
+        // en la marca aunque acabe rechazada—, así que los casos que se rechazan antes del horario
+        // también necesitan una decisión con la que trabajar.
+        lenient().when(schedulePolicy.check(any(), any(), any(), any(), any()))
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.noSchedule());
     }
 
     /** Sin overrides de tipos de evento → todos los intermedios habilitados. */
@@ -73,14 +79,14 @@ class RegisterAttendanceServiceTest {
 
     /** El colaborador no tiene turno asignado vigente → sin restricción horaria. */
     private void noScheduleStub() {
-        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any()))
+        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
                 .thenReturn(SchedulePolicyPort.ScheduleDecision.noSchedule());
     }
 
     /** Hay turno vigente y la marca cae dentro de ventana, con {@code minutesLate} de retardo. */
     private void withinWindowStub(int minutesLate) {
-        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any()))
-                .thenReturn(SchedulePolicyPort.ScheduleDecision.withinWindow(minutesLate));
+        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.withinWindow(minutesLate, shiftId));
     }
 
     private RegisterAttendanceCommand cmd() {
@@ -122,7 +128,15 @@ class RegisterAttendanceServiceTest {
         }
     }
 
-    /** Registro efectivamente persistido, para comprobar qué evidencia quedó asociada. */
+    /** Evento de dominio publicado, para comprobar qué señales viajan a los consumidores. */
+    private com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRegistered publishedRegistered() {
+        var captor = org.mockito.ArgumentCaptor
+                .forClass(com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRegistered.class);
+        verify(events).publish(captor.capture());
+        return captor.getValue();
+    }
+
+    /** Registro efectivamente persistido, para comprobar qué quedó asociado. */
     private com.condor.nexussoft.timeclock.attendance.domain.AttendanceRecord savedRecord() {
         var captor = org.mockito.ArgumentCaptor
                 .forClass(com.condor.nexussoft.timeclock.attendance.domain.AttendanceRecord.class);
@@ -340,7 +354,7 @@ class RegisterAttendanceServiceTest {
 
         AttendanceResult result = service.register(tenantId, userId, offlineCmd(punchedAt));
 
-        verify(schedulePolicy).check(tenantId, userId, siteId, punchedAt);
+        verify(schedulePolicy).check(tenantId, userId, siteId, AttendanceEventType.ENTRADA, punchedAt);
         assertThat(result.flags()).contains("OFFLINE_DEVICE_TIME_USED");
     }
 
@@ -353,7 +367,7 @@ class RegisterAttendanceServiceTest {
 
         AttendanceResult result = service.register(tenantId, userId, offlineCmd(tooOld));
 
-        verify(schedulePolicy).check(tenantId, userId, siteId, serverNow);
+        verify(schedulePolicy).check(tenantId, userId, siteId, AttendanceEventType.ENTRADA, serverNow);
         assertThat(result.flags()).doesNotContain("OFFLINE_DEVICE_TIME_USED");
     }
 
@@ -558,13 +572,74 @@ class RegisterAttendanceServiceTest {
     @Test
     void fueraDeVentanaDeTurno_esRechazada() {
         baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
-        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any()))
+        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
                 .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow());
 
         AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));
 
         assertThat(result.status()).isEqualTo("REJECTED");
         assertThat(result.rejectionReason()).isEqualTo("OUT_OF_SCHEDULE");
+        assertThat(result.flags()).contains("OUT_OF_SCHEDULE");
+    }
+
+    /**
+     * La ventana gobierna cuándo se puede ABRIR la jornada, así que no puede impedir cerrarla:
+     * rechazar la SALIDA dejaba al colaborador con la jornada abierta hasta que caducara (RN-12).
+     * Se acepta, y la bandera deja constancia para el supervisor.
+     */
+    @Test
+    void salidaFueraDeVentana_seAceptaConBandera() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
+
+        AttendanceResult result = service.register(tenantId, userId, cmd("SALIDA"));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(result.rejectionReason()).isNull();
+        assertThat(result.flags()).contains("OUT_OF_SCHEDULE");
+    }
+
+    /** Lo mismo para los intermedios: ocurren dentro de una jornada ya abierta. */
+    @Test
+    void eventoIntermedioFueraDeVentana_seAceptaConBandera() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        allEventTypesEnabledStub();
+        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
+
+        AttendanceResult result = service.register(tenantId, userId, cmd("INICIO_DESCANSO"));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(result.flags()).contains("OUT_OF_SCHEDULE");
+    }
+
+    /** La marca aceptada fuera de ventana llega a incidencias por el evento, no por la bandera. */
+    @Test
+    void salidaFueraDeVentana_publicaElEventoMarcadoFueraDeVentana() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow());
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
+
+        service.register(tenantId, userId, cmd("SALIDA"));
+
+        assertThat(publishedRegistered().outOfWindow()).isTrue();
+    }
+
+    @Test
+    void marcaDentroDeVentana_publicaElEventoSinLaSenal() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        withinWindowStub(0);
+
+        service.register(tenantId, userId, cmd("ENTRADA"));
+
+        assertThat(publishedRegistered().outOfWindow()).isFalse();
     }
 
     @Test
@@ -578,6 +653,31 @@ class RegisterAttendanceServiceTest {
         assertThat(result.rejectionReason()).isNull();
         assertThat(result.minutesLate()).isEqualTo(12);
         assertThat(result.flags()).contains("LATE");
+    }
+
+    /**
+     * El turno que decidió la ventana queda grabado en la marca: sin él, un retardo no es auditable
+     * —no se puede saber contra qué inicio se midió— y el reporte no puede partir el día por turno.
+     */
+    @Test
+    void turnoQueCasoLaVentana_quedaEnElRegistro() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        withinWindowStub(12);
+
+        service.register(tenantId, userId, cmd("ENTRADA"));
+
+        assertThat(savedRecord().shiftId()).isEqualTo(shiftId);
+    }
+
+    /** Sin turno vigente no hay nada que atribuir, y la columna queda vacía en vez de inventada. */
+    @Test
+    void sinTurnoVigente_elRegistroNoLlevaTurno() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        noScheduleStub();
+
+        service.register(tenantId, userId, cmd("ENTRADA"));
+
+        assertThat(savedRecord().shiftId()).isNull();
     }
 
     @Test
