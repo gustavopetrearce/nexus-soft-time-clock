@@ -20,7 +20,9 @@ spring:
       ddl-auto: none                # Flyway es dueño del esquema (tipos PostGIS/citext).
     properties:
       hibernate:
-        jdbc.time_zone: UTC
+        # Aquí NO va jdbc.time_zone. Solo sirve para columnas `timestamp` sin zona y el esquema no
+        # tiene ninguna (todo es timestamptz); a cambio desplazaba las dos únicas columnas `time`,
+        # shifts.start_time/end_time, por el huso de la JVM. Ver addendum de ADR-003.
         format_sql: false
 
   flyway:

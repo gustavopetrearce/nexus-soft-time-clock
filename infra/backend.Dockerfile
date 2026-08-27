@@ -24,4 +24,8 @@ RUN groupadd -r nexus && useradd -r -g nexus nexus
 COPY --from=build /workspace/backend/bootstrap/target/bootstrap-*.jar app.jar
 USER nexus
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+# El huso se clava aquí y no en una variable TZ: scripts/redeploy.sh reemplaza el entorno del stack
+# entero en cada redespliegue. Hasta ahora la app corría en UTC por accidente de la imagen base, y de
+# ese accidente dependen los LocalDate.now() sin zona (fecha de incidencia, antigüedad, rangos por
+# defecto de los reportes). ADR-003: la hora de servidor es UTC.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-Duser.timezone=UTC", "-jar", "app.jar"]
