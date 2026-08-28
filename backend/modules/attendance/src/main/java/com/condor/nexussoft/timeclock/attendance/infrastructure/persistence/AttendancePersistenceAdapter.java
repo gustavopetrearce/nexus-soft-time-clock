@@ -32,7 +32,7 @@ public class AttendancePersistenceAdapter implements AttendanceRepositoryPort {
     public void save(AttendanceRecord r) {
         Evidence e = r.evidence();
         jpa.save(new AttendanceRecordJpaEntity(
-                r.id(), r.tenantId(), r.serverTime(), r.userId(), r.workSiteId(),
+                r.id(), r.tenantId(), r.serverTime(), r.userId(), r.workSiteId(), r.shiftId(),
                 r.eventType().name(), r.status().name(),
                 r.rejectionReason() == null ? null : r.rejectionReason().name(),
                 GeoSupport.point(r.gps().latitude(), r.gps().longitude()),

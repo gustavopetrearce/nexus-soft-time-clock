@@ -26,6 +26,18 @@
         <springdoc.version>2.6.0</springdoc.version>
         <archunit.version>1.3.0</archunit.version>
         <minio.version>8.5.12</minio.version>
+
+        <!--
+            Las pruebas corren en un huso DELIBERADAMENTE distinto de UTC. Producción y CI arrancan
+            en UTC, así que un acoplamiento al huso ambiente ahí no se ve: así se coló que Hibernate
+            leyera `shifts.start_time` desplazada (ver addendum de ADR-003). Con un huso hostil, ese
+            fallo revienta en el pipeline.
+        -->
+        <test.timezone>America/Mexico_City</test.timezone>
+        <!-- Hueco para argumentos de JVM puntuales (p. ej. el PostGIS externo de PostgisIntegrationTest). -->
+        <test.extraArgs/>
+        <!-- Valor por defecto de @{argLine}: jacoco:prepare-agent lo sobrescribe con su agente. -->
+        <argLine/>
     </properties>
 
     <!-- Módulos foundation + bounded contexts (se añaden en sus iteraciones). -->
@@ -191,6 +203,25 @@
         </plugins>
         <pluginManagement>
             <plugins>
+                <!--
+                    Huso de las pruebas (ver ${test.timezone}). @{argLine} es evaluación tardía:
+                    recoge el agente que inyecta jacoco:prepare-agent en la propiedad `argLine`.
+                -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <argLine>@{argLine} -Duser.timezone=${test.timezone} ${test.extraArgs}</argLine>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <configuration>
+                        <argLine>@{argLine} -Duser.timezone=${test.timezone} ${test.extraArgs}</argLine>
+                    </configuration>
+                </plugin>
+
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>

@@ -8,7 +8,10 @@
 - `GET /api/v1/audit` (`audit:read`) — consulta paginada de la bitácora del tenant (RF-12).
 
 ## Incidents (BC-09) — `backend/modules/incidents/`
-- `IncidentEventListener` escucha `AttendanceRejected` → **regla de negocio automatizada**: abre una incidencia `REGISTRO_RECHAZADO` para revisión (RF-09).
+- `IncidentEventListener` implementa tres **reglas de negocio automatizadas** (RF-09):
+  - `AttendanceRejected` → incidencia `REGISTRO_RECHAZADO` (prioridad `MEDIUM`).
+  - `AttendanceRegistered` con ENTRADA y retardo → incidencia `RETARDO` (RN-16, prioridad `LOW`). El registro sigue aceptado.
+  - `AttendanceRegistered` marcado fuera de la ventana del turno → incidencia `FUERA_DE_VENTANA` (RN-15, prioridad `LOW`, migración **V24**). La ventana solo rechaza la ENTRADA, así que una SALIDA tardía se acepta y cierra la jornada; esta incidencia es la señal que le queda al supervisor. Es excluyente con `RETARDO`, que exige estar *dentro* de la ventana.
 - `IncidentService`: listado filtrable por estado y **resolución** (aprobar/rechazar/resolver) con transición de estado validada (solo desde `OPEN`) y registro del resolutor + fecha.
 - `GET /api/v1/incidents?status=` y `PATCH /api/v1/incidents/{id}/resolve` (`incident:approve`).
 

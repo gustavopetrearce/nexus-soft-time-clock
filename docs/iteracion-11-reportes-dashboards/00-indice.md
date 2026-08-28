@@ -6,6 +6,12 @@
 - **Dashboard** (`dashboard:read`): `GET /api/v1/dashboard/summary` → KPIs del tenant (asistencias/rechazos hoy, incidencias abiertas, usuarios activos, centros activos) vía consultas de lectura (`JdbcTemplate`).
 - **Reportes** (`report:export`): `GET /api/v1/reports/attendance?from&to&status&format` → descarga el reporte de asistencia con filtros en **CSV** (nativo), **Excel** (Apache POI) o **PDF** (OpenPDF). Datos obtenidos con `ST_Y/ST_X` para lat/lng.
 - Columnas centralizadas (`ReportColumns`, DRY) reutilizadas por los tres exportadores.
+- **Agregados en JSON** (`report:export`), añadidos después de esta iteración y que el cliente filtra/ordena/exporta:
+  - `GET /api/v1/reports/attendance-summary?from&to` → una fila por colaborador: días esperados/asistidos, incidencias, horas trabajadas y extra, y el centro donde acumuló **más horas**.
+  - `GET /api/v1/reports/attendance-records?from&to&status` → una fila por marcación.
+  - `GET /api/v1/reports/attendance-events?from&to` → una fila por evento, con evidencia y datos de GPS.
+  - `GET /api/v1/reports/hours-by-site?from&to` → **desglose de horas por centro**: un colaborador aparece tantas veces como sedes en las que trabajó. Responde a dónde se trabajaron las horas cuando `CAMBIO_SITIO` parte la jornada entre varios centros.
+- La unidad de cálculo de horas es la **jornada**, no el día natural, y dentro de ella el **tramo** por centro. Ambos agregados salen de los mismos CTEs (`JourneySegmentsSql`), así que la suma del desglose cuadra con el total del resumen. Detalle y decisiones en [el caso de uso de dos turnos](../iteracion-08-registro-asistencia/02-caso-de-uso-dos-turnos.md).
 
 ## Realtime (BC-13) — `backend/modules/realtime/`
 - **WebSocket STOMP** (ADR-011): endpoint `/ws` (SockJS), broker `/topic`.

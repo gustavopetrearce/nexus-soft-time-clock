@@ -5,6 +5,8 @@ import com.condor.nexussoft.timeclock.reporting.application.AttendanceRecordRow;
 import com.condor.nexussoft.timeclock.reporting.application.AttendanceReportService;
 import com.condor.nexussoft.timeclock.reporting.application.AttendanceSummaryRow;
 import com.condor.nexussoft.timeclock.reporting.application.AttendanceSummaryService;
+import com.condor.nexussoft.timeclock.reporting.application.SiteHoursRow;
+import com.condor.nexussoft.timeclock.reporting.application.SiteHoursService;
 import com.condor.nexussoft.timeclock.reporting.application.ReportRow;
 import com.condor.nexussoft.timeclock.reporting.infrastructure.export.CsvExporter;
 import com.condor.nexussoft.timeclock.reporting.infrastructure.export.ExcelExporter;
@@ -32,14 +34,17 @@ public class ReportController {
 
     private final AttendanceReportService report;
     private final AttendanceSummaryService summary;
+    private final SiteHoursService siteHours;
     private final CsvExporter csv;
     private final ExcelExporter excel;
     private final PdfExporter pdf;
 
     public ReportController(AttendanceReportService report, AttendanceSummaryService summary,
+                            SiteHoursService siteHours,
                             CsvExporter csv, ExcelExporter excel, PdfExporter pdf) {
         this.report = report;
         this.summary = summary;
+        this.siteHours = siteHours;
         this.csv = csv;
         this.excel = excel;
         this.pdf = pdf;
@@ -76,6 +81,23 @@ public class ReportController {
         LocalDate toDate = to != null && !to.isBlank() ? LocalDate.parse(to) : LocalDate.now();
         LocalDate fromDate = from != null && !from.isBlank() ? LocalDate.parse(from) : toDate.minusDays(29);
         return summary.summary(TenantContext.require(), fromDate, toDate);
+    }
+
+    /**
+     * Desglose de horas por centro de trabajo (JSON): un colaborador aparece tantas veces como centros
+     * en los que trabajó dentro del rango. Es el detalle que el reporte agregado resume en una sola
+     * columna, y responde a dónde se trabajaron las horas cuando la jornada pasa por varias sedes con
+     * {@code CAMBIO_SITIO}. {@code from}/{@code to} son fechas {@code yyyy-MM-dd} (por defecto,
+     * últimos 30 días).
+     */
+    @GetMapping("/hours-by-site")
+    public List<SiteHoursRow> hoursByWorkSite(
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+
+        LocalDate toDate = to != null && !to.isBlank() ? LocalDate.parse(to) : LocalDate.now();
+        LocalDate fromDate = from != null && !from.isBlank() ? LocalDate.parse(from) : toDate.minusDays(29);
+        return siteHours.byWorkSite(TenantContext.require(), fromDate, toDate);
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.attendance.domain;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -16,9 +17,46 @@ public final class ScheduleWindowValidator {
     private ScheduleWindowValidator() {
     }
 
+    /**
+     * Una aparición concreta del turno en el calendario: sus dos bordes ya fechados. Es lo que hace
+     * falta para decidir <b>a qué turno pertenece</b> una marca cuando dos ventanas se solapan.
+     */
+    public record Occurrence(LocalDateTime start, LocalDateTime end) {
+
+        /**
+         * Distancia de la marca al punto del turno que le corresponde según el tipo de evento: una
+         * ENTRADA se mide contra el inicio, una SALIDA contra el fin, y los intermedios contra el
+         * cuerpo del turno (0 si caen dentro). Es el criterio de desempate entre turnos solapados:
+         * gana el más cercano.
+         */
+        public long referenceDistanceMinutes(AttendanceEventType eventType, LocalDateTime now) {
+            return switch (eventType) {
+                case ENTRADA -> absMinutes(start, now);
+                case SALIDA -> absMinutes(end, now);
+                case INICIO_DESCANSO, FIN_DESCANSO, CAMBIO_SITIO -> distanceToBody(now);
+            };
+        }
+
+        /** Si la ocurrencia ya había empezado: desempata de forma estable hacia el turno en curso. */
+        public boolean startedBy(LocalDateTime now) {
+            return !now.isBefore(start);
+        }
+
+        private long distanceToBody(LocalDateTime now) {
+            if (now.isBefore(start)) {
+                return absMinutes(start, now);
+            }
+            return now.isAfter(end) ? absMinutes(end, now) : 0L;
+        }
+
+        private static long absMinutes(LocalDateTime a, LocalDateTime b) {
+            return Math.abs(Duration.between(a, b).toMinutes());
+        }
+    }
+
     public static boolean withinWindow(LocalTime start, LocalTime end, boolean crossesMidnight,
                                        int windowBeforeMin, int windowAfterMin, LocalDateTime now) {
-        return matchedStart(start, end, crossesMidnight, windowBeforeMin, windowAfterMin, now).isPresent();
+        return matchedOccurrence(start, end, crossesMidnight, windowBeforeMin, windowAfterMin, now).isPresent();
     }
 
     /**
@@ -28,23 +66,31 @@ public final class ScheduleWindowValidator {
      */
     public static Optional<LocalDateTime> matchedStart(LocalTime start, LocalTime end, boolean crossesMidnight,
                                                        int windowBeforeMin, int windowAfterMin, LocalDateTime now) {
-        LocalDate today = now.toLocalDate();
-        if (inWindowForStartDate(today, start, end, crossesMidnight, windowBeforeMin, windowAfterMin, now)) {
-            return Optional.of(today.atTime(start));
-        }
-        if (crossesMidnight && inWindowForStartDate(today.minusDays(1), start, end, true,
-                windowBeforeMin, windowAfterMin, now)) {
-            return Optional.of(today.minusDays(1).atTime(start));
-        }
-        return Optional.empty();
+        return matchedOccurrence(start, end, crossesMidnight, windowBeforeMin, windowAfterMin, now)
+                .map(Occurrence::start);
     }
 
-    private static boolean inWindowForStartDate(LocalDate startDate, LocalTime start, LocalTime end,
-                                                boolean crossesMidnight, int beforeMin, int afterMin,
-                                                LocalDateTime now) {
-        LocalDateTime windowStart = startDate.atTime(start).minusMinutes(beforeMin);
+    /** La ocurrencia cuya ventana contiene a {@code now}, con sus dos bordes fechados. */
+    public static Optional<Occurrence> matchedOccurrence(LocalTime start, LocalTime end, boolean crossesMidnight,
+                                                        int windowBeforeMin, int windowAfterMin, LocalDateTime now) {
+        LocalDate today = now.toLocalDate();
+        Optional<Occurrence> deHoy = occurrenceFor(today, start, end, crossesMidnight,
+                windowBeforeMin, windowAfterMin, now);
+        if (deHoy.isPresent() || !crossesMidnight) {
+            return deHoy;
+        }
+        return occurrenceFor(today.minusDays(1), start, end, true, windowBeforeMin, windowAfterMin, now);
+    }
+
+    private static Optional<Occurrence> occurrenceFor(LocalDate startDate, LocalTime start, LocalTime end,
+                                                      boolean crossesMidnight, int beforeMin, int afterMin,
+                                                      LocalDateTime now) {
+        LocalDateTime occurrenceStart = startDate.atTime(start);
         LocalDate endDate = crossesMidnight ? startDate.plusDays(1) : startDate;
-        LocalDateTime windowEnd = endDate.atTime(end).plusMinutes(afterMin);
-        return !now.isBefore(windowStart) && !now.isAfter(windowEnd);
+        LocalDateTime occurrenceEnd = endDate.atTime(end);
+
+        boolean dentro = !now.isBefore(occurrenceStart.minusMinutes(beforeMin))
+                && !now.isAfter(occurrenceEnd.plusMinutes(afterMin));
+        return dentro ? Optional.of(new Occurrence(occurrenceStart, occurrenceEnd)) : Optional.empty();
     }
 }

@@ -15,6 +15,8 @@ public class AttendanceRecord {
     private final Instant serverTime;
     private final UUID userId;
     private final UUID workSiteId;
+    /** Turno al que se atribuye la marca (RN-15); nulo si ninguno la reclama. */
+    private final UUID shiftId;
     private final AttendanceEventType eventType;
     private final AttendanceStatus status;
     private final RejectionReason rejectionReason;
@@ -30,7 +32,7 @@ public class AttendanceRecord {
     private final Evidence evidence;
     private final String validationsJson;
 
-    public AttendanceRecord(UUID id, UUID tenantId, Instant serverTime, UUID userId, UUID workSiteId,
+    public AttendanceRecord(UUID id, UUID tenantId, Instant serverTime, UUID userId, UUID workSiteId, UUID shiftId,
                             AttendanceEventType eventType, AttendanceStatus status, RejectionReason rejectionReason,
                             GpsFix gps, Double distanceToSiteM, String deviceId, Instant deviceTime,
                             Integer timeSkewSeconds, String qrNonce, UUID operationUuid, String source,
@@ -40,6 +42,7 @@ public class AttendanceRecord {
         this.serverTime = serverTime;
         this.userId = userId;
         this.workSiteId = workSiteId;
+        this.shiftId = shiftId;
         this.eventType = eventType;
         this.status = status;
         this.rejectionReason = rejectionReason;
@@ -65,6 +68,7 @@ public class AttendanceRecord {
     public Instant serverTime() { return serverTime; }
     public UUID userId() { return userId; }
     public UUID workSiteId() { return workSiteId; }
+    public UUID shiftId() { return shiftId; }
     public AttendanceEventType eventType() { return eventType; }
     public AttendanceStatus status() { return status; }
     public RejectionReason rejectionReason() { return rejectionReason; }

@@ -74,7 +74,7 @@ public class SchedulingPersistenceAdapter implements ScheduleRepositoryPort, Shi
 
     @Override
     public List<ShiftAssignment> findByUserAndTenant(UUID userId, UUID tenantId) {
-        return assignmentRepo.findByUserIdAndTenantId(userId, tenantId).stream().map(this::toAssignment).toList();
+        return assignmentRepo.findByUserIdAndTenantIdOrderByValidFromDescIdAsc(userId, tenantId).stream().map(this::toAssignment).toList();
     }
 
     private Schedule toSchedule(ScheduleJpaEntity e) {
