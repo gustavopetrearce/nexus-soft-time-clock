@@ -5,13 +5,13 @@ import com.condor.nexussoft.timeclock.attendance.domain.port.out.WorkSitePolicyP
 import com.condor.nexussoft.timeclock.organization.domain.GeoPoint;
 import com.condor.nexussoft.timeclock.organization.domain.WorkSite;
 import com.condor.nexussoft.timeclock.organization.domain.port.in.WorkSiteManagementUseCase;
-import com.condor.nexussoft.timeclock.shared.domain.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,8 +39,8 @@ class WorkSitePolicyAdapterTest {
     }
 
     private void site(Boolean requirePhoto, Integer accuracy) {
-        when(workSites.get(tenantId, siteId)).thenReturn(new WorkSite(siteId, tenantId, "C1", "Centro",
-                null, new GeoPoint(19.4, -99.1), null, accuracy, requirePhoto, null, WorkSite.Status.ACTIVE));
+        when(workSites.find(tenantId, siteId)).thenReturn(Optional.of(new WorkSite(siteId, tenantId, "C1", "Centro",
+                null, new GeoPoint(19.4, -99.1), null, accuracy, requirePhoto, null, WorkSite.Status.ACTIVE)));
     }
 
     @Test
@@ -87,11 +87,16 @@ class WorkSitePolicyAdapterTest {
         assertThat(adapter.find(tenantId, siteId).gpsAccuracyMaxM()).isEqualTo(10);
     }
 
-    /** Un id de centro inválido no puede servir para relajar la política del tenant. */
+    /**
+     * Un id de centro inválido —incluido el de un QR de otra organización— no puede servir para relajar
+     * la política del tenant. Se consulta con {@code find}, que devuelve vacío en vez de lanzar: la
+     * variante que lanza marcaba rollback-only la transacción del registro y su commit fallaba después
+     * con {@code UnexpectedRollbackException}, dejando la marcación sin persistir.
+     */
     @Test
     void centroInexistente_conservaLaPoliticaDeLaEmpresa() {
         company(true, 30);
-        when(workSites.get(tenantId, siteId)).thenThrow(new ResourceNotFoundException("Centro", siteId));
+        when(workSites.find(tenantId, siteId)).thenReturn(Optional.empty());
 
         WorkSitePolicyPort.SitePolicy policy = adapter.find(tenantId, siteId);
 

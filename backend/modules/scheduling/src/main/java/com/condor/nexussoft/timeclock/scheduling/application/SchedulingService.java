@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -57,6 +58,12 @@ public class SchedulingService implements SchedulingUseCase {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Schedule> findSchedule(UUID tenantId, UUID id) {
+        return schedules.findByIdAndTenant(id, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Paged<Schedule> listSchedules(UUID tenantId, int page, int size, String search) {
         return schedules.findAllByTenant(tenantId, page, size, search);
     }
@@ -86,6 +93,12 @@ public class SchedulingService implements SchedulingUseCase {
     public Shift getShift(UUID tenantId, UUID shiftId) {
         return shifts.findByIdAndTenant(shiftId, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Turno", shiftId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Shift> findShift(UUID tenantId, UUID shiftId) {
+        return shifts.findByIdAndTenant(shiftId, tenantId);
     }
 
     @Override

@@ -2,9 +2,7 @@ package com.condor.nexussoft.timeclock.attendance.infrastructure.integration;
 
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.CompanyPolicyPort;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.WorkSitePolicyPort;
-import com.condor.nexussoft.timeclock.organization.domain.WorkSite;
 import com.condor.nexussoft.timeclock.organization.domain.port.in.WorkSiteManagementUseCase;
-import com.condor.nexussoft.timeclock.shared.domain.ResourceNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -30,18 +28,18 @@ public class WorkSitePolicyAdapter implements WorkSitePolicyPort {
     @Override
     public SitePolicy find(UUID tenantId, UUID workSiteId) {
         CompanyPolicyPort.CompanyPolicy company = companyPolicy.find(tenantId);
-        try {
-            WorkSite site = workSites.get(tenantId, workSiteId);
-            return new SitePolicy(
-                    site.gpsAccuracyMaxM() != null ? site.gpsAccuracyMaxM() : company.defaultGpsAccuracyMaxM(),
-                    site.requirePhoto() != null ? site.requirePhoto() : company.requirePhoto(),
-                    site.requireBiometric() != null ? site.requireBiometric() : company.requireBiometric());
-        } catch (ResourceNotFoundException e) {
-            // Un centro inexistente ya deriva en otros rechazos (QR/geocerca). Se devuelve la política
-            // de la empresa —no una permisiva— para que un id inválido no relaje sus exigencias, y se
-            // evita lanzar aquí para no marcar la transacción como rollback-only.
-            return new SitePolicy(company.defaultGpsAccuracyMaxM(),
-                    company.requirePhoto(), company.requireBiometric());
-        }
+        // Búsqueda no excepcional: el centro puede no existir o ser de otro tenant (QR ajeno), y eso ya
+        // deriva en otros rechazos (QR/geocerca). Pedirlo con el `get` que lanza no vale ni capturando la
+        // excepción: al ser @Transactional, Spring marca rollback-only la transacción compartida del
+        // registro antes de que el catch la vea, y el commit falla con UnexpectedRollbackException.
+        // Sin centro se devuelve la política de la empresa —no una permisiva— para que un id inválido
+        // no relaje sus exigencias.
+        return workSites.find(tenantId, workSiteId)
+                .map(site -> new SitePolicy(
+                        site.gpsAccuracyMaxM() != null ? site.gpsAccuracyMaxM() : company.defaultGpsAccuracyMaxM(),
+                        site.requirePhoto() != null ? site.requirePhoto() : company.requirePhoto(),
+                        site.requireBiometric() != null ? site.requireBiometric() : company.requireBiometric()))
+                .orElseGet(() -> new SitePolicy(company.defaultGpsAccuracyMaxM(),
+                        company.requirePhoto(), company.requireBiometric()));
     }
 }

@@ -134,6 +134,26 @@ class AppDatabase extends _$AppDatabase {
     return rows.length;
   }
 
+  /// Estado de la cola para la UI. Además del contador expone las operaciones que quedaron en
+  /// firme sin registrarse y el último motivo real de fallo: ese motivo ya se guardaba en
+  /// `last_error`, pero al no mostrarse en ninguna pantalla, un rechazo del servidor era
+  /// indistinguible de una falta de cobertura.
+  Future<SyncQueueStatus> queueStatus() async {
+    final rows = await select(pendingAttendanceOps).get();
+    bool hasIssue(PendingAttendanceOp r) =>
+        (r.status == 'PENDING' || r.status == 'ERROR') &&
+        r.lastError != null &&
+        r.lastError != 'OFFLINE';
+
+    final withIssue = rows.where(hasIssue).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return SyncQueueStatus(
+      pending: rows.where((r) => r.status == 'PENDING').length,
+      failed: rows.where((r) => r.status == 'ERROR').length,
+      lastIssue: withIssue.isEmpty ? null : withIssue.first.lastError,
+    );
+  }
+
   /// Vacía la cola local completa. Se usa al cerrar sesión para que las marcaciones de un
   /// usuario no se atribuyan al siguiente (la tabla es global del dispositivo, sin scope de usuario).
   /// Borra también las fotos pendientes: son datos personales del usuario que cierra sesión y,
@@ -177,6 +197,20 @@ class AppDatabase extends _$AppDatabase {
       updates: {pendingAttendanceOps},
     );
   }
+}
+
+/// Resumen de la cola local de marcaciones para mostrarlo en pantalla.
+class SyncQueueStatus {
+  const SyncQueueStatus({required this.pending, required this.failed, this.lastIssue});
+
+  /// Operaciones aún por enviar.
+  final int pending;
+
+  /// Operaciones que el servidor rechazó en firme y no se reintentarán.
+  final int failed;
+
+  /// Último motivo de fallo distinto de «sin conexión», o `null` si no lo hubo.
+  final String? lastIssue;
 }
 
 LazyDatabase _openConnection() {

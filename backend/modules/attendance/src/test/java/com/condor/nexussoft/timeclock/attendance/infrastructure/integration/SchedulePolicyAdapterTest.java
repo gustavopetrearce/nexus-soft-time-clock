@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,8 +54,9 @@ class SchedulePolicyAdapterTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(scheduling.getSchedule(eqTenant(), any()))
-                .thenReturn(new Schedule(scheduleId, tenantId, "H1", "Horario", "UTC", Schedule.Status.ACTIVE));
+        lenient().when(scheduling.findSchedule(eqTenant(), any()))
+                .thenReturn(Optional.of(
+                        new Schedule(scheduleId, tenantId, "H1", "Horario", "UTC", Schedule.Status.ACTIVE)));
     }
 
     @Test
@@ -202,7 +204,7 @@ class SchedulePolicyAdapterTest {
 
     private void stubShifts(Shift... shifts) {
         for (Shift s : shifts) {
-            lenient().when(scheduling.getShift(tenantId, s.id())).thenReturn(s);
+            lenient().when(scheduling.findShift(tenantId, s.id())).thenReturn(Optional.of(s));
         }
     }
 

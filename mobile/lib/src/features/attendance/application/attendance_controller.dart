@@ -10,16 +10,38 @@ import '../data/attendance_sync_service.dart';
 import '../domain/attendance_operation.dart';
 
 class AttendanceUiState {
-  const AttendanceUiState({this.busy = false, this.message, this.pendingCount = 0});
+  const AttendanceUiState({
+    this.busy = false,
+    this.message,
+    this.pendingCount = 0,
+    this.failedCount = 0,
+    this.lastIssue,
+  });
 
   final bool busy;
   final String? message;
   final int pendingCount;
 
-  AttendanceUiState copyWith({bool? busy, String? message, int? pendingCount}) => AttendanceUiState(
+  /// Marcaciones que el servidor rechazó en firme: no se reintentan y hay que actuar sobre ellas.
+  final int failedCount;
+
+  /// Último motivo de fallo distinto de «sin conexión», para no disfrazar de falta de red lo
+  /// que en realidad fue una respuesta del servidor.
+  final String? lastIssue;
+
+  AttendanceUiState copyWith({
+    bool? busy,
+    String? message,
+    int? pendingCount,
+    int? failedCount,
+    String? lastIssue,
+  }) =>
+      AttendanceUiState(
         busy: busy ?? this.busy,
         message: message,
         pendingCount: pendingCount ?? this.pendingCount,
+        failedCount: failedCount ?? this.failedCount,
+        lastIssue: lastIssue ?? this.lastIssue,
       );
 }
 
@@ -83,14 +105,19 @@ class AttendanceController extends Notifier<AttendanceUiState> {
       evidencePath: evidencePath,
       evidenceSha256: evidenceSha256,
     );
-    await ref.read(attendanceSyncServiceProvider).syncPending();
-    await _refreshCount();
 
-    // El mensaje refleja el veredicto autoritativo del servidor aplicado por el sync a la
-    // fila local (HU-10 CA3, HU-15 CA4): aceptado, rechazado con motivo, o aún pendiente si
-    // no hubo red. Se fija DESPUÉS de _refreshCount porque copyWith resetea message en cada llamada.
-    final row = await db.findByUuid(op.operationUuid);
-    state = state.copyWith(busy: false, message: _messageFor(row, position.accuracy));
+    // La marcación ya está a salvo en la cola; a partir de aquí nada puede dejar la pantalla
+    // girando ni sin mensaje, así que el veredicto se fija siempre, también si sincronizar falla.
+    try {
+      await ref.read(attendanceSyncServiceProvider).syncPending();
+    } finally {
+      await _refreshCount();
+      // El mensaje refleja el veredicto autoritativo del servidor aplicado por el sync a la
+      // fila local (HU-10 CA3, HU-15 CA4). Se fija DESPUÉS de _refreshCount porque copyWith
+      // resetea message en cada llamada.
+      final row = await db.findByUuid(op.operationUuid);
+      state = state.copyWith(busy: false, message: _messageFor(row, position.accuracy));
+    }
   }
 
   /// Traduce el estado final de la operación (tras sincronizar) a un mensaje para el colaborador.
@@ -112,10 +139,36 @@ class AttendanceController extends Notifier<AttendanceUiState> {
               'Muévete a un lugar abierto (sal al exterior) y vuelve a intentarlo.';
         }
         return 'Registro rechazado: ${_rejectionLabel(reason)}.';
+      case 'ERROR':
+        // El servidor contestó y rechazó la operación en firme: anunciarlo como falta de
+        // conexión dejaba al colaborador esperando una sincronización que nunca iba a ocurrir.
+        return 'No se pudo registrar: ${_failureLabel(row?.lastError)}.';
       default:
-        // PENDING/ERROR o fila ausente: no se perdió, se reintentará al recuperar conexión.
-        return 'Registro guardado. Se sincronizará cuando haya conexión.';
+        // PENDING o fila ausente: no se perdió, se reintentará.
+        final reason = row?.lastError;
+        if (reason == null || reason == AttendanceSyncService.offlineMarker) {
+          return 'Registro guardado. Se sincronizará cuando haya conexión.';
+        }
+        return 'Registro guardado, pero el servidor no lo aceptó aún '
+            '(${_failureLabel(reason)}). Se reintentará.';
     }
+  }
+
+  /// Motivo de un envío fallido (no de un rechazo de negocio) en texto para el colaborador.
+  String _failureLabel(String? reason) {
+    if (reason == null) {
+      return 'motivo desconocido';
+    }
+    if (reason.startsWith('HTTP_401') || reason.startsWith('HTTP_403')) {
+      return 'tu cuenta no tiene permiso para registrar asistencia';
+    }
+    if (reason == 'SYNC_ERROR') {
+      return 'error interno del servidor';
+    }
+    if (reason.startsWith('HTTP_') || reason.startsWith('evidencia:')) {
+      return reason;
+    }
+    return _rejectionLabel(reason);
   }
 
   /// Motivo de rechazo (código del backend, RejectionReason) a texto en español.
@@ -156,14 +209,32 @@ class AttendanceController extends Notifier<AttendanceUiState> {
 
   Future<void> syncNow() async {
     state = state.copyWith(busy: true);
-    await ref.read(attendanceSyncServiceProvider).syncPending();
-    await _refreshCount();
-    state = state.copyWith(busy: false, message: 'Sincronización completada.');
+    try {
+      await ref.read(attendanceSyncServiceProvider).syncPending();
+    } finally {
+      await _refreshCount();
+      // No se anuncia éxito a ciegas: si algo quedó sin subir, el mensaje dice qué pasó.
+      final issue = state.lastIssue;
+      final message = state.pendingCount == 0 && state.failedCount == 0
+          ? 'Sincronización completada.'
+          : issue == null
+              ? 'Quedan ${state.pendingCount} operaciones por sincronizar.'
+              : 'No se pudo sincronizar: ${_failureLabel(issue)}.';
+      state = state.copyWith(busy: false, message: message);
+    }
   }
 
   Future<void> _refreshCount() async {
-    final count = await ref.read(appDatabaseProvider).pendingCount();
-    state = state.copyWith(pendingCount: count);
+    final status = await ref.read(appDatabaseProvider).queueStatus();
+    state = AttendanceUiState(
+      busy: state.busy,
+      message: state.message,
+      pendingCount: status.pending,
+      failedCount: status.failed,
+      // Se reconstruye el estado en vez de usar copyWith porque lastIssue debe poder volver a
+      // null cuando la cola se resuelve; con `??` el motivo antiguo quedaría pegado en pantalla.
+      lastIssue: status.lastIssue,
+    );
   }
 }
 

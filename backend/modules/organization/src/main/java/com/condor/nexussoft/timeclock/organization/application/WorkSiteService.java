@@ -11,6 +11,7 @@ import com.condor.nexussoft.timeclock.shared.domain.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -59,12 +60,18 @@ public class WorkSiteService implements WorkSiteManagementUseCase {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<WorkSite> find(UUID tenantId, UUID id) {
+        return workSites.findByIdAndTenant(id, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Paged<WorkSite> list(UUID tenantId, int page, int size, String search) {
         return workSites.findAllByTenant(tenantId, page, size, search);
     }
 
     private WorkSite requireSite(UUID tenantId, UUID id) {
-        return workSites.findByIdAndTenant(id, tenantId)
+        return find(tenantId, id)
                 .orElseThrow(() -> new ResourceNotFoundException("Centro de trabajo", id));
     }
 }

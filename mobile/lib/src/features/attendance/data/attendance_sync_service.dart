@@ -8,11 +8,23 @@ import '../../../core/db/app_database.dart';
 import '../../../core/network/dio_provider.dart';
 import 'evidence_upload_service.dart';
 
-/// Envía la cola local al backend por lotes y aplica el resultado autoritativo del
-/// servidor a cada operación (RN-53, RN-54). Ante fallo de red, incrementa intentos
-/// y deja PENDING para reintento con backoff (RN-52).
+/// Envía la cola local al backend por lotes y aplica el resultado autoritativo del servidor a cada
+/// operación (RN-53, RN-54).
+///
+/// Distinguir *por qué* falló el envío es parte del contrato: la app no tiene detección de
+/// conectividad, así que si aquí se tratara cualquier fallo como falta de red —como se hacía— un 403
+/// o un error del servidor se quedarían en la cola indefinidamente y se le anunciarían al
+/// colaborador como falta de conexión. Solo un fallo de transporte deja la operación PENDING sin
+/// coste; que el servidor conteste significa que sí había conexión.
 class AttendanceSyncService {
   AttendanceSyncService(this._dio, this._db, this._evidence);
+
+  /// Marca de fallo de transporte; la UI lo traduce a "se sincronizará cuando haya conexión".
+  static const String offlineMarker = 'OFFLINE';
+
+  /// Pasados estos intentos un fallo deja de considerarse transitorio y la operación pasa a ERROR:
+  /// sin esta cota, un error determinista del servidor se reintenta para siempre en silencio.
+  static const int maxAttempts = 5;
 
   final Dio _dio;
   final AppDatabase _db;
@@ -36,46 +48,116 @@ class AttendanceSyncService {
       }
     }
     if (operations.isEmpty) {
-      return;
+      return; // el motivo ya quedó anotado en el last_error de cada operación
     }
 
     try {
-      final response = await _dio.post<Map<String, dynamic>>(
+      // Respuesta sin tipar a propósito: el reintento tras 401 del interceptor resuelve un
+      // `Response<dynamic>`, y pedir aquí `Response<Map<String, dynamic>>` lo convertiría en un
+      // error de cast que escaparía como excepción no-Dio.
+      final response = await _dio.post<dynamic>(
         '/sync/attendance',
         data: {'operations': operations},
       );
-      final results = (response.data!['results'] as List).cast<Map<String, dynamic>>();
+      final body = response.data;
+      final results = body is Map ? body['results'] : null;
+      if (results is! List) {
+        await _retryLater(sent, 'RESPUESTA_INVALIDA');
+        return;
+      }
       for (final r in results) {
-        final uuid = r['operationUuid'] as String;
-        final error = r['error'] as String?;
-        final status = r['status'] as String?;
-        if (error != null) {
-          // Fallo transitorio por operación (RN-54): el servidor pide reintento.
-          // Se mantiene PENDING e incrementa intentos; no se marca ERROR terminal
-          // para no perder el registro fuera de la cola de sincronización (RN-52).
-          await _db.incrementAttempts(uuid, error);
-        } else if (status == 'ACCEPTED') {
-          // Aceptado; si el servidor detectó retardo (RN-16) se anota en la nota para informarlo.
-          final late = r['minutesLate'] as int?;
-          await _db.markStatus(uuid, 'SYNCED', (late != null && late > 0) ? 'LATE:$late' : null);
-          await _discardLocalPhoto(uuid);
-        } else {
-          await _db.markStatus(uuid, 'REJECTED', r['rejectionReason'] as String?);
-          await _discardLocalPhoto(uuid);
+        if (r is Map) {
+          await _applyResult(r);
         }
       }
     } on DioException catch (e) {
-      // Fallo de red/servidor: no se pierde nada; se reintentará.
-      for (final uuid in sent) {
-        await _db.incrementAttempts(uuid, e.message ?? 'network');
+      await _applyTransportFailure(sent, e);
+    } catch (e) {
+      // Nada puede escapar de aquí: el llamador no tiene red de seguridad y una excepción dejaría
+      // la pantalla girando sin mensaje y la operación en la cola sin explicación.
+      await _retryLater(sent, 'ERROR_INESPERADO: $e');
+    }
+  }
+
+  /// Aplica a la fila local el veredicto del servidor para una operación del lote.
+  Future<void> _applyResult(Map<dynamic, dynamic> r) async {
+    final uuid = r['operationUuid'] as String?;
+    if (uuid == null) {
+      return;
+    }
+    final error = r['error'] as String?;
+    final status = r['status'] as String?;
+
+    if (error != null) {
+      // Fallo por operación (RN-54). Puede ser transitorio, así que se reintenta, pero con cota:
+      // un error determinista del servidor no se arregla repitiéndolo.
+      await _retryLater([uuid], error);
+      return;
+    }
+    if (status == 'ACCEPTED') {
+      // Aceptado; si el servidor detectó retardo (RN-16) se anota en la nota para informarlo.
+      final late = r['minutesLate'] as int?;
+      await _db.markStatus(uuid, 'SYNCED', (late != null && late > 0) ? 'LATE:$late' : null);
+      await _discardLocalPhoto(uuid);
+      return;
+    }
+    await _db.markStatus(uuid, 'REJECTED', r['rejectionReason'] as String?);
+    await _discardLocalPhoto(uuid);
+  }
+
+  /// Traduce un [DioException] a estado local: sin respuesta es un fallo de transporte (sin red);
+  /// con respuesta, el servidor contestó y hay que decir con qué código.
+  Future<void> _applyTransportFailure(List<String> uuids, DioException e) async {
+    final status = e.response?.statusCode;
+    if (status == null) {
+      // Sin cota de intentos: estar sin cobertura es una condición normal de la app offline-first
+      // y no debe consumir los reintentos de la operación.
+      for (final uuid in uuids) {
+        await _db.incrementAttempts(uuid, offlineMarker);
+      }
+      return;
+    }
+    final detail = _problemDetail(e.response?.data);
+    final label = detail == null ? 'HTTP_$status' : 'HTTP_$status: $detail';
+    if (_isTerminal(status)) {
+      for (final uuid in uuids) {
+        await _db.markStatus(uuid, 'ERROR', label);
+      }
+      return;
+    }
+    await _retryLater(uuids, label);
+  }
+
+  /// Deja las operaciones PENDING para otro intento, o las cierra como ERROR si ya se agotaron.
+  Future<void> _retryLater(List<String> uuids, String reason) async {
+    for (final uuid in uuids) {
+      await _db.incrementAttempts(uuid, reason);
+      final row = await _db.findByUuid(uuid);
+      if (row != null && row.attempts >= maxAttempts) {
+        await _db.markStatus(uuid, 'ERROR', reason);
       }
     }
+  }
+
+  /// 4xx atribuibles a la petición: repetir el mismo cuerpo daría el mismo resultado. 408 y 429 sí
+  /// se reintentan, y todo 5xx también.
+  bool _isTerminal(int status) => status >= 400 && status < 500 && status != 408 && status != 429;
+
+  /// Mensaje legible de un ProblemDetail (RFC 7807), que es lo que devuelve el backend.
+  String? _problemDetail(dynamic body) {
+    if (body is! Map) {
+      return null;
+    }
+    final detail = body['detail'] ?? body['code'] ?? body['title'];
+    return detail is String && detail.isNotEmpty ? detail : null;
   }
 
   /// Devuelve el payload de la operación listo para enviarse, subiendo antes su foto si hace falta.
   ///
   /// Devuelve `null` si la subida falla: esa operación se queda fuera del lote y se reintenta,
   /// porque enviarla sin evidencia haría que un centro con foto obligatoria la rechace en firme.
+  /// El motivo queda siempre anotado en la fila; antes se salía en silencio y la marcación se
+  /// quedaba pendiente sin que nada explicara por qué.
   Future<Map<String, dynamic>?> _payloadWithEvidence(PendingAttendanceOp op) async {
     final payload = jsonDecode(op.payload) as Map<String, dynamic>;
 
@@ -101,6 +183,7 @@ class AttendanceSyncService {
         contentType: 'image/jpeg',
       );
       if (uploaded == null) {
+        await _retryLater([op.operationUuid], 'evidencia: respuesta vacía del servidor');
         return null;
       }
       await _db.markEvidenceUploaded(op.operationUuid, uploaded.bucket, uploaded.objectKey);
@@ -111,7 +194,10 @@ class AttendanceSyncService {
       }
       return payload;
     } on DioException catch (e) {
-      await _db.incrementAttempts(op.operationUuid, 'evidencia: ${e.message ?? 'red'}');
+      await _applyTransportFailure([op.operationUuid], e);
+      return null;
+    } catch (e) {
+      await _retryLater([op.operationUuid], 'evidencia: $e');
       return null;
     }
   }

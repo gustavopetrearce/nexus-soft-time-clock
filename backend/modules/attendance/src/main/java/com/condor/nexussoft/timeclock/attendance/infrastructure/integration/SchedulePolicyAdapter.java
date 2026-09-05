@@ -3,12 +3,13 @@ package com.condor.nexussoft.timeclock.attendance.infrastructure.integration;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceEventType;
 import com.condor.nexussoft.timeclock.attendance.domain.ScheduleWindowValidator;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.SchedulePolicyPort;
+import com.condor.nexussoft.timeclock.scheduling.domain.Schedule;
 import com.condor.nexussoft.timeclock.scheduling.domain.Shift;
 import com.condor.nexussoft.timeclock.scheduling.domain.ShiftAssignment;
 import com.condor.nexussoft.timeclock.scheduling.domain.port.in.SchedulingUseCase;
-import com.condor.nexussoft.timeclock.shared.domain.ResourceNotFoundException;
 import org.springframework.stereotype.Component;
 
+import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -106,20 +107,28 @@ public class SchedulePolicyAdapter implements SchedulePolicyPort {
         return startedOk && notEnded;
     }
 
+    /**
+     * Zona del horario del turno, con UTC de reserva. Se consulta con la variante que devuelve
+     * {@code Optional}: la que lanza marcaría rollback-only la transacción del registro de asistencia
+     * —aun capturando la excepción aquí— y el commit fallaría con {@code UnexpectedRollbackException}.
+     * El {@code catch} queda solo para una zona horaria mal formada, que sí es un dato corrupto.
+     */
     private ZoneId zoneForShift(UUID tenantId, Shift shift) {
+        String tz = scheduling.findSchedule(tenantId, shift.scheduleId())
+                .map(Schedule::timezone)
+                .orElse(null);
+        if (tz == null || tz.isBlank()) {
+            return FALLBACK_ZONE;
+        }
         try {
-            String tz = scheduling.getSchedule(tenantId, shift.scheduleId()).timezone();
-            return tz == null || tz.isBlank() ? FALLBACK_ZONE : ZoneId.of(tz);
-        } catch (RuntimeException e) {
+            return ZoneId.of(tz);
+        } catch (DateTimeException e) {
             return FALLBACK_ZONE;
         }
     }
 
+    /** Turno ausente (borrado con la asignación viva) → sin restricción horaria, sin excepción. */
     private Shift safeShift(UUID tenantId, UUID shiftId) {
-        try {
-            return scheduling.getShift(tenantId, shiftId);
-        } catch (ResourceNotFoundException e) {
-            return null;
-        }
+        return scheduling.findShift(tenantId, shiftId).orElse(null);
     }
 }

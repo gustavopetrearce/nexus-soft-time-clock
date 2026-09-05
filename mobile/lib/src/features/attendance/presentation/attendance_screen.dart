@@ -73,16 +73,23 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       return;
     }
 
-    // 6) Registrar (GPS → cola local → sincronización) con el token crudo.
-    await ref.read(attendanceControllerProvider.notifier).register(
-          eventType: eventType,
-          workSiteId: workSiteId,
-          qrToken: raw,
-          biometricVerified: biometricOk,
-          evidencePath: evidence?.file.path,
-          evidenceSha256: evidence?.sha256,
-        );
-    final message = ref.read(attendanceControllerProvider).message;
+    // 6) Registrar (GPS → cola local → sincronización) con el token crudo. El try es la última
+    //    red: sin él, un fallo antes de encolar (GPS, identidad del dispositivo, base local) dejaba
+    //    el botón deshabilitado y sin ningún aviso de por qué.
+    String? message;
+    try {
+      await ref.read(attendanceControllerProvider.notifier).register(
+            eventType: eventType,
+            workSiteId: workSiteId,
+            qrToken: raw,
+            biometricVerified: biometricOk,
+            evidencePath: evidence?.file.path,
+            evidenceSha256: evidence?.sha256,
+          );
+      message = ref.read(attendanceControllerProvider).message;
+    } catch (e) {
+      message = 'No se pudo completar el registro: $e';
+    }
     if (mounted && message != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
@@ -162,7 +169,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               ),
               _IntermediateEvents(busy: state.busy, onRegister: _register),
               const SizedBox(height: 24),
-              _PendingStatus(count: state.pendingCount, theme: theme, scheme: scheme),
+              _PendingStatus(
+                count: state.pendingCount,
+                failed: state.failedCount,
+                issue: state.lastIssue,
+                theme: theme,
+                scheme: scheme,
+              ),
             ],
           ),
         ),
@@ -217,38 +230,75 @@ class _IntermediateEvents extends ConsumerWidget {
 
 /// Tarjeta de estado con el número de operaciones aún por sincronizar.
 class _PendingStatus extends StatelessWidget {
-  const _PendingStatus({required this.count, required this.theme, required this.scheme});
+  const _PendingStatus({
+    required this.count,
+    required this.failed,
+    required this.issue,
+    required this.theme,
+    required this.scheme,
+  });
 
   final int count;
+
+  /// Marcaciones que el servidor rechazó en firme; no se reintentan solas.
+  final int failed;
+
+  /// Último motivo real de fallo. Se muestra porque, sin él, un 403 o un error del servidor se
+  /// veían igual que una falta de cobertura y el colaborador esperaba una sincronización que
+  /// nunca iba a llegar.
+  final String? issue;
+
   final ThemeData theme;
   final ColorScheme scheme;
 
   @override
   Widget build(BuildContext context) {
-    final synced = count == 0;
+    final synced = count == 0 && failed == 0;
+    final hasFailures = failed > 0;
+    final accent = synced
+        ? scheme.primary
+        : hasFailures
+            ? scheme.error
+            : scheme.tertiary;
     return Card(
       color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              synced ? Icons.cloud_done_outlined : Icons.cloud_upload_outlined,
-              color: synced ? scheme.primary : scheme.tertiary,
+            Row(
+              children: [
+                Icon(
+                  synced
+                      ? Icons.cloud_done_outlined
+                      : hasFailures
+                          ? Icons.error_outline
+                          : Icons.cloud_upload_outlined,
+                  color: accent,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    hasFailures
+                        ? 'Marcaciones sin registrar'
+                        : 'Operaciones pendientes de sincronizar',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ),
+                Text(
+                  '${hasFailures ? failed : count}',
+                  style: theme.textTheme.titleLarge?.copyWith(color: accent),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Operaciones pendientes de sincronizar',
-                style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            if (issue != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                issue!,
+                style: theme.textTheme.bodySmall?.copyWith(color: accent),
               ),
-            ),
-            Text(
-              '$count',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: synced ? scheme.primary : scheme.tertiary,
-              ),
-            ),
+            ],
           ],
         ),
       ),
