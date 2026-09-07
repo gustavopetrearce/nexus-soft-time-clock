@@ -1,7 +1,7 @@
 name: nexus_time_clock
 description: "Nexus Soft Time Clock — App de empleados (offline-first)."
 publish_to: 'none'
-version: 1.0.3+4
+version: 1.0.7+8
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
