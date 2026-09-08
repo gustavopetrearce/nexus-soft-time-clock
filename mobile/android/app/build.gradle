@@ -16,14 +16,36 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
-if (flutterVersionCode == null) {
-    flutterVersionCode = "1"
+// Versionado: la única fuente de verdad es el `version:` de pubspec.yaml.
+//
+// `flutter build` lo vuelca en local.properties antes de invocar a Gradle, y por el
+// camino aplica --build-name/--build-version si se pasaron; por eso local.properties
+// tiene prioridad. Pero está fuera de VCS, así que un `gradlew bundleRelease` directo
+// —en CI o en una máquina recién clonada— no lo encuentra. Ese caso degradaba en
+// silencio a versionCode 1 y producía un bundle mal versionado; ahora se cae de vuelta
+// al pubspec y, si tampoco se puede leer, el build falla en lugar de mentir.
+def pubspecVersion = null
+def pubspecFile = rootProject.file("../pubspec.yaml")
+if (pubspecFile.exists()) {
+    def versionLine = pubspecFile.readLines().find { it ==~ /^version:\s*\S+.*/ }
+    if (versionLine != null) {
+        pubspecVersion = versionLine.replaceFirst(/^version:\s*/, "").trim()
+    }
 }
 
 def flutterVersionName = localProperties.getProperty("flutter.versionName")
+        ?: pubspecVersion?.split("\\+")?.first()
 if (flutterVersionName == null) {
-    flutterVersionName = "1.0"
+    throw new GradleException("No se puede determinar el versionName: falta " +
+            "flutter.versionName en android/local.properties y `version:` en pubspec.yaml.")
+}
+
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
+        ?: (pubspecVersion?.contains("+") ? pubspecVersion.split("\\+").last() : null)
+if (flutterVersionCode == null) {
+    throw new GradleException("No se puede determinar el versionCode: falta " +
+            "flutter.versionCode en android/local.properties y el sufijo `+N` de " +
+            "`version:` en pubspec.yaml.")
 }
 
 // Carga la configuración de firma de release desde key.properties (fuera de VCS).
