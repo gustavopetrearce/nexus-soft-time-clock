@@ -5,6 +5,7 @@ import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRejected
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,13 +24,19 @@ public class RealtimeAttendanceListener {
 
     @org.springframework.context.event.EventListener
     public void onRegistered(AttendanceRegistered e) {
-        send(e.tenantId(), Map.of(
-                "type", "ACCEPTED",
-                "attendanceId", e.attendanceId().toString(),
-                "userId", e.userId().toString(),
-                "workSiteId", e.workSiteId().toString(),
-                "eventKind", e.eventKind(),
-                "occurredAt", e.occurredAt().toString()));
+        // LinkedHashMap y no Map.of: una marcación sin centro llega con workSiteId nulo, y Map.of
+        // no admite nulos. El campo se omite —el mapa del portal ya lo trata como opcional— porque
+        // esa marca no tiene chincheta que encender.
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", "ACCEPTED");
+        payload.put("attendanceId", e.attendanceId().toString());
+        payload.put("userId", e.userId().toString());
+        if (e.workSiteId() != null) {
+            payload.put("workSiteId", e.workSiteId().toString());
+        }
+        payload.put("eventKind", e.eventKind());
+        payload.put("occurredAt", e.occurredAt().toString());
+        send(e.tenantId(), payload);
     }
 
     @org.springframework.context.event.EventListener

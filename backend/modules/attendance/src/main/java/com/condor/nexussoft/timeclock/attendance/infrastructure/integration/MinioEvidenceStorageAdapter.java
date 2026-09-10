@@ -20,6 +20,7 @@ import java.util.UUID;
  *
  * <p>Esquema de clave, decidido siempre por el servidor:
  * <pre>t/{tenant}/s/{site}/d/{yyyy}/{MM}/{dd}/u/{user}/{uuid}.jpg</pre>
+ * En una marcación sin centro, {@code {site}} es el centinela {@code _none}.
  * El tenant y el usuario en el prefijo permiten rechazar de plano una clave ajena; la fecha
  * abarata el barrido de huérfanos y evita reciclar la foto de otro día.
  */
@@ -28,6 +29,9 @@ public class MinioEvidenceStorageAdapter implements EvidenceStoragePort {
 
     private static final Logger log = LoggerFactory.getLogger(MinioEvidenceStorageAdapter.class);
     private static final DateTimeFormatter DATE_PATH = DateTimeFormatter.ofPattern("yyyy/MM/dd").withZone(ZoneOffset.UTC);
+
+    /** Segmento de centro para las marcaciones sin centro de trabajo (V25). */
+    private static final String SITELESS_SEGMENT = "_none";
 
     private final ObjectStorage storage;
     private final StorageProperties props;
@@ -110,8 +114,13 @@ public class MinioEvidenceStorageAdapter implements EvidenceStoragePort {
         return sitePrefix(tenantId, workSiteId) + "d/" + DATE_PATH.format(now) + "/" + userSegment(userId);
     }
 
+    /**
+     * Segmento de centro del prefijo. Una marcación sin centro (QR de empresa) usa el centinela
+     * {@code _none} en lugar de interpolar el literal {@code null}. Lo comparten la firma de subida
+     * y la verificación posterior, así que ambas siguen coincidiendo.
+     */
     private String sitePrefix(UUID tenantId, UUID workSiteId) {
-        return "t/" + tenantId + "/s/" + workSiteId + "/";
+        return "t/" + tenantId + "/s/" + (workSiteId == null ? SITELESS_SEGMENT : workSiteId) + "/";
     }
 
     private String userSegment(UUID userId) {

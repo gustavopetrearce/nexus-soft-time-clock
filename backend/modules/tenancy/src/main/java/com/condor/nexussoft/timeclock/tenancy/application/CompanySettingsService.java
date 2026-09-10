@@ -35,11 +35,12 @@ public class CompanySettingsService implements CompanySettingsUseCase {
                 c.requirePhoto(),
                 c.requireBiometric(),
                 c.deviceBindingEnabled(),
-                CompanySettings.parseAction(c.deviceBindingAction())));
+                CompanySettings.parseAction(c.deviceBindingAction()),
+                c.sitelessAttendanceEnabled()));
     }
 
     private CompanySettings defaultsFor(UUID tenantId) {
         return new CompanySettings(tenantId, 50, false, false, true,
-                CompanySettings.DeviceBindingAction.REJECT);
+                CompanySettings.DeviceBindingAction.REJECT, false);
     }
 }

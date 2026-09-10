@@ -67,6 +67,28 @@ class SchedulePolicyAdapterTest {
                 .isEqualTo(SchedulePolicyPort.Outcome.NO_SCHEDULE);
     }
 
+    /**
+     * MarcaciÃ³n sin centro (QR de empresa): no hay contra quÃ© filtrar, asÃ­ que se evalÃºan todas las
+     * asignaciones vigentes del colaborador. Sin esto, el camino sin centro se quedarÃ­a sin control
+     * horario ây antes de la guarda, el filtro reventaba con NullPointerExceptionâ.
+     */
+    @Test
+    void sinCentro_evaluaCualquierTurnoAsignado() {
+        Shift t1 = turno("Turno 1", LocalTime.of(8, 0), LocalTime.of(14, 0));
+        turno1 = t1.id();
+        stubShifts(t1);
+        when(scheduling.listAssignments(tenantId, userId))
+                .thenReturn(List.of(asignacion(turno1, UUID.randomUUID())));
+
+        Instant at = DIA.atTime(8, 20).toInstant(ZoneOffset.UTC);
+        SchedulePolicyPort.ScheduleDecision d =
+                adapter.check(tenantId, userId, null, AttendanceEventType.ENTRADA, at);
+
+        assertThat(d.outcome()).isEqualTo(SchedulePolicyPort.Outcome.WITHIN_WINDOW);
+        assertThat(d.shiftId()).isEqualTo(turno1);
+        assertThat(d.minutesLate()).isEqualTo(10);
+    }
+
     /** Un turno asignado en otro centro no gobierna el horario de este. */
     @Test
     void asignacionEnOtroCentro_seIgnora() {

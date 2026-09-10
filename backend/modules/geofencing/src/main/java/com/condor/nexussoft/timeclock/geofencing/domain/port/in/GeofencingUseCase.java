@@ -34,6 +34,14 @@ public interface GeofencingUseCase {
      */
     GeneratedQr generateQr(UUID tenantId, UUID workSiteId, Integer ttlMinutes, Instant expiresAt);
 
+    /**
+     * Genera/rota el <b>QR de empresa</b>: el que no pertenece a ningún centro y habilita el
+     * registro sin validación de geocerca (camino opcional de RF-15). Mismas reglas de vigencia
+     * que {@link #generateQr}. Rotarlo invalida el anterior de verdad —{@code is_active} se
+     * comprueba al verificar—, porque este cartel sirve desde cualquier ubicación.
+     */
+    GeneratedQr generateCompanyQr(UUID tenantId, Integer ttlMinutes, Instant expiresAt);
+
     /** Verifica firma y vigencia del QR; el consumo del nonce (anti-replay) ocurre al registrar (BC-06). */
     QrPayload verifyQr(String token);
 }

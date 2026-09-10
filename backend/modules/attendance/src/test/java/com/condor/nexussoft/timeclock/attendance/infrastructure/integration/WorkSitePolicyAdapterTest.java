@@ -35,7 +35,7 @@ class WorkSitePolicyAdapterTest {
     private void company(boolean requirePhoto, Integer accuracy) {
         when(companyPolicy.find(tenantId))
                 .thenReturn(new CompanyPolicyPort.CompanyPolicy(accuracy, requirePhoto, false,
-                        CompanyPolicyPort.DEFAULT_OPEN_SHIFT_MAX_HOURS));
+                        CompanyPolicyPort.DEFAULT_OPEN_SHIFT_MAX_HOURS, false));
     }
 
     private void site(Boolean requirePhoto, Integer accuracy) {

@@ -11,7 +11,12 @@ public record CompanySettingsDto(
         boolean requirePhoto,
         boolean requireBiometric,
         boolean deviceBindingEnabled,
-        @Pattern(regexp = "REJECT|FLAG") String deviceBindingAction) {
+        @Pattern(regexp = "REJECT|FLAG") String deviceBindingAction,
+        /**
+         * Habilita el camino de registro sin centro de trabajo (V25): QR de empresa, sin validación
+         * de geocerca y con foto obligatoria. Apagado salvo que la empresa lo active a propósito.
+         */
+        boolean sitelessAttendanceEnabled) {
 
     public static CompanySettingsDto from(CompanySettings s) {
         return new CompanySettingsDto(
@@ -19,6 +24,7 @@ public record CompanySettingsDto(
                 s.requirePhoto(),
                 s.requireBiometric(),
                 s.deviceBindingEnabled(),
-                s.deviceBindingAction().name());
+                s.deviceBindingAction().name(),
+                s.sitelessAttendanceEnabled());
     }
 }

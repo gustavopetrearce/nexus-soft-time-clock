@@ -40,6 +40,9 @@ public class CompanySettingsJpaEntity {
     @Column(name = "device_binding_action")
     private String deviceBindingAction = "REJECT";
 
+    @Column(name = "siteless_attendance_enabled")
+    private boolean sitelessAttendanceEnabled = false;
+
     protected CompanySettingsJpaEntity() {
     }
 
@@ -89,5 +92,13 @@ public class CompanySettingsJpaEntity {
 
     public void setDeviceBindingAction(String v) {
         this.deviceBindingAction = v;
+    }
+
+    public boolean isSitelessAttendanceEnabled() {
+        return sitelessAttendanceEnabled;
+    }
+
+    public void setSitelessAttendanceEnabled(boolean v) {
+        this.sitelessAttendanceEnabled = v;
     }
 }

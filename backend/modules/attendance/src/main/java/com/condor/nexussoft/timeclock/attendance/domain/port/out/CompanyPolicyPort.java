@@ -19,13 +19,18 @@ public interface CompanyPolicyPort {
      * @param requirePhoto           la empresa exige evidencia fotográfica (HU-13 CA1).
      * @param requireBiometric       la empresa exige verificación biométrica (HU-14 CA1).
      * @param openShiftMaxHours      horas durante las que una jornada sin SALIDA sigue abierta (RN-12).
+     * @param sitelessAttendanceEnabled la empresa admite registrar sin centro de trabajo (V25):
+     *                               QR de empresa, sin validación de geocerca y con foto obligatoria.
      */
     record CompanyPolicy(Integer defaultGpsAccuracyMaxM, boolean requirePhoto, boolean requireBiometric,
-                         int openShiftMaxHours) {
+                         int openShiftMaxHours, boolean sitelessAttendanceEnabled) {
 
-        /** Tenant sin fila de configuración: se asume la política más permisiva. */
+        /**
+         * Tenant sin fila de configuración: se asume la política más permisiva, salvo el camino sin
+         * centro, que es una excepción a activar deliberadamente y nunca por ausencia de datos.
+         */
         public static CompanyPolicy defaults() {
-            return new CompanyPolicy(null, false, false, DEFAULT_OPEN_SHIFT_MAX_HOURS);
+            return new CompanyPolicy(null, false, false, DEFAULT_OPEN_SHIFT_MAX_HOURS, false);
         }
     }
 }

@@ -41,7 +41,8 @@ public class CompanySettingsController {
                         body.requirePhoto(),
                         body.requireBiometric(),
                         body.deviceBindingEnabled(),
-                        body.deviceBindingAction()));
+                        body.deviceBindingAction(),
+                        body.sitelessAttendanceEnabled()));
         return CompanySettingsDto.from(updated);
     }
 }

@@ -18,7 +18,8 @@ public record CompanySettings(
         boolean requirePhoto,
         boolean requireBiometric,
         boolean deviceBindingEnabled,
-        DeviceBindingAction deviceBindingAction) {
+        DeviceBindingAction deviceBindingAction,
+        boolean sitelessAttendanceEnabled) {
 
     private static final int MIN_ACCURACY_M = 5;
     private static final int MAX_ACCURACY_M = 500;

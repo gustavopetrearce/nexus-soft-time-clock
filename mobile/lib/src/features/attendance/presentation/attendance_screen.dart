@@ -11,8 +11,11 @@ import '../domain/qr_token.dart';
 import 'qr_scanner_screen.dart';
 
 /// Pantalla de registro de asistencia (offline-first). El empleado elige Entrada/Salida
-/// y escanea el QR firmado del centro con la cámara: de ahí se obtiene el token crudo y
-/// se deriva el centro (workSiteId). No hay entrada manual de datos.
+/// y escanea el QR firmado con la cámara: de ahí se obtiene el token crudo y se deriva el
+/// ámbito. No hay entrada manual de datos.
+///
+/// El QR puede ser de un centro (validación de geocerca habitual) o de empresa, en cuyo caso no
+/// hay centro ni geocerca y la foto pasa a ser obligatoria.
 class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
 
@@ -32,33 +35,46 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       return;
     }
 
-    // 2) Derivar el centro del token firmado; si el QR no es reconocible, avisar.
-    final workSiteId = workSiteIdFromQrToken(raw);
-    if (workSiteId == null) {
+    // 2) Derivar el ámbito del token firmado; si el QR no es reconocible, avisar. Un QR de
+    //    empresa es válido y no lleva centro: registra sin validación de geocerca.
+    final scope = scopeFromQrToken(raw);
+    if (scope == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('QR no válido.')),
       );
       return;
     }
+    final workSiteId = scope.workSiteId;
 
-    // 3) Política del centro (HU-13 CA1): decide si la foto es obligatoria. Se consulta al
-    //    backend y se cachea, para poder exigirla también sin conexión.
-    final policy = await ref.read(sitePolicyServiceProvider).forSite(workSiteId);
-    if (!mounted) {
-      return;
+    // 3) ¿Hace falta foto? Con centro manda su política (HU-13 CA1), consultada al backend y
+    //    cacheada para poder exigirla también sin conexión. Sin centro se exige siempre: es la
+    //    evidencia que sustituye a la geocerca, y el servidor la reclamará igualmente.
+    bool requirePhoto = true;
+    if (workSiteId != null) {
+      final policy = await ref.read(sitePolicyServiceProvider).forSite(workSiteId);
+      if (!mounted) {
+        return;
+      }
+      requirePhoto = policy.requirePhoto;
     }
 
-    // 4) Evidencia fotográfica. Si el centro la exige, sin foto no hay registro: enviarlo sería
-    //    gastarle al colaborador un intento que el servidor rechazará con PHOTO_REQUIRED.
+    // 4) Evidencia fotográfica. Si se exige, sin foto no hay registro: enviarlo sería gastarle al
+    //    colaborador un intento que el servidor rechazará con PHOTO_REQUIRED.
     CapturedEvidence? evidence;
-    if (policy.requirePhoto) {
+    if (requirePhoto) {
       evidence = await ref.read(evidenceCaptureServiceProvider).capture(_uuid.v4());
       if (!mounted) {
         return;
       }
       if (evidence == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Este centro exige una foto para registrar tu asistencia.')),
+          SnackBar(
+            content: Text(
+              scope.isCompanyWide
+                  ? 'Al registrar sin centro de trabajo, la foto es obligatoria.'
+                  : 'Este centro exige una foto para registrar tu asistencia.',
+            ),
+          ),
         );
         return;
       }
@@ -129,7 +145,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
-                          'Toca Entrada o Salida y escanea el QR del centro con la cámara.',
+                          'Toca Entrada o Salida y escanea el QR con la cámara.',
                           style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer),
                         ),
                       ),

@@ -177,7 +177,7 @@ class AttendanceSyncService {
     try {
       final uploaded = await _evidence.upload(
         file: file,
-        workSiteId: payload['workSiteId'] as String,
+        workSiteId: payload['workSiteId'] as String?,
         sha256: op.evidenceSha256 ?? '',
         sizeBytes: file.lengthSync(),
         contentType: 'image/jpeg',

@@ -12,6 +12,7 @@ import { NotificationService } from '../../../core/ui/notification.service';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
 import { CompanyPolicy } from './company-policy.models';
 import { CompanyPolicyService } from './company-policy.service';
+import { CompanyQrCardComponent } from './company-qr-card.component';
 import { VacationPolicy, VacationTier } from './vacation-policy.models';
 import { VacationPolicyService } from './vacation-policy.service';
 
@@ -32,6 +33,7 @@ import { VacationPolicyService } from './vacation-policy.service';
     MatSlideToggleModule,
     MatProgressBarModule,
     PageHeaderComponent,
+    CompanyQrCardComponent,
   ],
   template: `
     <app-page-header title="Configuración" subtitle="Parámetros generales de la empresa. Aplican a todo el tenant." />
@@ -99,6 +101,19 @@ import { VacationPolicyService } from './vacation-policy.service';
             <input class="inline-num" type="number" min="5" max="500" [(ngModel)]="policy.defaultGpsAccuracyMaxM" />
           </div>
 
+          <div class="cfg-item">
+            <div class="ci-ic"><mat-icon>travel_explore</mat-icon></div>
+            <div class="ci-txt">
+              <h4>Permitir registro sin centro de trabajo</h4>
+              <p>
+                Para personal sin sede fija. Se ficha con un QR de empresa: la ubicación se guarda pero
+                <b>no se compara con ninguna geocerca</b>, y la foto pasa a ser obligatoria aunque esté
+                desactivada arriba. El camino con centro sigue funcionando igual.
+              </p>
+            </div>
+            <mat-slide-toggle [(ngModel)]="policy.sitelessAttendanceEnabled" color="primary" />
+          </div>
+
           <div class="actions">
             <button mat-button type="button" [disabled]="savingPolicy()" (click)="loadPolicy()">Descartar</button>
             <button mat-flat-button color="primary" [disabled]="savingPolicy()" (click)="savePolicy()">
@@ -107,6 +122,11 @@ import { VacationPolicyService } from './vacation-policy.service';
           </div>
         </mat-card-content>
       </mat-card>
+
+      <!-- El QR solo tiene sentido con la política ya guardada: el backend rechaza emitirlo si no. -->
+      @if (savedSitelessEnabled()) {
+        <app-company-qr-card />
+      }
     }
 
     <div class="cfg-grid">
@@ -251,7 +271,14 @@ export class SettingsComponent {
     requireBiometric: false,
     deviceBindingEnabled: true,
     deviceBindingAction: 'REJECT',
+    sitelessAttendanceEnabled: false,
   };
+  /**
+   * Valor de la bandera tal como está <b>guardado</b>, no como lo tiene el formulario. La tarjeta
+   * del QR se apoya en esto porque el backend rechaza emitirlo mientras la política no esté
+   * persistida, y ofrecer el botón antes de guardar solo produce un error inexplicable.
+   */
+  protected readonly savedSitelessEnabled = signal(false);
   protected readonly loadingPolicy = signal(false);
   protected readonly savingPolicy = signal(false);
   protected readonly policyError = signal<string | null>(null);
@@ -273,6 +300,7 @@ export class SettingsComponent {
     this.policyService.get().subscribe({
       next: (p) => {
         this.policy = { ...p };
+        this.savedSitelessEnabled.set(p.sitelessAttendanceEnabled);
         this.loadingPolicy.set(false);
       },
       error: () => {
@@ -287,6 +315,7 @@ export class SettingsComponent {
     this.policyService.update({ ...this.policy }).subscribe({
       next: (p) => {
         this.policy = { ...p };
+        this.savedSitelessEnabled.set(p.sitelessAttendanceEnabled);
         this.savingPolicy.set(false);
         this.notify.success('Políticas de registro guardadas.');
       },

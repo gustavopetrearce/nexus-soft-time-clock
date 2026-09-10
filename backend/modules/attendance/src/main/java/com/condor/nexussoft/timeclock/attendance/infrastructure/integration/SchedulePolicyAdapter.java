@@ -37,8 +37,11 @@ public class SchedulePolicyAdapter implements SchedulePolicyPort {
     @Override
     public ScheduleDecision check(UUID tenantId, UUID userId, UUID workSiteId,
                                   AttendanceEventType eventType, Instant at) {
+        // Sin centro (QR de empresa) no hay contra qué filtrar: se evalúan todas las asignaciones
+        // vigentes del colaborador, de modo que el camino sin centro conserva la ventana de turno
+        // y la detección de retardo (RN-15, RN-16) en lugar de quedarse sin control horario.
         List<ShiftAssignment> forSite = scheduling.listAssignments(tenantId, userId).stream()
-                .filter(a -> workSiteId.equals(a.workSiteId()))
+                .filter(a -> workSiteId == null || workSiteId.equals(a.workSiteId()))
                 .toList();
 
         boolean anyEffectiveToday = false;

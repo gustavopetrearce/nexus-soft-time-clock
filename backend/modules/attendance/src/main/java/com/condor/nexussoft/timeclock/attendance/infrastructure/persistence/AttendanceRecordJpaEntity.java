@@ -32,7 +32,8 @@ public class AttendanceRecordJpaEntity {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(name = "work_site_id", nullable = false)
+    /** Nulo en una marcación sin centro (QR de empresa, sin validación de geocerca). */
+    @Column(name = "work_site_id")
     private UUID workSiteId;
 
     /** Turno al que se atribuye la marca (RN-15); nulo si ninguno la reclama. */

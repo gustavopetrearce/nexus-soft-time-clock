@@ -15,9 +15,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Firma el QR de centro con HMAC-SHA256 (ADR-006). Formato: {@code base64url(body).base64url(sig)}
+ * Firma el QR con HMAC-SHA256 (ADR-006). Formato: {@code base64url(body).base64url(sig)}
  * donde {@code body = tenantId|workSiteId|nonce|expEpochSeconds}. La verificación usa comparación
  * en tiempo constante para resistir ataques de temporización.
+ *
+ * <p>En un <b>QR de empresa</b> el segundo campo va vacío ({@code tenantId||nonce|exp}). El formato
+ * no cambia —siguen siendo cuatro campos—, así que los QR de centro ya impresos se verifican
+ * exactamente igual que antes.</p>
  */
 @Component
 public class HmacQrTokenSigner implements QrTokenSignerPort {
@@ -33,7 +37,8 @@ public class HmacQrTokenSigner implements QrTokenSignerPort {
 
     @Override
     public String sign(QrPayload payload) {
-        String body = payload.tenantId() + "|" + payload.workSiteId() + "|" + payload.nonce()
+        String site = payload.workSiteId() == null ? "" : payload.workSiteId().toString();
+        String body = payload.tenantId() + "|" + site + "|" + payload.nonce()
                 + "|" + payload.expiresAt().getEpochSecond();
         String b64Body = ENC.encodeToString(body.getBytes(StandardCharsets.UTF_8));
         String b64Sig = ENC.encodeToString(hmac(b64Body));
@@ -54,13 +59,15 @@ public class HmacQrTokenSigner implements QrTokenSignerPort {
                 return Optional.empty();
             }
             String body = new String(DEC.decode(b64Body), StandardCharsets.UTF_8);
-            String[] parts = body.split("\\|");
+            // -1 conserva los campos vacíos intermedios; sin él, un cuerpo terminado en vacío
+            // devolvería menos partes de las esperadas.
+            String[] parts = body.split("\\|", -1);
             if (parts.length != 4) {
                 return Optional.empty();
             }
             return Optional.of(new QrPayload(
                     UUID.fromString(parts[0]),
-                    UUID.fromString(parts[1]),
+                    parts[1].isBlank() ? null : UUID.fromString(parts[1]),
                     parts[2],
                     Instant.ofEpochSecond(Long.parseLong(parts[3]))));
         } catch (RuntimeException e) {

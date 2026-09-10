@@ -12,6 +12,7 @@ public interface CompanySettingsUseCase {
     CompanySettings update(UUID tenantId, UpdateCommand command);
 
     record UpdateCommand(Integer defaultGpsAccuracyMaxM, boolean requirePhoto, boolean requireBiometric,
-                         boolean deviceBindingEnabled, String deviceBindingAction) {
+                         boolean deviceBindingEnabled, String deviceBindingAction,
+                         boolean sitelessAttendanceEnabled) {
     }
 }

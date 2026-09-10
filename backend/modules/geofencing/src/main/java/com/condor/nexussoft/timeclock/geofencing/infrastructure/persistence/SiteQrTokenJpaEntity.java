@@ -18,7 +18,8 @@ public class SiteQrTokenJpaEntity {
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
-    @Column(name = "work_site_id", nullable = false)
+    /** Nulo en un QR de empresa: el cartel no pertenece a ningún centro (camino sin geocerca). */
+    @Column(name = "work_site_id")
     private UUID workSiteId;
 
     @Column(nullable = false)

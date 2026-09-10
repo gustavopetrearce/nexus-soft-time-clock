@@ -48,14 +48,16 @@ class RegisterAttendanceServiceTest {
     final Clock clock = Clock.fixed(serverNow, ZoneOffset.UTC);
     static final int OPEN_SHIFT_HOURS = 16;
     static final long OFFLINE_MAX_AGE_HOURS = 72;
+    static final double DEFAULT_GPS_ACCURACY_MAX_M = 50;
 
     @BeforeEach
     void setUp() {
         service = new RegisterAttendanceService(attendance, idempotency, qrValidation,
                 geofenceCheck, fraudCheck, deviceRecognition, sitePolicy, schedulePolicy,
-                eventTypeConfig, evidenceStorage, companyPolicy, events, clock, OFFLINE_MAX_AGE_HOURS);
+                eventTypeConfig, evidenceStorage, companyPolicy, events, clock, OFFLINE_MAX_AGE_HOURS,
+                DEFAULT_GPS_ACCURACY_MAX_M);
         lenient().when(companyPolicy.find(tenantId)).thenReturn(
-                new CompanyPolicyPort.CompanyPolicy(null, false, false, OPEN_SHIFT_HOURS));
+                new CompanyPolicyPort.CompanyPolicy(null, false, false, OPEN_SHIFT_HOURS, false));
         // Por defecto el dispositivo es reconocido (device binding no interfiere). Lenient: el caso de
         // idempotencia corta antes de llegar a la validación de dispositivo.
         lenient().when(deviceRecognition.resolve(any(), any(), any(), any(), any(), any()))
@@ -729,5 +731,148 @@ class RegisterAttendanceServiceTest {
         assertThat(result.status()).isEqualTo("ACCEPTED");
         assertThat(result.rejectionReason()).isNull();
         assertThat(result.flags()).contains("UNTRUSTED_DEVICE");
+    }
+
+    // =================================================================================
+    // Camino opcional sin centro de trabajo (V25): QR de empresa, sin geocerca, foto obligatoria.
+    // =================================================================================
+
+    /** La empresa tiene habilitado el registro sin centro. */
+    private void sitelessEnabledStub() {
+        when(companyPolicy.find(tenantId)).thenReturn(
+                new CompanyPolicyPort.CompanyPolicy(null, false, false, OPEN_SHIFT_HOURS, true));
+    }
+
+    /** MarcaciÃ³n sin centro: {@code workSiteId} nulo y el QR de empresa correspondiente. */
+    private RegisterAttendanceCommand sitelessCmd(String evidenceKey) {
+        return new RegisterAttendanceCommand(UUID.randomUUID(), null, "qr-empresa", 19.4326, -99.1332, 10.0,
+                "ENTRADA", "dev-1", null, "ONLINE", false, false, false, false, true, false,
+                null, evidenceKey, "hash", "ANDROID", "Pixel 7", "14");
+    }
+
+    /** QR de empresa vÃ¡lido, antifraude limpio y polÃ­tica de empresa sin exigencias extra. */
+    private void sitelessStubs() {
+        when(idempotency.find(eq(tenantId), any())).thenReturn(Optional.empty());
+        when(qrValidation.verify("qr-empresa"))
+                .thenReturn(new QrValidationPort.QrCheck(true, false, tenantId, null, "nonce-empresa"));
+        when(fraudCheck.evaluate(anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(new FraudCheckPort.FraudCheckResult(List.of(), false, null));
+        when(sitePolicy.find(tenantId, null)).thenReturn(WorkSitePolicyPort.SitePolicy.permissive());
+    }
+
+    private void sitelessEvidenceStub() {
+        when(evidenceStorage.validate(eq(tenantId), eq(userId), isNull(), anyString(), any()))
+                .thenReturn(EvidenceStoragePort.Outcome.VALID);
+        when(evidenceStorage.bucket()).thenReturn("evidence");
+    }
+
+    @Test
+    void sinCentro_conPoliticaActivaYFoto_esAceptado_marcadoSinGeocerca() {
+        sitelessEnabledStub();
+        sitelessStubs();
+        sitelessEvidenceStub();
+
+        AttendanceResult result = service.register(tenantId, userId, sitelessCmd(VALID_KEY));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(result.rejectionReason()).isNull();
+        assertThat(result.flags()).contains("NO_GEOFENCE");
+        // Sin geocerca no hay distancia que medir: el campo queda vacÃ­o en vez de con un 0 engaÃ±oso.
+        assertThat(result.distanceToSiteM()).isNull();
+        // Y no se consulta geocerca alguna: es justo lo que este camino se salta.
+        verify(geofenceCheck, never()).check(any(), any(), anyDouble(), anyDouble());
+    }
+
+    /**
+     * El interruptor no puede vivir solo en la emisiÃ³n del QR: un cartel generado antes de apagar
+     * la polÃ­tica seguirÃ­a firmado y vigente.
+     */
+    @Test
+    void sinCentro_conPoliticaDesactivada_esRechazado() {
+        // companyPolicy por defecto (setUp) trae el camino sin centro apagado.
+        sitelessStubs();
+        sitelessEvidenceStub();
+
+        AttendanceResult result = service.register(tenantId, userId, sitelessCmd(VALID_KEY));
+
+        assertThat(result.status()).isEqualTo("REJECTED");
+        assertThat(result.rejectionReason()).isEqualTo("SITELESS_NOT_ALLOWED");
+    }
+
+    /** Retirada la geocerca, la foto es la Ãºnica evidencia: se exige aunque la empresa no la pida. */
+    @Test
+    void sinCentro_sinFoto_esRechazado_aunqueLaEmpresaNoLaExija() {
+        sitelessEnabledStub();
+        sitelessStubs();
+
+        AttendanceResult result = service.register(tenantId, userId, sitelessCmd(null));
+
+        assertThat(result.status()).isEqualTo("REJECTED");
+        assertThat(result.rejectionReason()).isEqualTo("PHOTO_REQUIRED");
+    }
+
+    /** Omitir el centro frente a un QR de centro darÃ­a una vÃ­a libre para saltarse la geocerca. */
+    @Test
+    void sinCentro_conQrDeCentro_esInvalidQr() {
+        sitelessEnabledStub();
+        when(idempotency.find(eq(tenantId), any())).thenReturn(Optional.empty());
+        when(qrValidation.verify("qr-empresa"))
+                .thenReturn(new QrValidationPort.QrCheck(true, false, tenantId, siteId, "nonce-1"));
+        when(fraudCheck.evaluate(anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(new FraudCheckPort.FraudCheckResult(List.of(), false, null));
+        when(sitePolicy.find(tenantId, null)).thenReturn(WorkSitePolicyPort.SitePolicy.permissive());
+        sitelessEvidenceStub();
+
+        AttendanceResult result = service.register(tenantId, userId, sitelessCmd(VALID_KEY));
+
+        assertThat(result.status()).isEqualTo("REJECTED");
+        assertThat(result.rejectionReason()).isEqualTo("INVALID_QR");
+    }
+
+    /** Y al revÃ©s: un QR de empresa no vale para declarar presencia en un centro concreto. */
+    @Test
+    void conCentro_conQrDeEmpresa_esInvalidQr() {
+        when(idempotency.find(eq(tenantId), any())).thenReturn(Optional.empty());
+        when(qrValidation.verify("qr"))
+                .thenReturn(new QrValidationPort.QrCheck(true, false, tenantId, null, "nonce-empresa"));
+        when(fraudCheck.evaluate(anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(new FraudCheckPort.FraudCheckResult(List.of(), false, null));
+        permissiveSiteStub();
+        when(geofenceCheck.check(eq(tenantId), eq(siteId), anyDouble(), anyDouble()))
+                .thenReturn(new GeofenceCheckPort.GeofenceCheck(true, true, 12.0, 50.0));
+
+        AttendanceResult result = service.register(tenantId, userId, cmd());
+
+        assertThat(result.status()).isEqualTo("REJECTED");
+        assertThat(result.rejectionReason()).isEqualTo("INVALID_QR");
+    }
+
+    /** Prescindir de la geocerca no relaja la precisiÃ³n: un fix de Â±2 km tampoco prueba nada aquÃ­. */
+    @Test
+    void sinCentro_conPrecisionPorEncimaDelUmbral_esRechazado() {
+        sitelessEnabledStub();
+        sitelessStubs();
+        sitelessEvidenceStub();
+        RegisterAttendanceCommand impreciso = new RegisterAttendanceCommand(UUID.randomUUID(), null,
+                "qr-empresa", 19.4326, -99.1332, 2000.0, "ENTRADA", "dev-1", null, "ONLINE",
+                false, false, false, false, true, false,
+                null, VALID_KEY, "hash", "ANDROID", "Pixel 7", "14");
+
+        AttendanceResult result = service.register(tenantId, userId, impreciso);
+
+        assertThat(result.status()).isEqualTo("REJECTED");
+        assertThat(result.rejectionReason()).isEqualTo("LOW_GPS_ACCURACY");
+    }
+
+    /** La marca se persiste sin centro; el reporte por centro la deja fuera, y eso es lo correcto. */
+    @Test
+    void sinCentro_persisteElRegistroSinCentro() {
+        sitelessEnabledStub();
+        sitelessStubs();
+        sitelessEvidenceStub();
+
+        service.register(tenantId, userId, sitelessCmd(VALID_KEY));
+
+        assertThat(savedRecord().workSiteId()).isNull();
     }
 }

@@ -97,4 +97,27 @@ class AttendanceSequenceValidatorTest {
         assertThat(AttendanceSequenceValidator.validate(tras, SALIDA, site))
                 .contains(RejectionReason.INVALID_SEQUENCE);
     }
+
+    /** Jornada sin centro (QR de empresa): se abre y se cierra consigo misma. */
+    @Test
+    void jornadaSinCentro_seCierraConSuPropiaSalida() {
+        Optional<LastEvent> abierta = Optional.of(new LastEvent(ENTRADA, null));
+        assertThat(AttendanceSequenceValidator.validate(abierta, SALIDA, null)).isEmpty();
+        assertThat(AttendanceSequenceValidator.validate(abierta, INICIO_DESCANSO, null)).isEmpty();
+    }
+
+    /**
+     * Los dos caminos no se mezclan: una jornada abierta en un centro no se cierra con un QR de
+     * empresa (esquivarÃ­a la geocerca de la salida) ni una sin centro se cierra en un centro.
+     */
+    @Test
+    void jornadaConCentro_noSeCierraSinCentro_niAlReves() {
+        Optional<LastEvent> enCentro = Optional.of(new LastEvent(ENTRADA, site));
+        assertThat(AttendanceSequenceValidator.validate(enCentro, SALIDA, null))
+                .contains(RejectionReason.INVALID_SEQUENCE);
+
+        Optional<LastEvent> sinCentro = Optional.of(new LastEvent(ENTRADA, null));
+        assertThat(AttendanceSequenceValidator.validate(sinCentro, SALIDA, site))
+                .contains(RejectionReason.INVALID_SEQUENCE);
+    }
 }

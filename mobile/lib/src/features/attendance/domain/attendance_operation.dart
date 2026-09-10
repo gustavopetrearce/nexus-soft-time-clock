@@ -3,7 +3,7 @@
 class AttendanceOperation {
   const AttendanceOperation({
     required this.operationUuid,
-    required this.workSiteId,
+    this.workSiteId,
     required this.qrToken,
     required this.latitude,
     required this.longitude,
@@ -27,7 +27,9 @@ class AttendanceOperation {
   });
 
   final String operationUuid;
-  final String workSiteId;
+
+  /// Centro de la marcación; nulo con un QR de empresa (registro sin centro ni geocerca).
+  final String? workSiteId;
   final String qrToken;
   final double latitude;
   final double longitude;
@@ -54,7 +56,7 @@ class AttendanceOperation {
 
   Map<String, dynamic> toJson() => {
         'operationUuid': operationUuid,
-        'workSiteId': workSiteId,
+        if (workSiteId != null) 'workSiteId': workSiteId,
         'qrToken': qrToken,
         'latitude': latitude,
         'longitude': longitude,

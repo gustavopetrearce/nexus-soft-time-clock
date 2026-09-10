@@ -23,7 +23,16 @@ import { AttendanceEventsService } from './attendance-events.service';
       <div class="meta">
         <div class="row"><span class="k">Colaborador</span><span class="v">{{ data.employeeName || '—' }}</span></div>
         <div class="row"><span class="k">N.º de empleado</span><span class="v">{{ data.employeeCode || '—' }}</span></div>
-        <div class="row"><span class="k">Centro</span><span class="v">{{ data.workSite || '—' }}</span></div>
+        <div class="row">
+          <span class="k">Centro</span>
+          <span class="v">
+            @if (data.siteless) {
+              Sin centro <em>· registro sin validación de geocerca</em>
+            } @else {
+              {{ data.workSite || '—' }}
+            }
+          </span>
+        </div>
         <div class="row"><span class="k">Fecha y hora</span><span class="v mono">{{ fmt(data.serverTime) }}</span></div>
         <div class="row">
           <span class="k">Estado</span>

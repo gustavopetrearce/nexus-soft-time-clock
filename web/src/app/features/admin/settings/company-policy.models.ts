@@ -12,4 +12,9 @@ export interface CompanyPolicy {
   requireBiometric: boolean;
   deviceBindingEnabled: boolean;
   deviceBindingAction: DeviceBindingAction;
+  /**
+   * Habilita el camino de registro sin centro de trabajo: QR de empresa, sin validación de
+   * geocerca y con foto obligatoria (aunque `requirePhoto` esté desactivado).
+   */
+  sitelessAttendanceEnabled: boolean;
 }
