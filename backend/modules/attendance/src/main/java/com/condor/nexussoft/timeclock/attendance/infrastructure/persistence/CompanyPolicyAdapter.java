@@ -26,7 +26,8 @@ public class CompanyPolicyAdapter implements CompanyPolicyPort {
             return CompanyPolicy.defaults();
         }
         return jdbc.query(
-                "SELECT default_gps_accuracy_max_m, require_photo, require_biometric, open_shift_max_hours "
+                "SELECT default_gps_accuracy_max_m, require_photo, require_biometric, open_shift_max_hours, "
+                        + "siteless_attendance_enabled "
                         + "FROM company_settings WHERE company_id = ? LIMIT 1",
                 rs -> {
                     if (!rs.next()) {
@@ -42,7 +43,8 @@ public class CompanyPolicyAdapter implements CompanyPolicyPort {
                             accuracyNull ? null : accuracy,
                             rs.getBoolean("require_photo"),
                             rs.getBoolean("require_biometric"),
-                            openShiftHours);
+                            openShiftHours,
+                            rs.getBoolean("siteless_attendance_enabled"));
                 },
                 tenantId);
     }

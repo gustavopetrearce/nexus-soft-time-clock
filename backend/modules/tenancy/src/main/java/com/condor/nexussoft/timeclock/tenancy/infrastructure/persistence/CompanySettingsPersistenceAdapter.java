@@ -32,6 +32,7 @@ public class CompanySettingsPersistenceAdapter implements CompanySettingsReposit
         e.setRequireBiometric(s.requireBiometric());
         e.setDeviceBindingEnabled(s.deviceBindingEnabled());
         e.setDeviceBindingAction(s.deviceBindingAction().name());
+        e.setSitelessAttendanceEnabled(s.sitelessAttendanceEnabled());
         return toDomain(jpa.save(e));
     }
 
@@ -42,6 +43,7 @@ public class CompanySettingsPersistenceAdapter implements CompanySettingsReposit
                 e.isRequirePhoto(),
                 e.isRequireBiometric(),
                 e.isDeviceBindingEnabled(),
-                CompanySettings.parseAction(e.getDeviceBindingAction()));
+                CompanySettings.parseAction(e.getDeviceBindingAction()),
+                e.isSitelessAttendanceEnabled());
     }
 }

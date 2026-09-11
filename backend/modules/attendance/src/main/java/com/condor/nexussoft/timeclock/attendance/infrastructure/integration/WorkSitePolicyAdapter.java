@@ -28,6 +28,10 @@ public class WorkSitePolicyAdapter implements WorkSitePolicyPort {
     @Override
     public SitePolicy find(UUID tenantId, UUID workSiteId) {
         CompanyPolicyPort.CompanyPolicy company = companyPolicy.find(tenantId);
+        // Marcación sin centro (QR de empresa): no hay overrides que heredar, rige la empresa.
+        if (workSiteId == null) {
+            return companyWide(company);
+        }
         // Búsqueda no excepcional: el centro puede no existir o ser de otro tenant (QR ajeno), y eso ya
         // deriva en otros rechazos (QR/geocerca). Pedirlo con el `get` que lanza no vale ni capturando la
         // excepción: al ser @Transactional, Spring marca rollback-only la transacción compartida del
@@ -39,7 +43,11 @@ public class WorkSitePolicyAdapter implements WorkSitePolicyPort {
                         site.gpsAccuracyMaxM() != null ? site.gpsAccuracyMaxM() : company.defaultGpsAccuracyMaxM(),
                         site.requirePhoto() != null ? site.requirePhoto() : company.requirePhoto(),
                         site.requireBiometric() != null ? site.requireBiometric() : company.requireBiometric()))
-                .orElseGet(() -> new SitePolicy(company.defaultGpsAccuracyMaxM(),
-                        company.requirePhoto(), company.requireBiometric()));
+                .orElseGet(() -> companyWide(company));
+    }
+
+    private SitePolicy companyWide(CompanyPolicyPort.CompanyPolicy company) {
+        return new SitePolicy(company.defaultGpsAccuracyMaxM(),
+                company.requirePhoto(), company.requireBiometric());
     }
 }

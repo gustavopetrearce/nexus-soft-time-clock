@@ -15,5 +15,7 @@ public enum RejectionReason {
     UNTRUSTED_DEVICE,
     PHOTO_REQUIRED,
     BIOMETRIC_REQUIRED,
-    EVENT_TYPE_DISABLED
+    EVENT_TYPE_DISABLED,
+    /** La empresa no admite registrar sin centro de trabajo (V25). */
+    SITELESS_NOT_ALLOWED
 }

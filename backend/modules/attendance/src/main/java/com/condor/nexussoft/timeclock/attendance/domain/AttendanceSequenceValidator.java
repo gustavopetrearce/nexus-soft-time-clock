@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.attendance.domain;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,7 +55,12 @@ public final class AttendanceSequenceValidator {
                 || prev == AttendanceEventType.CAMBIO_SITIO;
     }
 
+    /**
+     * Compara con {@code Objects.equals} porque el centro puede ser nulo en ambos lados: una
+     * jornada abierta sin centro (QR de empresa) casa consigo misma, y una abierta en un centro
+     * no se puede cerrar sin él —ni al revés—, que es justo lo que debe ocurrir.
+     */
     private static boolean sameSite(Optional<LastEvent> last, UUID requestedSite) {
-        return last.map(l -> l.workSiteId().equals(requestedSite)).orElse(false);
+        return last.map(l -> Objects.equals(l.workSiteId(), requestedSite)).orElse(false);
     }
 }

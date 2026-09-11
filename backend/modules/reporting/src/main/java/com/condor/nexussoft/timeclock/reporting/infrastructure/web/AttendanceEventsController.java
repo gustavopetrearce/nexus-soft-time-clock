@@ -48,7 +48,13 @@ public class AttendanceEventsController {
             boolean biometricVerified,
             Double gpsAccuracyM,
             Double distanceToSiteM,
-            String source) {}
+            String source,
+            /**
+             * La marca se registró sin centro de trabajo (QR de empresa) y por tanto sin validación
+             * de geocerca. Se distingue explícitamente de un centro borrado, que también dejaría
+             * {@code workSite} nulo pero sí pasó por su geocerca en su momento.
+             */
+            boolean siteless) {}
 
     @GetMapping("/attendance-events")
     public List<AttendanceEventDto> events(
@@ -74,7 +80,8 @@ public class AttendanceEventsController {
                        ar.biometric_verified,
                        ar.gps_accuracy_m,
                        ar.distance_to_site_m,
-                       ar.source
+                       ar.source,
+                       (ar.work_site_id is null) as siteless
                 from attendance_records ar
                 join users u on u.id = ar.user_id
                 left join work_sites ws on ws.id = ar.work_site_id
@@ -102,7 +109,8 @@ public class AttendanceEventsController {
                             rs.getBoolean("biometric_verified"),
                             accuracyM,
                             distanceM,
-                            rs.getString("source"));
+                            rs.getString("source"),
+                            rs.getBoolean("siteless"));
                 },
                 TenantContext.require(), fromTs, toTs);
     }

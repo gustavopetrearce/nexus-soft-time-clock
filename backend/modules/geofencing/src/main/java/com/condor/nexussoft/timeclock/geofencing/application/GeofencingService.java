@@ -75,31 +75,51 @@ public class GeofencingService implements GeofencingUseCase {
     @Override
     @Transactional
     public GeneratedQr generateQr(UUID tenantId, UUID workSiteId, Integer ttlMinutes, Instant expiresAtOverride) {
+        return issue(tenantId, workSiteId, ttlMinutes, expiresAtOverride);
+    }
+
+    @Override
+    @Transactional
+    public GeneratedQr generateCompanyQr(UUID tenantId, Integer ttlMinutes, Instant expiresAtOverride) {
+        return issue(tenantId, null, ttlMinutes, expiresAtOverride);
+    }
+
+    /** Emisión común: {@code workSiteId} nulo produce el QR de empresa. */
+    private GeneratedQr issue(UUID tenantId, UUID workSiteId, Integer ttlMinutes, Instant expiresAtOverride) {
         Instant now = clock.instant();
-        Instant maxAllowed = now.plus(Duration.ofDays(qrMaxFarExpiryDays));
-        Instant expiresAt;
-        if (expiresAtOverride != null) {
-            if (!expiresAtOverride.isAfter(now)) {
-                throw new DomainException("INVALID_QR_EXPIRY", "La fecha de expiración debe ser futura");
-            }
-            if (expiresAtOverride.isAfter(maxAllowed)) {
-                throw new DomainException("INVALID_QR_EXPIRY",
-                        "La fecha de expiración no puede superar " + qrMaxFarExpiryDays + " días");
-            }
-            expiresAt = expiresAtOverride;
-        } else {
-            long ttlSeconds = ttlMinutes != null ? ttlMinutes * 60L : qrTtlSeconds;
-            expiresAt = now.plusSeconds(ttlSeconds);
-        }
+        Instant expiresAt = resolveExpiry(now, ttlMinutes, expiresAtOverride);
         String nonce = newNonce();
 
-        qrTokens.deactivateActiveForSite(workSiteId, tenantId);
+        if (workSiteId == null) {
+            qrTokens.deactivateActiveForCompany(tenantId);
+        } else {
+            qrTokens.deactivateActiveForSite(workSiteId, tenantId);
+        }
         qrTokens.save(SiteQrToken.issue(tenantId, workSiteId, nonce, KEY_ID, now, expiresAt));
 
         String token = signer.sign(new QrPayload(tenantId, workSiteId, nonce, expiresAt));
         return new GeneratedQr(token, expiresAt);
     }
 
+    private Instant resolveExpiry(Instant now, Integer ttlMinutes, Instant expiresAtOverride) {
+        if (expiresAtOverride == null) {
+            long ttlSeconds = ttlMinutes != null ? ttlMinutes * 60L : qrTtlSeconds;
+            return now.plusSeconds(ttlSeconds);
+        }
+        if (!expiresAtOverride.isAfter(now)) {
+            throw new DomainException("INVALID_QR_EXPIRY", "La fecha de expiración debe ser futura");
+        }
+        if (expiresAtOverride.isAfter(now.plus(Duration.ofDays(qrMaxFarExpiryDays)))) {
+            throw new DomainException("INVALID_QR_EXPIRY",
+                    "La fecha de expiración no puede superar " + qrMaxFarExpiryDays + " días");
+        }
+        return expiresAtOverride;
+    }
+
+    // Deliberadamente SIN @Transactional: lanza DomainException y se invoca desde la transacción
+    // del registro de asistencia. Si fuera transaccional, el interceptor marcaría esa transacción
+    // compartida como rollback-only antes de que QrValidationAdapter capturase la excepción, y el
+    // commit acabaría en UnexpectedRollbackException.
     @Override
     public QrPayload verifyQr(String token) {
         QrPayload payload = signer.verify(token)
@@ -108,6 +128,12 @@ public class GeofencingService implements GeofencingUseCase {
             // Código propio: para quien registra asistencia, un QR caducado y uno falsificado
             // acaban en el mismo rechazo, pero solo el primero se resuelve renovando el cartel.
             throw new DomainException("QR_EXPIRED", "QR expirado");
+        }
+        // El QR de empresa se comprueba además contra el registro de emisiones: al no estar
+        // respaldado por una geocerca, la firma y la vigencia no bastan y su rotación tiene que
+        // dejar inservible al anterior. El QR de centro conserva su comportamiento histórico.
+        if (payload.isCompanyWide() && !qrTokens.isActiveCompanyToken(payload.tenantId(), payload.nonce())) {
+            throw new DomainException("INVALID_QR", "QR de empresa revocado o desconocido");
         }
         return payload;
     }

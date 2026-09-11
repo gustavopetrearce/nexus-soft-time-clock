@@ -8,7 +8,9 @@ import java.util.UUID;
 /** Solicitud de registro de asistencia (CU-02). */
 public record RegisterAttendanceRequest(
         @NotNull UUID operationUuid,
-        @NotNull UUID workSiteId,
+        // Nulo = marcación sin centro. Debe ir acompañado de un QR de empresa: el servicio exige
+        // que el ámbito del token y el del comando coincidan, en ambas direcciones.
+        UUID workSiteId,
         @NotBlank String qrToken,
         @NotNull @DecimalMin("-90") @DecimalMax("90") Double latitude,
         @NotNull @DecimalMin("-180") @DecimalMax("180") Double longitude,

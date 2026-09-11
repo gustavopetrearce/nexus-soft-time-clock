@@ -13,15 +13,15 @@ Traza cada **Requisito Funcional (RF)** con sus **Historias (HU)**, **Reglas de 
 | RF-07 | Centros de trabajo | HU-22 | RN-43 | CU-06 | BC-03 |
 | RF-08 | Horarios y turnos | HU-24 | RN-15, RN-16 | (CRUD estándar) | BC-04 |
 | RF-09 | Incidencias | HU-26 | RN-16, RN-43, RN-60 | CU-08 | BC-09 |
-| RF-10 | Geocercas | HU-23 | RN-13, RN-14 | CU-06 | BC-05 |
+| RF-10 | Geocercas | HU-23 | RN-13, RN-14, RN-18 | CU-06 | BC-05 |
 | RF-11 | Reportes exportables | HU-33 | RN-30 | CU-09 | BC-11 |
 | RF-12 | Auditoría | HU-34 | RN-60, RN-61, RN-62 | CU-10 | BC-10 |
 | RF-13 | Multiempresa | HU-20 | RN-30, RN-31, RN-32 | — | BC-02 |
-| RF-14 | Registro vía QR | HU-10, HU-25 | RN-25, RN-26 | CU-02, CU-07 | BC-05, BC-06 |
-| RF-15 | Validación GPS | HU-10 | RN-13, RN-14 | CU-02 | BC-06 |
+| RF-14 | Registro vía QR | HU-10, HU-17, HU-25 | RN-25, RN-26, RN-19 | CU-02, CU-07 | BC-05, BC-06 |
+| RF-15 | Validación GPS | HU-10, HU-17 | RN-13, RN-14, RN-18 | CU-02 | BC-06 |
 | RF-16 | Validación horario/turno | HU-10, HU-24 | RN-15, RN-16 | CU-02 | BC-04, BC-06 |
 | RF-17 | Hora del servidor | HU-10, HU-15 | RN-11 | CU-02, CU-05 | BC-06 |
-| RF-18 | Evidencia fotográfica | HU-13 | RN-10 | CU-02 | BC-06 |
+| RF-18 | Evidencia fotográfica | HU-13, HU-17 | RN-10, RN-18 | CU-02 | BC-06 |
 | RF-19 | Biometría opcional | HU-14 | RN-10 | CU-02 | BC-06 |
 | RF-20 | Prevención de fraude | HU-10, HU-15 | RN-20..RN-28 | CU-02 | BC-07 |
 | RF-21 | Offline + sincronización | HU-15 | RN-50..RN-54 | CU-05 | BC-08 |

@@ -49,6 +49,16 @@ public class GeofencingPersistenceAdapter implements GeofenceRepositoryPort, Sit
     }
 
     @Override
+    public void deactivateActiveForCompany(UUID tenantId) {
+        qrRepo.deactivateActiveForCompany(tenantId);
+    }
+
+    @Override
+    public boolean isActiveCompanyToken(UUID tenantId, String nonce) {
+        return nonce != null && qrRepo.existsActiveCompanyToken(tenantId, nonce);
+    }
+
+    @Override
     public SiteQrToken save(SiteQrToken t) {
         qrRepo.save(new SiteQrTokenJpaEntity(t.id(), t.tenantId(), t.workSiteId(), t.nonce(), t.keyId(),
                 t.issuedAt(), t.expiresAt(), t.active()));

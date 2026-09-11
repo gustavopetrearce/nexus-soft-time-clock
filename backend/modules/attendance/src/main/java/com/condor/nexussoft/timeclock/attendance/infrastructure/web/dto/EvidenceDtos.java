@@ -3,7 +3,6 @@ package com.condor.nexussoft.timeclock.attendance.infrastructure.web.dto;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.EvidenceStoragePort;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.WorkSitePolicyPort;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 import java.time.Instant;
@@ -21,7 +20,7 @@ public final class EvidenceDtos {
      * el objeto almacenado, porque una declaración del cliente no es prueba de nada.
      */
     public record EvidenceUploadRequest(
-            @NotNull UUID workSiteId,
+            UUID workSiteId,
             @NotBlank String contentType,
             @Positive long sizeBytes,
             String sha256) {

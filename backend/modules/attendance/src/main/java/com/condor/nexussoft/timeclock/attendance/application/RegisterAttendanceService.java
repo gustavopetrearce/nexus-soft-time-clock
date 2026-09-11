@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -22,6 +23,12 @@ import java.util.stream.Collectors;
  * idempotencia → QR firmado → antifraude → device binding → geocerca/precisión → horario →
  * secuencia de jornada → evidencia/biometría, fija la hora de servidor (RN-11), persiste el
  * registro (aceptado o rechazado con motivo) y publica el evento de dominio.
+ *
+ * <p>Existe un <b>camino opcional sin centro de trabajo</b> (V25): con un QR de empresa
+ * ({@code workSiteId} nulo) no se evalúa geocerca alguna, el GPS se persiste sin contrastar, la
+ * foto pasa a ser obligatoria y el registro queda marcado con la bandera {@code NO_GEOFENCE}.
+ * Requiere que la empresa lo tenga habilitado; el resto de barreras (precisión GPS, antifraude,
+ * device binding, secuencia, horario) siguen aplicándose igual.</p>
  *
  * <p>El anti-replay (RN-26) descansa en la idempotencia por {@code operation_uuid} (RN-51) y en la
  * secuencia coherente (RN-12), no en consumir el nonce del QR: el QR de centro lleva un nonce fijo
@@ -51,6 +58,13 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
      */
     private final long offlineMaxAgeHours;
 
+    /**
+     * Umbral de precisión GPS de último recurso para la marcación sin centro. Con centro lo aporta
+     * la propia geocerca; sin ella hace falta leerlo aquí. Misma propiedad que usa
+     * {@code GeofenceCheckAdapter}, para que ambos caminos no puedan divergir por configuración.
+     */
+    private final double defaultGpsAccuracyMaxM;
+
     public RegisterAttendanceService(AttendanceRepositoryPort attendance, IdempotencyStorePort idempotency,
                                      QrValidationPort qrValidation,
                                      GeofenceCheckPort geofenceCheck, FraudCheckPort fraudCheck,
@@ -60,7 +74,9 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
                                      CompanyPolicyPort companyPolicy,
                                      AttendanceEventPublisherPort events,
                                      Clock clock,
-                                     @Value("${attendance.offline.max-age-hours:72}") long offlineMaxAgeHours) {
+                                     @Value("${attendance.offline.max-age-hours:72}") long offlineMaxAgeHours,
+                                     @Value("${attendance.default-gps-accuracy-max-m:50}")
+                                     double defaultGpsAccuracyMaxM) {
         this.attendance = attendance;
         this.idempotency = idempotency;
         this.qrValidation = qrValidation;
@@ -75,6 +91,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         this.events = events;
         this.clock = clock;
         this.offlineMaxAgeHours = offlineMaxAgeHours;
+        this.defaultGpsAccuracyMaxM = defaultGpsAccuracyMaxM;
     }
 
     @Override
@@ -93,6 +110,10 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         List<String> flags = new ArrayList<>();
         RejectionReason reason = null;
 
+        // Marcación sin centro: la abre un QR de empresa y prescinde de la geocerca (V25).
+        boolean siteless = cmd.workSiteId() == null;
+        CompanyPolicyPort.CompanyPolicy company = companyPolicy.find(tenantId);
+
         // Momento con el que se contrasta la ventana de turno. Para un lote offline sincronizado
         // horas después, la hora de llegada caería sistemáticamente fuera de ventana (OUT_OF_SCHEDULE
         // espurio), así que se usa la del dispositivo. Es un dato manipulable, pero se acota al
@@ -106,8 +127,11 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
 
         // 1) QR firmado + vigencia + coincidencia de tenant/centro (RN-25).
         QrValidationPort.QrCheck qr = qrValidation.verify(cmd.qrToken());
+        // La comparación de centro es simétrica a propósito: un QR de empresa solo casa con un
+        // comando sin centro y uno de centro solo con el suyo. Sin esa simetría bastaría con omitir
+        // el workSiteId frente a un QR de centro para saltarse la geocerca.
         boolean qrOk = qr.valid() && !qr.expired()
-                && tenantId.equals(qr.tenantId()) && cmd.workSiteId().equals(qr.workSiteId());
+                && tenantId.equals(qr.tenantId()) && Objects.equals(cmd.workSiteId(), qr.workSiteId());
         if (qr.expired()) {
             // Mismo motivo de rechazo, pero distinguible en la traza: es el fallo más probable de un
             // lote offline contra un QR de vigencia corta.
@@ -122,6 +146,12 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         if (reason == null && EventTypeCatalog.isConfigurable(eventType)
                 && !EventTypeCatalog.isEnabled(eventType, eventTypeConfig.findByTenant(tenantId))) {
             reason = RejectionReason.EVENT_TYPE_DISABLED;
+        }
+
+        // 1.6) El camino sin centro es opt-in por empresa. Se comprueba aquí, y no solo al emitir el
+        //       QR, porque un cartel generado antes de apagar la política seguiría siendo válido.
+        if (reason == null && siteless && !company.sitelessAttendanceEnabled()) {
+            reason = RejectionReason.SITELESS_NOT_ALLOWED;
         }
 
         // 2) Antifraude (mock, root, spoofing, GPS) — RN-20..RN-28.
@@ -145,16 +175,32 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
 
         // 3) Geocerca + precisión GPS (RN-13, RN-14). El umbral de precisión es por-centro (HU-10);
         //    si el centro no lo define, se usa el default de plataforma que expone la geocerca.
-        GeofenceCheckPort.GeofenceCheck geo = geofenceCheck.check(tenantId, cmd.workSiteId(),
-                cmd.latitude(), cmd.longitude());
-        Double distance = geo.exists() ? geo.distanceM() : null;
+        //    Sin centro no hay geocerca contra la que medir: la posición se registra tal cual y el
+        //    registro se marca con NO_GEOFENCE, pero la PRECISIÓN se sigue exigiendo —un fix de
+        //    ±2 km no prueba nada tampoco aquí— contra el umbral de la empresa.
         WorkSitePolicyPort.SitePolicy policy = sitePolicy.find(tenantId, cmd.workSiteId());
-        double accuracyMax = policy.gpsAccuracyMaxM() != null ? policy.gpsAccuracyMaxM() : geo.accuracyMaxM();
-        if (reason == null) {
-            if (cmd.accuracyM() > accuracyMax) {
+        Double distance = null;
+        if (siteless) {
+            double accuracyMax = policy.gpsAccuracyMaxM() != null
+                    ? policy.gpsAccuracyMaxM() : defaultGpsAccuracyMaxM;
+            // La bandera se pone aunque la marca acabe rechazada por otro motivo: describe cómo se
+            // validó, no si se aceptó (mismo criterio que OUT_OF_SCHEDULE).
+            flags.add("NO_GEOFENCE");
+            if (reason == null && cmd.accuracyM() > accuracyMax) {
                 reason = RejectionReason.LOW_GPS_ACCURACY;
-            } else if (!geo.exists() || !geo.withinRadius()) {
-                reason = RejectionReason.OUT_OF_GEOFENCE;
+            }
+        } else {
+            GeofenceCheckPort.GeofenceCheck geo = geofenceCheck.check(tenantId, cmd.workSiteId(),
+                    cmd.latitude(), cmd.longitude());
+            distance = geo.exists() ? geo.distanceM() : null;
+            double accuracyMax = policy.gpsAccuracyMaxM() != null
+                    ? policy.gpsAccuracyMaxM() : geo.accuracyMaxM();
+            if (reason == null) {
+                if (cmd.accuracyM() > accuracyMax) {
+                    reason = RejectionReason.LOW_GPS_ACCURACY;
+                } else if (!geo.exists() || !geo.withinRadius()) {
+                    reason = RejectionReason.OUT_OF_GEOFENCE;
+                }
             }
         }
 
@@ -180,7 +226,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
             // colaborador para siempre (INVALID_SEQUENCE en cada intento posterior), porque nada
             // cierra las jornadas huérfanas. Ventana deslizante —no día natural— para no partir en
             // dos un turno nocturno.
-            Instant since = now.minus(companyPolicy.find(tenantId).openShiftMaxHours(), ChronoUnit.HOURS);
+            Instant since = now.minus(company.openShiftMaxHours(), ChronoUnit.HOURS);
             reason = AttendanceSequenceValidator
                     .validate(attendance.findLastAcceptedEvent(tenantId, userId, since),
                             eventType, cmd.workSiteId())
@@ -205,8 +251,11 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
             }
         }
 
-        // Políticas obligatorias del centro: foto (HU-13 CA1) y biometría (HU-14 CA1).
-        if (reason == null && policy.requirePhoto() && evidence == null) {
+        // Políticas obligatorias del centro: foto (HU-13 CA1) y biometría (HU-14 CA1). Sin centro la
+        // foto se exige siempre, aunque la empresa la tenga desactivada: retirada la geocerca, es la
+        // única evidencia que queda de que quien fichó estaba realmente allí.
+        boolean photoRequired = siteless || policy.requirePhoto();
+        if (reason == null && photoRequired && evidence == null) {
             reason = RejectionReason.PHOTO_REQUIRED;
         }
         if (reason == null && policy.requireBiometric() && !cmd.biometricVerified()) {

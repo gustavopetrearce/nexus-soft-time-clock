@@ -59,10 +59,12 @@ class AttendanceController extends Notifier<AttendanceUiState> {
 
   /// [evidencePath] y [evidenceSha256] son la foto ya capturada y comprimida (RF-18). No se sube
   /// aquí: viaja con la cola, para que una marcación sin conexión no dependa de la red.
+  ///
+  /// [workSiteId] nulo = marcación con QR de empresa: sin centro y sin validación de geocerca.
   Future<void> register({
     required String eventType,
-    required String workSiteId,
     required String qrToken,
+    String? workSiteId,
     bool biometricVerified = false,
     String? evidencePath,
     String? evidenceSha256,
@@ -202,6 +204,8 @@ class AttendanceController extends Notifier<AttendanceUiState> {
         return 'se requiere verificación biométrica';
       case 'EVENT_TYPE_DISABLED':
         return 'tipo de evento no habilitado';
+      case 'SITELESS_NOT_ALLOWED':
+        return 'tu empresa no permite registrar sin centro de trabajo';
       default:
         return reason ?? 'motivo desconocido';
     }

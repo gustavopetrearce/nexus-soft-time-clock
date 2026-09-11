@@ -50,4 +50,33 @@ class HmacQrTokenSignerTest {
     void verify_conBasura_devuelveVacio() {
         assertThat(signer.verify("no-es-un-token")).isEmpty();
     }
+
+    /** QR de empresa: el centro viaja vacío y debe volver como nulo, no como token ilegible. */
+    @Test
+    void sign_then_verify_deUnQrDeEmpresa_devuelveCentroNulo() {
+        QrPayload payload = new QrPayload(UUID.randomUUID(), null, "nonce-empresa",
+                Instant.parse("2026-07-21T10:02:00Z"));
+
+        Optional<QrPayload> verified = signer.verify(signer.sign(payload));
+
+        assertThat(verified).isPresent();
+        assertThat(verified.get().tenantId()).isEqualTo(payload.tenantId());
+        assertThat(verified.get().workSiteId()).isNull();
+        assertThat(verified.get().isCompanyWide()).isTrue();
+        assertThat(verified.get().nonce()).isEqualTo("nonce-empresa");
+        assertThat(verified.get().expiresAt()).isEqualTo(payload.expiresAt());
+    }
+
+    /** El campo vacío del centro no debe hacer que el cuerpo pierda campos al trocearlo. */
+    @Test
+    void qrDeEmpresa_conNonceVacio_noSeConfundeConUnCuerpoDeTresCampos() {
+        QrPayload payload = new QrPayload(UUID.randomUUID(), null, "",
+                Instant.parse("2026-07-21T10:02:00Z"));
+
+        Optional<QrPayload> verified = signer.verify(signer.sign(payload));
+
+        assertThat(verified).isPresent();
+        assertThat(verified.get().workSiteId()).isNull();
+        assertThat(verified.get().expiresAt()).isEqualTo(payload.expiresAt());
+    }
 }

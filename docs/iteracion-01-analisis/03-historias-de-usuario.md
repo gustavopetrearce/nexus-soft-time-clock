@@ -34,6 +34,9 @@ Como **colaborador** quiero registrar mi entrada escaneando el QR del sitio para
 - **CA5:** Si se detecta mock location / root / spoofing, se **rechaza/marca** según política. Ver [RN-20..RN-27](04-reglas-de-negocio.md).
 - **CA6:** El registro guarda: usuario, centro, geocerca, lat/lng, precisión, tipo de evento, hash del QR, hora de servidor, resultado de validaciones.
 
+> CA1, CA2 y CA4 describen el registro **con centro de trabajo**, que es el camino por defecto. La
+> empresa puede habilitar además un camino sin centro: ver [HU-17](#hu-17--registrar-asistencia-sin-centro-de-trabajo-rf-15-rf-18).
+
 ### HU-11 — Registrar salida (RF-03)
 Como **colaborador** quiero registrar mi salida para cerrar mi jornada.
 - **CA1:** Solo puedo registrar salida si tengo una entrada abierta en el mismo centro/turno.
@@ -64,6 +67,19 @@ Como **colaborador en zona sin señal** quiero registrar mi asistencia sin conex
 Como **colaborador** quiero ver mi historial de registros para consultar mi asistencia.
 - **CA1:** Puedo filtrar por rango de fechas y ver estado de cada registro.
 
+### HU-17 — Registrar asistencia sin centro de trabajo (RF-15, RF-18)
+Como **colaborador sin sede fija** (visitador, técnico de campo, comercial) quiero registrar mi
+asistencia sin pertenecer a un centro de trabajo, para dejar constancia de mi jornada donde quiera
+que esté. Es un camino **opcional** que convive con [HU-10](#hu-10--registrar-entrada-por-qr--gps-rf-02-rf-14-rf-15-rf-16-rf-17); no lo sustituye.
+- **CA1:** El camino solo existe si la empresa lo habilita (`company_settings.siteless_attendance_enabled`, apagado por defecto). Con la política apagada, un intento se **rechaza** con `SITELESS_NOT_ALLOWED` aunque se presente un QR de empresa emitido antes.
+- **CA2:** Se registra escaneando un **QR de empresa**: firmado y con vigencia como el de centro, pero sin centro asociado. Lo emite quien tenga `geofence:manage`.
+- **CA3:** La ubicación GPS sigue siendo **obligatoria** y se persiste, pero **no se contrasta con ninguna geocerca**: el registro se acepta marcado con la bandera `NO_GEOFENCE` y sin distancia al centro.
+- **CA4:** La **precisión** del GPS se sigue exigiendo contra el umbral de la empresa; por encima, `LOW_GPS_ACCURACY`.
+- **CA5:** La **foto es obligatoria** en este camino, aunque la empresa tenga la evidencia fotográfica desactivada: sin geocerca es la única prueba de presencia. Sin ella, `PHOTO_REQUIRED`.
+- **CA6:** Los ámbitos no se mezclan: un QR de empresa presentado con un centro, o un QR de centro presentado sin él, se rechazan con `INVALID_QR`. Una jornada abierta sin centro solo se cierra sin centro, y viceversa (ver [RN-12](04-reglas-de-negocio.md)).
+- **CA7:** Antifraude, device binding, ventana de turno y secuencia de jornada siguen aplicándose. El turno se busca entre **todas** las asignaciones vigentes del colaborador, sin filtrar por centro, para conservar la detección de retardo.
+- **CA8:** En el portal, estas marcas se distinguen como **«Sin centro»** —no como un centro vacío— y el detalle indica que no hubo validación de geocerca.
+
 ---
 
 ## Épica E3 — Administración (portal)
@@ -91,6 +107,7 @@ Como **administrador** quiero configurar horarios y turnos con tolerancias para 
 ### HU-25 — Generación de QR de centro (RF-14)
 Como **administrador** quiero generar/rotar el QR de un centro para el registro seguro.
 - **CA1:** El QR incorpora un secreto/nonce firmado y una vigencia, no un valor estático adivinable. Ver [RN-25](04-reglas-de-negocio.md).
+- **CA2:** Si la empresa habilitó el registro sin centro ([HU-17](#hu-17--registrar-asistencia-sin-centro-de-trabajo-rf-15-rf-18)), puedo emitir además un **QR de empresa** desde Configuración. A diferencia del QR de centro, rotarlo **invalida el anterior de inmediato**: al no tener geocerca detrás, la firma y la vigencia no bastan como única barrera.
 
 ### HU-26 — Gestión de incidencias (RF-09)
 Como **RR.HH./supervisor** quiero revisar y resolver incidencias (retardos, faltas, permisos) para mantener la asistencia correcta.

@@ -29,7 +29,7 @@ class EvidenceUploadService {
 
   Future<UploadedEvidence?> upload({
     required File file,
-    required String workSiteId,
+    String? workSiteId,
     required String sha256,
     required int sizeBytes,
     required String contentType,
@@ -37,7 +37,8 @@ class EvidenceUploadService {
     final ticket = await _api.post<Map<String, dynamic>>(
       '/attendance/evidence/uploads',
       data: {
-        'workSiteId': workSiteId,
+        // Se omite en una marcación sin centro: el servidor decide entonces un prefijo propio.
+        if (workSiteId != null) 'workSiteId': workSiteId,
         'contentType': contentType,
         'sizeBytes': sizeBytes,
         'sha256': sha256,

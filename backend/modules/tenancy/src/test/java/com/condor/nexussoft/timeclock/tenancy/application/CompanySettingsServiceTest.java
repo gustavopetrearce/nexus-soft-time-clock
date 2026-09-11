@@ -27,7 +27,11 @@ class CompanySettingsServiceTest {
     final UUID tenantId = UUID.randomUUID();
 
     private CompanySettingsUseCase.UpdateCommand command(Integer accuracy, String action) {
-        return new CompanySettingsUseCase.UpdateCommand(accuracy, true, false, true, action);
+        return command(accuracy, action, false);
+    }
+
+    private CompanySettingsUseCase.UpdateCommand command(Integer accuracy, String action, boolean siteless) {
+        return new CompanySettingsUseCase.UpdateCommand(accuracy, true, false, true, action, siteless);
     }
 
     /** Sin fila de configuración el tenant opera con los defaults del esquema, no con un 404. */
@@ -41,6 +45,8 @@ class CompanySettingsServiceTest {
         assertThat(settings.requireBiometric()).isFalse();
         assertThat(settings.deviceBindingEnabled()).isTrue();
         assertThat(settings.deviceBindingAction()).isEqualTo(CompanySettings.DeviceBindingAction.REJECT);
+        // El camino sin centro es una excepción a activar a propósito: jamás por ausencia de datos.
+        assertThat(settings.sitelessAttendanceEnabled()).isFalse();
     }
 
     @Test
@@ -51,6 +57,15 @@ class CompanySettingsServiceTest {
 
         assertThat(saved.requirePhoto()).isTrue();
         assertThat(saved.deviceBindingAction()).isEqualTo(CompanySettings.DeviceBindingAction.FLAG);
+    }
+
+    @Test
+    void actualizar_persisteLaHabilitacionDelRegistroSinCentro() {
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CompanySettings saved = service.update(tenantId, command(50, "REJECT", true));
+
+        assertThat(saved.sitelessAttendanceEnabled()).isTrue();
     }
 
     @Test

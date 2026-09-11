@@ -15,6 +15,11 @@ export interface AttendanceEvent {
   gpsAccuracyM?: number | null;
   distanceToSiteM?: number | null;
   source?: string;
+  /**
+   * Se registró sin centro de trabajo (QR de empresa), luego sin validación de geocerca. No es lo
+   * mismo que un centro borrado: aquel también deja `workSite` vacío pero sí pasó por su geocerca.
+   */
+  siteless: boolean;
 }
 
 /** Etiquetas en español de los tipos de evento. */
@@ -50,4 +55,5 @@ export const REJECTION_LABELS: Record<string, string> = {
   PHOTO_REQUIRED: 'Falta evidencia fotográfica',
   BIOMETRIC_REQUIRED: 'Falta verificación biométrica',
   EVENT_TYPE_DISABLED: 'Tipo de evento deshabilitado',
+  SITELESS_NOT_ALLOWED: 'La empresa no permite registrar sin centro de trabajo',
 };

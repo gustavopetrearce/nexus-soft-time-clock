@@ -78,7 +78,13 @@ type Period = 'week' | 'fortnight' | 'month' | 'range';
             </ng-container>
             <ng-container matColumnDef="site">
               <th mat-header-cell *matHeaderCellDef>Centro de trabajo</th>
-              <td mat-cell *matCellDef="let e">{{ e.workSite || '—' }}</td>
+              <td mat-cell *matCellDef="let e">
+                @if (e.siteless) {
+                  <span class="siteless" title="Registro sin centro: no se validó geocerca">Sin centro</span>
+                } @else {
+                  {{ e.workSite || '—' }}
+                }
+              </td>
             </ng-container>
             <ng-container matColumnDef="status">
               <th mat-header-cell *matHeaderCellDef>Estado</th>
@@ -155,6 +161,7 @@ type Period = 'week' | 'fortnight' | 'month' | 'range';
       .cf { width: 100%; min-width: 110px; padding: 7px 9px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: var(--font-small); }
       .cf:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
       select.cf { cursor: pointer; }
+      .siteless { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: var(--font-small); font-weight: 600; background: var(--warning-bg); color: var(--warning); }
     `,
   ],
 })
@@ -182,7 +189,7 @@ export class AttendanceEventsComponent {
       if (f['date'] && !this.fmt(e.serverTime).toLowerCase().includes(f['date'].toLowerCase())) return false;
       if (f['user'] && !`${e.employeeName ?? ''} ${e.employeeCode ?? ''}`.toLowerCase().includes(f['user'].toLowerCase())) return false;
       if (f['event'] && e.eventType !== f['event']) return false;
-      if (f['site'] && !(e.workSite ?? '').toLowerCase().includes(f['site'].toLowerCase())) return false;
+      if (f['site'] && !(e.siteless ? 'sin centro' : (e.workSite ?? '').toLowerCase()).includes(f['site'].toLowerCase())) return false;
       if (f['status'] && e.status !== f['status']) return false;
       return true;
     });
@@ -239,7 +246,8 @@ export class AttendanceEventsComponent {
     const header = ['Fecha y hora', 'Colaborador', 'Código', 'Evento', 'Centro de trabajo', 'Estado', 'Motivo de rechazo'];
     const rows = this.filtered().map((e) => [
       this.fmt(e.serverTime), e.employeeName ?? e.userId, e.employeeCode ?? '',
-      this.eventLabel(e.eventType), e.workSite ?? '', this.statusLabel(e.status), this.rejectionTooltip(e),
+      this.eventLabel(e.eventType), e.siteless ? 'Sin centro' : (e.workSite ?? ''),
+      this.statusLabel(e.status), this.rejectionTooltip(e),
     ]);
     const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const book = XLSX.utils.book_new();
