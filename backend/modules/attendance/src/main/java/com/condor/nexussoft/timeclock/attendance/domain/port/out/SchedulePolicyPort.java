@@ -26,10 +26,11 @@ public interface SchedulePolicyPort {
 
     /**
      * Resultado de la evaluación horaria. {@code minutesLate} es la tardanza sobre
-     * {@code inicio_turno + tolerancia} de la ocurrencia que casó la ventana (RN-16); es 0 salvo
-     * que la marca sea posterior a la tolerancia. Solo tiene sentido para ENTRADA dentro de ventana.
-     * {@code shiftId} es el turno al que se atribuye la marca, y es {@code null} cuando no hay
-     * ninguno que la reclame.
+     * {@code inicio_turno + tolerancia} de la ocurrencia elegida (RN-16); es 0 salvo que la marca
+     * sea posterior a la tolerancia. Solo tiene sentido para ENTRADA dentro de ventana.
+     * {@code shiftId} es el turno al que se atribuye la marca —también cuando cae fuera de su
+     * ventana, para que el rechazo diga contra qué turno se midió— y es {@code null} solo cuando el
+     * colaborador no tiene ninguno vigente.
      */
     record ScheduleDecision(Outcome outcome, int minutesLate, UUID shiftId) {
 
@@ -37,8 +38,8 @@ public interface SchedulePolicyPort {
             return new ScheduleDecision(Outcome.NO_SCHEDULE, 0, null);
         }
 
-        public static ScheduleDecision outOfWindow() {
-            return new ScheduleDecision(Outcome.OUT_OF_WINDOW, 0, null);
+        public static ScheduleDecision outOfWindow(UUID shiftId) {
+            return new ScheduleDecision(Outcome.OUT_OF_WINDOW, 0, shiftId);
         }
 
         public static ScheduleDecision withinWindow(int minutesLate, UUID shiftId) {
