@@ -4,13 +4,18 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
- * Determina si un instante (ya convertido a la zona del turno) cae dentro de la <b>ventana de
- * registro</b> de un turno (RN-15): {@code [inicio - windowBefore, fin + windowAfter]}.
- * Para turnos que cruzan medianoche se evalúa tanto la ocurrencia que empieza hoy como la que
- * empezó ayer (un turno nocturno abierto anoche sigue vigente en la madrugada).
+ * Sitúa un instante (ya convertido a la zona del turno) dentro del calendario de un turno.
+ *
+ * <p>Dos preguntas distintas, y conviene no mezclarlas: <b>a qué aparición del turno pertenece</b>
+ * una marca —{@link #candidateOccurrences}, que las enumera todas— y <b>si cae en su ventana de
+ * registro</b> (RN-15) {@code [inicio - windowBefore, fin + windowAfter]}
+ * —{@link Occurrence#withinWindow}. Resolver la primera filtrando por la segunda hacía que un turno
+ * cuya ventana aún no ha abierto no compitiera, y la marca se la quedara otro turno con la ventana
+ * todavía abierta, midiendo la entrada contra un inicio de horas antes.</p>
  */
 public final class ScheduleWindowValidator {
 
@@ -19,7 +24,7 @@ public final class ScheduleWindowValidator {
 
     /**
      * Una aparición concreta del turno en el calendario: sus dos bordes ya fechados. Es lo que hace
-     * falta para decidir <b>a qué turno pertenece</b> una marca cuando dos ventanas se solapan.
+     * falta para decidir <b>a qué turno pertenece</b> una marca cuando dos turnos se disputan.
      */
     public record Occurrence(LocalDateTime start, LocalDateTime end) {
 
@@ -42,6 +47,20 @@ public final class ScheduleWindowValidator {
             return !now.isBefore(start);
         }
 
+        /** La ventana de registro de esta aparición (RN-15). Inclusiva en ambos extremos. */
+        public boolean withinWindow(int windowBeforeMin, int windowAfterMin, LocalDateTime now) {
+            return !now.isBefore(start.minusMinutes(windowBeforeMin))
+                    && !now.isAfter(end.plusMinutes(windowAfterMin));
+        }
+
+        /**
+         * Día al que pertenece la jornada. Es la fecha contra la que se mide la vigencia de la
+         * asignación: un turno nocturno fichado de madrugada sigue siendo el del día que arrancó.
+         */
+        public LocalDate businessDate() {
+            return start.toLocalDate();
+        }
+
         private long distanceToBody(LocalDateTime now) {
             if (now.isBefore(start)) {
                 return absMinutes(start, now);
@@ -54,43 +73,41 @@ public final class ScheduleWindowValidator {
         }
     }
 
+    /**
+     * Las apariciones del turno que pueden reclamar una marca de {@code now}: la de ayer, la de hoy
+     * y la de mañana. Se enumeran las tres siempre —no sólo en los turnos nocturnos— porque el
+     * criterio de cercanía necesita ver el turno que aún no ha empezado para no atribuir la marca al
+     * de ayer; en un turno diurno las de los extremos quedan a más de un día y nunca ganan.
+     */
+    public static List<Occurrence> candidateOccurrences(LocalTime start, LocalTime end,
+                                                        boolean crossesMidnight, LocalDateTime now) {
+        LocalDate today = now.toLocalDate();
+        return List.of(
+                occurrenceFor(today, start, end, crossesMidnight),
+                occurrenceFor(today.minusDays(1), start, end, crossesMidnight),
+                occurrenceFor(today.plusDays(1), start, end, crossesMidnight));
+    }
+
     public static boolean withinWindow(LocalTime start, LocalTime end, boolean crossesMidnight,
                                        int windowBeforeMin, int windowAfterMin, LocalDateTime now) {
         return matchedOccurrence(start, end, crossesMidnight, windowBeforeMin, windowAfterMin, now).isPresent();
     }
 
     /**
-     * Devuelve el {@code inicio} (fecha+hora) de la ocurrencia del turno cuya ventana contiene a
-     * {@code now}, o vacío si {@code now} no cae en ninguna ventana. Sirve para medir la tardanza
-     * respecto al inicio real de la jornada (RN-16), respetando turnos que cruzan medianoche.
+     * La aparición cuya ventana contiene a {@code now}, con sus dos bordes fechados, o vacío si
+     * ninguna la contiene. Prevalece la de hoy sobre la de ayer y la de mañana, que es lo que
+     * mantiene abierto el turno nocturno arrancado anoche cuando se ficha de madrugada.
      */
-    public static Optional<LocalDateTime> matchedStart(LocalTime start, LocalTime end, boolean crossesMidnight,
-                                                       int windowBeforeMin, int windowAfterMin, LocalDateTime now) {
-        return matchedOccurrence(start, end, crossesMidnight, windowBeforeMin, windowAfterMin, now)
-                .map(Occurrence::start);
-    }
-
-    /** La ocurrencia cuya ventana contiene a {@code now}, con sus dos bordes fechados. */
     public static Optional<Occurrence> matchedOccurrence(LocalTime start, LocalTime end, boolean crossesMidnight,
                                                         int windowBeforeMin, int windowAfterMin, LocalDateTime now) {
-        LocalDate today = now.toLocalDate();
-        Optional<Occurrence> deHoy = occurrenceFor(today, start, end, crossesMidnight,
-                windowBeforeMin, windowAfterMin, now);
-        if (deHoy.isPresent() || !crossesMidnight) {
-            return deHoy;
-        }
-        return occurrenceFor(today.minusDays(1), start, end, true, windowBeforeMin, windowAfterMin, now);
+        return candidateOccurrences(start, end, crossesMidnight, now).stream()
+                .filter(o -> o.withinWindow(windowBeforeMin, windowAfterMin, now))
+                .findFirst();
     }
 
-    private static Optional<Occurrence> occurrenceFor(LocalDate startDate, LocalTime start, LocalTime end,
-                                                      boolean crossesMidnight, int beforeMin, int afterMin,
-                                                      LocalDateTime now) {
-        LocalDateTime occurrenceStart = startDate.atTime(start);
+    private static Occurrence occurrenceFor(LocalDate startDate, LocalTime start, LocalTime end,
+                                            boolean crossesMidnight) {
         LocalDate endDate = crossesMidnight ? startDate.plusDays(1) : startDate;
-        LocalDateTime occurrenceEnd = endDate.atTime(end);
-
-        boolean dentro = !now.isBefore(occurrenceStart.minusMinutes(beforeMin))
-                && !now.isAfter(occurrenceEnd.plusMinutes(afterMin));
-        return dentro ? Optional.of(new Occurrence(occurrenceStart, occurrenceEnd)) : Optional.empty();
+        return new Occurrence(startDate.atTime(start), endDate.atTime(end));
     }
 }

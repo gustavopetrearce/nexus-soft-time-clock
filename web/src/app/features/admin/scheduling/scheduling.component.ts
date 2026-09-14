@@ -110,6 +110,17 @@ import { SchedulingService } from './scheduling.service';
                     <mat-form-field appearance="outline" style="width:150px">
                       <mat-label>Tolerancia (min)</mat-label>
                       <input matInput type="number" formControlName="lateToleranceMin" />
+                      <mat-hint>Margen tras la entrada antes de contar retardo.</mat-hint>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" style="width:150px">
+                      <mat-label>Ventana antes (min)</mat-label>
+                      <input matInput type="number" formControlName="windowBeforeMin" />
+                      <mat-hint>Cuánto antes de la entrada se admite marcar.</mat-hint>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" style="width:150px">
+                      <mat-label>Ventana después (min)</mat-label>
+                      <input matInput type="number" formControlName="windowAfterMin" />
+                      <mat-hint>Cuánto después de la salida se admite marcar.</mat-hint>
                     </mat-form-field>
                     <mat-checkbox formControlName="crossesMidnight">Cruza medianoche</mat-checkbox>
                     <button mat-flat-button color="primary" type="submit" [disabled]="shiftForm.invalid">
@@ -133,6 +144,10 @@ import { SchedulingService } from './scheduling.service';
                       <ng-container matColumnDef="tolerance">
                         <th mat-header-cell *matHeaderCellDef>Tol.</th>
                         <td mat-cell *matCellDef="let s">{{ s.lateToleranceMin }}m</td>
+                      </ng-container>
+                      <ng-container matColumnDef="window">
+                        <th mat-header-cell *matHeaderCellDef>Ventana</th>
+                        <td mat-cell *matCellDef="let s">−{{ s.windowBeforeMin }}m / +{{ s.windowAfterMin }}m</td>
                       </ng-container>
                       <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef></th>
@@ -256,7 +271,7 @@ export class SchedulingComponent {
   protected readonly router = inject(Router);
 
   protected readonly scheduleColumns = ['code', 'name', 'status', 'actions'];
-  protected readonly shiftColumns = ['name', 'time', 'tolerance', 'actions'];
+  protected readonly shiftColumns = ['name', 'time', 'tolerance', 'window', 'actions'];
   protected readonly assignmentColumns = ['shiftId', 'workSiteId', 'range'];
 
   protected readonly schedules = signal<Schedule[]>([]);
@@ -275,6 +290,11 @@ export class SchedulingComponent {
     startTime: ['08:00', [Validators.required]],
     endTime: ['17:00', [Validators.required]],
     lateToleranceMin: [10],
+    // Ventana de registro (RN-15). Se expone porque es lo que decide si quien llega pronto a su
+    // turno puede marcar o se le rechaza: con los 30 min de default, llegar 31 antes ya es un
+    // OUT_OF_SCHEDULE, y hasta ahora no había forma de ensancharla desde la aplicación.
+    windowBeforeMin: [30],
+    windowAfterMin: [30],
     crossesMidnight: [false],
   });
 
@@ -389,6 +409,8 @@ export class SchedulingComponent {
       startTime: raw.startTime,
       endTime: raw.endTime,
       lateToleranceMin: raw.lateToleranceMin ?? undefined,
+      windowBeforeMin: raw.windowBeforeMin ?? undefined,
+      windowAfterMin: raw.windowAfterMin ?? undefined,
       crossesMidnight: raw.crossesMidnight,
     };
     const editId = this.editingShiftId();
@@ -412,13 +434,22 @@ export class SchedulingComponent {
       startTime: shift.startTime.substring(0, 5),
       endTime: shift.endTime.substring(0, 5),
       lateToleranceMin: shift.lateToleranceMin,
+      windowBeforeMin: shift.windowBeforeMin,
+      windowAfterMin: shift.windowAfterMin,
       crossesMidnight: shift.crossesMidnight,
     });
   }
 
   protected resetShiftForm(): void {
     this.editingShiftId.set(null);
-    this.shiftForm.reset({ startTime: '08:00', endTime: '17:00', lateToleranceMin: 10, crossesMidnight: false });
+    this.shiftForm.reset({
+      startTime: '08:00',
+      endTime: '17:00',
+      lateToleranceMin: 10,
+      windowBeforeMin: 30,
+      windowAfterMin: 30,
+      crossesMidnight: false,
+    });
   }
 
   protected assign(): void {

@@ -17,7 +17,12 @@ Esta decisión se cumple con tres piezas, y **`hibernate.jdbc.time_zone` no es n
 2. Se almacena en columnas `timestamptz` mapeadas a `Instant`/`OffsetDateTime`, que son instantes
    absolutos: el esquema no tiene una sola columna `timestamp` sin zona.
 3. La zona de negocio para calcular turnos y presentar (RNF-19) sale del dato, no del entorno:
-   `schedules.timezone` con herencia de `work_sites`/`companies`, resuelta en `SchedulePolicyAdapter`.
+   `schedules.timezone` con herencia de `work_sites`/`companies`, resuelta en `ShiftZonePort` /
+   `ShiftZoneAdapter` y consumida por `SchedulePolicyAdapter`. Esa herencia estuvo **documentada aquí
+   pero no implementada** hasta el hallazgo H6 del [caso de uso de dos
+   turnos](../../iteracion-08-registro-asistencia/02-caso-de-uso-dos-turnos.md): el código caía a UTC
+   en cuanto el horario no fijaba zona, y con una empresa a UTC−6 eso desplazaba seis horas la
+   ventana de registro. La guarda hoy `ShiftZoneInheritanceIT`, nivel a nivel.
 
 `application.yml` fijaba además `spring.jpa.properties.hibernate.jdbc.time_zone: UTC`, heredado del
 commit inicial sin justificación. Ese ajuste solo tiene sentido para columnas `timestamp` sin zona

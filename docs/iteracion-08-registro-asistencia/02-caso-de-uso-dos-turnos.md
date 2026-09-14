@@ -280,6 +280,74 @@ ENTRADA fuera de ventana se rechaza o solo se marca. El patrón `REJECT|FLAG` ya
 columnas de `company_settings` lo usan, con su DTO, endpoint y toggle en ajustes—, así que es un
 añadido acotado si el negocio lo pide.
 
+### H6 — La ventana se evalúa en UTC cuando el horario no fija zona · **RESUELTO**
+
+Lo levantó un caso de producción: **CN-000234**, dos turnos —3 · 14:00–17:10 y 4 · 17:15–23:30—, una
+ENTRADA el 2026-09-14 a las **13:29:12 hora local** y una incidencia `RETARDO` de **124 minutos**.
+
+`SchedulePolicyAdapter.zoneForShift` solo leía `schedules.timezone` y, a falta de ella, caía a UTC.
+El esquema documenta lo contrario desde el principio —`V4__scheduling.sql:10`: *"override; si NULL
+hereda del centro/tenant"*—, y las columnas están ahí: `work_sites.timezone` (V3) y
+`companies.timezone NOT NULL DEFAULT 'UTC'` (V1). Solo faltaba el código, y el formulario web dejaba
+la zona del horario como campo opcional en blanco, así que crear un horario sin zona era el camino
+por defecto.
+
+Con la empresa a UTC−6, el instante real de la marca es `19:29:12` UTC, y se comparó contra las horas
+de pared de los turnos como si fueran UTC:
+
+| Turno | Ventana `[inicio−30, fin+30]` | ¿Contiene 19:29:12? |
+|---|---|---|
+| 3 · 14:00–17:10 | `[13:30, 17:40]` | No |
+| 4 · 17:15–23:30 | `[16:45, 00:00]` | **Sí** |
+
+```
+lateThreshold = 17:15 + 10 (late_tolerance_min)  = 17:25:00
+minutesLate   = 19:29:12 − 17:25:00 = 2 h 04 m 12 s  →  124
+```
+
+Cuadra al segundo, y −6 h es el único desfase que da 124. Las dos asignaciones son un espejismo: con
+el desfase el turno 3 también queda fuera de ventana, así que el turno 4 gana sin que llegue a
+ejecutarse el desempate de H2.
+
+**Arreglo aplicado.** Un puerto propio, `ShiftZonePort`, con un adaptador que baja la cadena
+**horario → centro → empresa → UTC** en una sola consulta. Se lee por JDBC y no con los casos de uso
+de Scheduling/Organization por la misma razón que el resto del adaptador: una consulta que no
+encuentra fila no lanza, y un `orElseThrow` dentro de la transacción del registro la marcaría
+rollback-only. El centro que manda en la herencia es el de la **asignación**, no el de la marca: es
+donde se trabaja ese turno.
+
+En hora local esa marca no la reclama ningún turno —llega 48 segundos antes de que abra la ventana
+del turno 3— y se rechaza con `OUT_OF_SCHEDULE`. El colaborador llegó 31 min antes de su turno con
+`window_before_min` en 30; el rechazo es honesto, el retardo de dos horas contra un turno que aún no
+había empezado, no.
+
+### H7 — Un turno cuya ventana aún no ha abierto no competía por la marca · **RESUELTO**
+
+Sobrevive al arreglo de H6 y produce el mismo síntoma por otro camino. `SchedulePolicyAdapter`
+filtraba la **candidatura** por la ventana: solo entraban al desempate de H2 los turnos cuya ventana
+ya contenía la marca. Quien llegaba a su turno antes de que abriera la suya —más de
+`window_before_min`— veía la marca atribuida al turno anterior, todavía dentro de su `window_after`.
+
+Con los turnos del caso, una ENTRADA a las **16:30**: la ventana del turno 4 abre a las 16:45, la del
+turno 3 cierra a las 17:40. El turno 3 era el único candidato y se llevaba la marca con **140 min** de
+retardo contra su inicio de las 14:00.
+
+**Arreglo aplicado.** Las dos preguntas se separan. `ScheduleWindowValidator.candidateOccurrences`
+enumera las apariciones del turno —ayer, hoy y mañana— sin mirar la ventana, compiten todas las de
+todos los turnos vigentes con el mismo criterio de cercanía de H2, y la ventana se comprueba
+**después**, sobre la que gana. Fuera de ventana, la ENTRADA se rechaza con `OUT_OF_SCHEDULE` en vez
+de convertirse en un retardo contra otro turno.
+
+- `ScheduleDecision.outOfWindow` pasa a llevar el `shiftId`, así que `attendance_records.shift_id`
+  queda grabado también en el rechazo: se ve contra qué turno se midió, que es lo que hacía tan
+  opaco el diagnóstico de este caso.
+- La vigencia de la asignación se mide contra la **fecha de la jornada** (`Occurrence.businessDate`)
+  y no contra la del reloj: un turno nocturno fichado de madrugada pertenece al día en que arrancó, y
+  antes se validaba contra el día siguiente en el último día de su vigencia.
+- `window_before_min` y `window_after_min` se exponen por fin en el formulario de turnos, y la zona
+  del horario pasa a ser obligatoria con la del navegador precargada. Sin lo primero no había forma
+  de ensanchar el margen desde la aplicación; sin lo segundo, H6 se repite en el próximo horario.
+
 ## Cobertura añadida
 
 `JornadaDosTurnosIT` (7 pruebas, contra PostgreSQL real con las migraciones aplicadas):
@@ -293,6 +361,21 @@ añadido acotado si el negocio lo pide.
 | `desgloseDeHorasPorCentro_reparteLaJornadaPartida` | H4: 6,5 h en A y 3,5 h en B |
 | `salidaFueraDeLaVentanaDelTurno_seAceptaYQuedaMarcada` | H5: la SALIDA tardía cierra la jornada y queda marcada |
 | `entradaFueraDeLaVentanaDelTurno_seRechaza` | Que la ENTRADA sí se sigue rechazando fuera de ventana |
+
+`SchedulePolicyAdapterTest` suma cinco pruebas con los turnos reales del caso (3 · 14:00–17:10 y
+4 · 17:15–23:30, defaults 10 / 30 / 30):
+
+| Prueba | Qué fija |
+|---|---|
+| `turnosReales_marcaSeEvaluaEnLaZonaDelCentro_noEnUtc` | H6: en hora local la marca de las 13:29:12 no la reclama el turno de la noche |
+| `turnosReales_enUtc_reproduceElRetardoDe124Minutos` | El retardo de producción, tal cual, como testigo de la causa |
+| `entradaAnticipadaAlSegundoTurno_noLaReclamaElPrimeroConUnRetardoFantasma` | H7: a las 16:30 gana el turno 4, sin los 140 min contra el 3 |
+| `entradaAnticipadaAlSegundoTurno_conVentanaPreviaAncha_seAceptaPuntual` | Que ensanchar `window_before_min` resuelve el caso de negocio |
+| `turnosReales_entradaTardiaAlSegundoTurno_mideContraSuInicio` | Que elegir bien el turno no perdona la tardanza real |
+
+`ShiftZoneInheritanceIT` (9 pruebas, contra PostgreSQL real) fija la cadena de H6 nivel a nivel:
+horario → centro → empresa → UTC, con los casos de cadena vacía, zona mal escrita, horario
+inexistente y horario de otro tenant.
 
 Ya no queda ninguna prueba de caracterización: las que fijaban un comportamiento incorrecto se
 reescribieron al arreglar su hallazgo.

@@ -64,7 +64,10 @@ import { SchedulingService } from './scheduling.service';
             <mat-form-field appearance="outline" class="drawer-field">
               <mat-label>Zona horaria</mat-label>
               <input matInput formControlName="timezone" placeholder="America/Lima" />
-              <mat-hint>Zona horaria del horario (opcional).</mat-hint>
+              <mat-hint>
+                Zona IANA en la que se interpretan las horas de los turnos de este horario. Dejarla en
+                blanco hace que se hereden del centro de trabajo o de la empresa.
+              </mat-hint>
             </mat-form-field>
             @if (isEdit()) {
               <mat-form-field appearance="outline" class="drawer-field">
@@ -147,7 +150,9 @@ export class ScheduleFormComponent {
   protected readonly form = this.fb.nonNullable.group({
     code: ['', [Validators.required]],
     name: ['', [Validators.required]],
-    timezone: [''],
+    // Se precarga la zona del navegador: dejarla en blanco delega en el centro o la empresa, y un
+    // horario sin zona en ninguno de los tres niveles acaba evaluando las horas de sus turnos en UTC.
+    timezone: [browserTimeZone(), [Validators.required]],
     status: ['ACTIVE'],
   });
 
@@ -163,7 +168,7 @@ export class ScheduleFormComponent {
           this.form.reset({
             code: s.code,
             name: s.name,
-            timezone: s.timezone ?? '',
+            timezone: s.timezone || browserTimeZone(),
             status: s.status,
           });
           this.form.controls.code.disable();
@@ -204,5 +209,14 @@ export class ScheduleFormComponent {
         this.notify.error('No se pudo guardar el horario.');
       },
     });
+  }
+}
+
+/** Zona IANA del navegador, o UTC si el entorno no la expone. */
+function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
   }
 }

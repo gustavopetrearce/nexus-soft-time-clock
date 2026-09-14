@@ -575,7 +575,7 @@ class RegisterAttendanceServiceTest {
     void fueraDeVentanaDeTurno_esRechazada() {
         baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
         when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
-                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow());
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow(shiftId));
 
         AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));
 
@@ -593,7 +593,7 @@ class RegisterAttendanceServiceTest {
     void salidaFueraDeVentana_seAceptaConBandera() {
         baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
         when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
-                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow());
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow(shiftId));
         when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
                 .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
 
@@ -610,7 +610,7 @@ class RegisterAttendanceServiceTest {
         baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
         allEventTypesEnabledStub();
         when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
-                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow());
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow(shiftId));
         when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
                 .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
 
@@ -625,7 +625,7 @@ class RegisterAttendanceServiceTest {
     void salidaFueraDeVentana_publicaElEventoMarcadoFueraDeVentana() {
         baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
         when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
-                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow());
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow(shiftId));
         when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
                 .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
 
@@ -668,6 +668,23 @@ class RegisterAttendanceServiceTest {
 
         service.register(tenantId, userId, cmd("ENTRADA"));
 
+        assertThat(savedRecord().shiftId()).isEqualTo(shiftId);
+    }
+
+    /**
+     * Y también cuando la marca se rechaza por caer fuera de la ventana: el turno al que pertenece
+     * es justo lo que el supervisor necesita para entender el rechazo, y es el dato que faltaba para
+     * explicar de dónde salía un retardo medido contra el turno equivocado.
+     */
+    @Test
+    void turnoElegido_quedaEnElRegistroTambienAlRechazarPorVentana() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.outOfWindow(shiftId));
+
+        AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));
+
+        assertThat(result.status()).isEqualTo("REJECTED");
         assertThat(savedRecord().shiftId()).isEqualTo(shiftId);
     }
 

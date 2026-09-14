@@ -2,7 +2,7 @@ package com.condor.nexussoft.timeclock.attendance.infrastructure.integration;
 
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceEventType;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.SchedulePolicyPort;
-import com.condor.nexussoft.timeclock.scheduling.domain.Schedule;
+import com.condor.nexussoft.timeclock.attendance.domain.port.out.ShiftZonePort;
 import com.condor.nexussoft.timeclock.scheduling.domain.Shift;
 import com.condor.nexussoft.timeclock.scheduling.domain.ShiftAssignment;
 import com.condor.nexussoft.timeclock.scheduling.domain.port.in.SchedulingUseCase;
@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +43,7 @@ class SchedulePolicyAdapterTest {
     private static final LocalDate DIA = LocalDate.of(2026, 8, 27);
 
     @Mock SchedulingUseCase scheduling;
+    @Mock ShiftZonePort zones;
     @InjectMocks SchedulePolicyAdapter adapter;
 
     final UUID tenantId = UUID.randomUUID();
@@ -54,9 +56,11 @@ class SchedulePolicyAdapterTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(scheduling.findSchedule(eqTenant(), any()))
-                .thenReturn(Optional.of(
-                        new Schedule(scheduleId, tenantId, "H1", "Horario", "UTC", Schedule.Status.ACTIVE)));
+        enZona(ZoneId.of("UTC"));
+    }
+
+    private void enZona(ZoneId zone) {
+        lenient().when(zones.resolve(eqTenant(), any(), any())).thenReturn(zone);
     }
 
     @Test
@@ -205,6 +209,106 @@ class SchedulePolicyAdapterTest {
         assertThat(d.minutesLate()).isEqualTo(35);   // 14:45 − (14:00 + 10 de tolerancia)
     }
 
+    // --- el caso de producción: CN-000234, 2026-09-14 ----------------------------------------
+
+    /**
+     * Horario sin zona y empresa a UTC−6, con los turnos reales del colaborador. La marca de las
+     * <b>13:29:12 locales</b> se evaluaba en UTC —19:29:12— y ahí caía de lleno en la ventana del
+     * turno de la noche, que la reclamaba con <b>124 min</b> de retardo sobre su inicio de las 17:15.
+     *
+     * <p>En hora local no la reclama ninguno: el turno 3 es el más cercano y su ventana abre 48
+     * segundos más tarde. El rechazo por llegar pronto es honesto; el retardo de dos horas contra un
+     * turno que aún no había empezado, no.</p>
+     */
+    @Test
+    void turnosReales_marcaSeEvaluaEnLaZonaDelCentro_noEnUtc() {
+        turnosDeProduccion();
+        enZona(ZoneId.of("America/Mexico_City"));
+
+        SchedulePolicyPort.ScheduleDecision d = adapter.check(tenantId, userId, siteId,
+                AttendanceEventType.ENTRADA, Instant.parse("2026-09-14T19:29:12Z"));
+
+        assertThat(d.outcome()).isEqualTo(SchedulePolicyPort.Outcome.OUT_OF_WINDOW);
+        assertThat(d.shiftId()).isEqualTo(turno1);   // turno 3: el inicio más cercano
+        assertThat(d.minutesLate()).isZero();
+    }
+
+    /** La misma siembra evaluada en UTC reproduce el retardo de 124 min que se vio en producción. */
+    @Test
+    void turnosReales_enUtc_reproduceElRetardoDe124Minutos() {
+        turnosDeProduccion();
+        enZona(ZoneId.of("UTC"));
+
+        SchedulePolicyPort.ScheduleDecision d = adapter.check(tenantId, userId, siteId,
+                AttendanceEventType.ENTRADA, Instant.parse("2026-09-14T19:29:12Z"));
+
+        assertThat(d.outcome()).isEqualTo(SchedulePolicyPort.Outcome.WITHIN_WINDOW);
+        assertThat(d.shiftId()).isEqualTo(turno2);   // turno 4
+        assertThat(d.minutesLate()).isEqualTo(124);  // 19:29:12 − (17:15 + 10 de tolerancia)
+    }
+
+    /**
+     * El gemelo, que sobrevive al arreglo de la zona horaria: a las 16:30 la ventana del turno 4 aún
+     * no ha abierto (16:45) pero la del turno 3 sigue abierta hasta las 17:40. Antes el turno 3 era
+     * el único candidato y se llevaba la marca con 140 min de retardo contra su inicio de las 14:00.
+     */
+    @Test
+    void entradaAnticipadaAlSegundoTurno_noLaReclamaElPrimeroConUnRetardoFantasma() {
+        turnosDeProduccion();
+        enZona(ZoneId.of("America/Mexico_City"));
+
+        SchedulePolicyPort.ScheduleDecision d = adapter.check(tenantId, userId, siteId,
+                AttendanceEventType.ENTRADA, Instant.parse("2026-09-14T22:30:00Z"));   // 16:30 local
+
+        assertThat(d.outcome()).isEqualTo(SchedulePolicyPort.Outcome.OUT_OF_WINDOW);
+        assertThat(d.shiftId()).isEqualTo(turno2);   // turno 4, el que de verdad va a empezar
+        assertThat(d.minutesLate()).isZero();
+    }
+
+    /** Y con la ventana previa ensanchada a 60 min, esa misma entrada se acepta y llega puntual. */
+    @Test
+    void entradaAnticipadaAlSegundoTurno_conVentanaPreviaAncha_seAceptaPuntual() {
+        Shift t3 = turno("Turno 3", LocalTime.of(14, 0), LocalTime.of(17, 10));
+        Shift t4 = turnoConVentana("Turno 4", LocalTime.of(17, 15), LocalTime.of(23, 30), 60, 30);
+        sembrar(t3, t4);
+        enZona(ZoneId.of("America/Mexico_City"));
+
+        SchedulePolicyPort.ScheduleDecision d = adapter.check(tenantId, userId, siteId,
+                AttendanceEventType.ENTRADA, Instant.parse("2026-09-14T22:30:00Z"));   // 16:30 local
+
+        assertThat(d.outcome()).isEqualTo(SchedulePolicyPort.Outcome.WITHIN_WINDOW);
+        assertThat(d.shiftId()).isEqualTo(turno2);
+        assertThat(d.minutesLate()).isZero();
+    }
+
+    /** Llegar tarde al turno de la noche sigue contando, y contra el inicio de ese turno. */
+    @Test
+    void turnosReales_entradaTardiaAlSegundoTurno_mideContraSuInicio() {
+        turnosDeProduccion();
+        enZona(ZoneId.of("America/Mexico_City"));
+
+        SchedulePolicyPort.ScheduleDecision d = adapter.check(tenantId, userId, siteId,
+                AttendanceEventType.ENTRADA, Instant.parse("2026-09-14T23:45:00Z"));   // 17:45 local
+
+        assertThat(d.outcome()).isEqualTo(SchedulePolicyPort.Outcome.WITHIN_WINDOW);
+        assertThat(d.shiftId()).isEqualTo(turno2);
+        assertThat(d.minutesLate()).isEqualTo(20);   // 17:45 − (17:15 + 10 de tolerancia)
+    }
+
+    /** Turno 3 · 14:00–17:10 y turno 4 · 17:15–23:30, con los defaults de V4 (10 / 30 / 30). */
+    private void turnosDeProduccion() {
+        sembrar(turno("Turno 3", LocalTime.of(14, 0), LocalTime.of(17, 10)),
+                turno("Turno 4", LocalTime.of(17, 15), LocalTime.of(23, 30)));
+    }
+
+    private void sembrar(Shift primero, Shift segundo) {
+        turno1 = primero.id();
+        turno2 = segundo.id();
+        stubShifts(primero, segundo);
+        when(scheduling.listAssignments(tenantId, userId))
+                .thenReturn(List.of(asignacion(turno1, siteId), asignacion(turno2, siteId)));
+    }
+
     // --- utilidades ------------------------------------------------------------------------
 
     private void unTurno() {
@@ -234,6 +338,13 @@ class SchedulePolicyAdapterTest {
     private Shift turno(String nombre, LocalTime inicio, LocalTime fin) {
         return new Shift(UUID.randomUUID(), tenantId, scheduleId, nombre, inicio, fin, false,
                 30, 10, 10, 30, 30);
+    }
+
+    /** Turno con la ventana de registro a medida; el resto, los defaults de V4. */
+    private Shift turnoConVentana(String nombre, LocalTime inicio, LocalTime fin,
+                                  int ventanaAntes, int ventanaDespues) {
+        return new Shift(UUID.randomUUID(), tenantId, scheduleId, nombre, inicio, fin, false,
+                30, 10, 10, ventanaAntes, ventanaDespues);
     }
 
     private ShiftAssignment asignacion(UUID shiftId, UUID site) {
