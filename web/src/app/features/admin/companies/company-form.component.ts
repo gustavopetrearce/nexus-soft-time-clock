@@ -8,12 +8,15 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 
 import { BreadcrumbComponent } from '../../../core/ui/breadcrumb.component';
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
 import { NotificationService } from '../../../core/ui/notification.service';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
+import { localeOptions } from '../../../core/models/locales';
+import { browserTimeZone, timezoneOptions } from '../../../core/models/timezones';
 import { Company } from './company.models';
 import { CompanyService } from './company.service';
 
@@ -29,6 +32,7 @@ import { CompanyService } from './company.service';
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
+    MatSelectModule,
     BreadcrumbComponent,
     PageHeaderComponent,
     StatusChipComponent,
@@ -73,13 +77,21 @@ import { CompanyService } from './company.service';
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
               <mat-label>Zona horaria</mat-label>
-              <input matInput formControlName="timezone" placeholder="America/Lima" />
+              <mat-select formControlName="timezone">
+                @for (tz of tzOptions(); track tz.value) {
+                  <mat-option [value]="tz.value">{{ tz.label }}</mat-option>
+                }
+              </mat-select>
               <mat-hint>Zona horaria principal de la empresa.</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
               <mat-label>Idioma</mat-label>
-              <input matInput formControlName="locale" placeholder="es" />
-              <mat-hint>Idioma y configuración regional.</mat-hint>
+              <mat-select formControlName="locale">
+                @for (loc of localeOpts(); track loc.value) {
+                  <mat-option [value]="loc.value">{{ loc.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>Idioma predeterminado de la empresa.</mat-hint>
             </mat-form-field>
           </div>
         </form>
@@ -240,13 +252,19 @@ export class CompanyFormComponent {
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  /** La lista es curada; si la empresa guarda una zona fuera de ella se añade para no perderla. */
+  protected readonly tzOptions = computed(() => timezoneOptions(this.company()?.timezone));
+
+  /** Igual que la zona: un idioma guardado fuera de la lista se conserva en vez de borrarse. */
+  protected readonly localeOpts = computed(() => localeOptions(this.company()?.locale));
+
   protected readonly form = this.fb.nonNullable.group({
     code: ['', [Validators.required]],
     name: ['', [Validators.required]],
     legalName: [''],
     emailDomain: [''],
-    timezone: [''],
-    locale: [''],
+    timezone: [browserTimeZone(), [Validators.required]],
+    locale: ['es', [Validators.required]],
   });
 
   /** Datos del administrador inicial (COMPANY_ADMIN). Requerido al crear; opcional (bajo demanda) al editar. */
@@ -281,8 +299,8 @@ export class CompanyFormComponent {
             name: c.name,
             legalName: c.legalName ?? '',
             emailDomain: c.emailDomain ?? '',
-            timezone: c.timezone ?? '',
-            locale: c.locale ?? '',
+            timezone: c.timezone || browserTimeZone(),
+            locale: c.locale || 'es',
           });
           this.form.controls.code.disable();
           this.loading.set(false);

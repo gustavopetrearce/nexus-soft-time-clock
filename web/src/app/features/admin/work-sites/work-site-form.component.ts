@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 
 import { BreadcrumbComponent } from '../../../core/ui/breadcrumb.component';
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
@@ -16,6 +17,7 @@ import { MapInlineComponent } from '../../../core/ui/map-inline.component';
 import { NotificationService } from '../../../core/ui/notification.service';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
+import { timezoneOptions } from '../../../core/models/timezones';
 import { PolicyOverride, WorkSite } from './work-site.models';
 import { WorkSiteService } from './work-site.service';
 
@@ -33,6 +35,7 @@ import { WorkSiteService } from './work-site.service';
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
+    MatSelectModule,
     BreadcrumbComponent,
     MapInlineComponent,
     PageHeaderComponent,
@@ -106,7 +109,12 @@ import { WorkSiteService } from './work-site.service';
           <div class="form-grid-2">
             <mat-form-field appearance="outline" class="drawer-field">
               <mat-label>Zona horaria</mat-label>
-              <input matInput formControlName="timezone" placeholder="America/Lima" />
+              <mat-select formControlName="timezone">
+                <mat-option [value]="''">Heredar de la empresa</mat-option>
+                @for (tz of tzOptions(); track tz.value) {
+                  <mat-option [value]="tz.value">{{ tz.label }}</mat-option>
+                }
+              </mat-select>
               <mat-hint>Zona horaria del centro de trabajo (opcional).</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
@@ -250,6 +258,9 @@ export class WorkSiteFormComponent {
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
+
+  /** La lista es curada; si el centro guarda una zona fuera de ella se añade para no perderla. */
+  protected readonly tzOptions = computed(() => timezoneOptions(this.site()?.timezone));
 
   protected readonly form = this.fb.group({
     code: this.fb.nonNullable.control('', [Validators.required]),
