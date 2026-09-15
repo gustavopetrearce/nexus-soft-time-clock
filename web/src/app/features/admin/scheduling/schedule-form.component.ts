@@ -13,6 +13,7 @@ import { BreadcrumbComponent } from '../../../core/ui/breadcrumb.component';
 import { NotificationService } from '../../../core/ui/notification.service';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
+import { browserTimeZone, timezoneOptions } from '../../../core/models/timezones';
 import { SCHEDULE_STATUSES, Schedule } from './scheduling.models';
 import { SchedulingService } from './scheduling.service';
 
@@ -63,10 +64,13 @@ import { SchedulingService } from './scheduling.service';
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
               <mat-label>Zona horaria</mat-label>
-              <input matInput formControlName="timezone" placeholder="America/Lima" />
+              <mat-select formControlName="timezone">
+                @for (tz of tzOptions(); track tz.value) {
+                  <mat-option [value]="tz.value">{{ tz.label }}</mat-option>
+                }
+              </mat-select>
               <mat-hint>
-                Zona IANA en la que se interpretan las horas de los turnos de este horario. Dejarla en
-                blanco hace que se hereden del centro de trabajo o de la empresa.
+                Zona IANA en la que se interpretan las horas de los turnos de este horario.
               </mat-hint>
             </mat-form-field>
             @if (isEdit()) {
@@ -147,6 +151,11 @@ export class ScheduleFormComponent {
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  /** La lista es curada; se añade la zona guardada —o la precargada del navegador— si no está en ella. */
+  protected readonly tzOptions = computed(() =>
+    timezoneOptions(this.schedule()?.timezone || browserTimeZone()),
+  );
+
   protected readonly form = this.fb.nonNullable.group({
     code: ['', [Validators.required]],
     name: ['', [Validators.required]],
@@ -209,14 +218,5 @@ export class ScheduleFormComponent {
         this.notify.error('No se pudo guardar el horario.');
       },
     });
-  }
-}
-
-/** Zona IANA del navegador, o UTC si el entorno no la expone. */
-function browserTimeZone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  } catch {
-    return 'UTC';
   }
 }
