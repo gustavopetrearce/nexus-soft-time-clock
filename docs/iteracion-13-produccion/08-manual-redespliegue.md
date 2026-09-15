@@ -216,6 +216,23 @@ En la UI de Portainer: **Containers** → los 5 contenedores en `running`;
 | `/actuator/health` = `DOWN` pero login funciona | Indicador de salud de una dependencia opcional (p. ej. mail) | El de mail ya está desactivado (`MANAGEMENT_HEALTH_MAIL_ENABLED`). Revisar qué componente falla |
 | `404` al abrir `/login` o refrescar rutas | Falta fallback SPA | Ya resuelto en `infra/web-nginx.conf`; confirmar que la imagen `web` se reconstruyó |
 | Portainer: `authentication required: Repository not found` | PAT de GitHub inválido/expirado | Renovar el PAT en **Stack → Git** o en el `env` del script |
+| `pull access denied for minio/minio, repository does not exist or may require 'docker login'` | MinIO archivó su edición comunitaria y **borró la imagen de Docker Hub** | Ya resuelto: los compose apuntan a `quay.io/minio/minio`. Si reaparece, comprobar que nadie devolvió el prefijo. Ver el aviso de abajo |
+
+> **Sobre el origen de la imagen de MinIO.** MinIO archivó su edición comunitaria y retiró
+> `minio/minio` de Docker Hub, que hoy responde `object not found`. El mensaje de error habla de
+> `docker login`, pero **no es un problema de credenciales**: el repositorio ya no existe y ningún
+> login lo arregla. Por eso `infra/portainer-stack.yml` e `infra/docker-compose.yml` tiran de
+> `quay.io/minio/minio`, el registro propio de MinIO, que sirve el mismo tag con pull anónimo. No
+> devuelvas el prefijo a `minio/minio` "para limpiar": eso vuelve a romper el redespliegue.
+>
+> El fallo solo aparece cuando se fuerza el pull (`--pull-image`, o **Re-pull image** en la UI),
+> que es justo lo que hace el despliegue automático de cada push a `main`. Sin forzarlo, Docker
+> reutiliza la imagen cacheada en el host y el stack sigue funcionando, que es por lo que esto
+> puede tardar semanas en manifestarse.
+>
+> Nota aparte, de seguridad: al estar archivada la edición comunitaria, esa imagen ya no recibe
+> parches. Conviene planificar su relevo (subir a la última comunitaria, replicarla en un registro
+> propio, o sustituir el almacén por otro compatible con S3).
 
 **Ver logs de un contenedor** (UI): Containers → `nexus-time-clock-backend-1` → **Logs**.
 Por API:

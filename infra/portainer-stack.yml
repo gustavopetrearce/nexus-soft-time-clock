@@ -49,8 +49,12 @@ services:
   # red interna y a través de NGINX (/evidence/), nunca directo desde internet.
   # MINIO_KMS_SECRET_KEY habilita el cifrado en reposo SSE-S3 (RNF-08); sin ella el bucket
   # queda sin cifrar y el backend lo avisa por log al arrancar.
+  # El origen es quay.io, el registro propio de MinIO, y NO Docker Hub: MinIO archivó su edición
+  # comunitaria y borró `minio/minio` de Docker Hub, que desde entonces responde al pull con
+  # "repository does not exist or may require 'docker login'" y rompe el redespliegue. No es un
+  # problema de credenciales y ningún `docker login` lo arregla: no devolver el prefijo.
   minio:
-    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    image: quay.io/minio/minio:RELEASE.2024-10-13T13-34-11Z
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
     environment:

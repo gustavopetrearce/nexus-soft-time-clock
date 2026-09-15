@@ -29,8 +29,12 @@ services:
     volumes:
       - redisdata:/data
 
+  # Igual que en portainer-stack.yml: la imagen viene de quay.io porque MinIO retiró la suya de
+  # Docker Hub al archivar la edición comunitaria. El tag va fijado y es el mismo que producción:
+  # `latest` ya no se mueve —la edición está congelada— y dejarlo suelto solo permitía que dev y
+  # producción divergieran en la capa de almacenamiento sin que nadie se enterara.
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:RELEASE.2024-10-13T13-34-11Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
