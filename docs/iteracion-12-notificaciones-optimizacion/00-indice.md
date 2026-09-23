@@ -13,6 +13,7 @@ Reemplaza la publicación **síncrona** de eventos por una **fiable y asíncrona
 - `OutboxRelay` (`@Scheduled`) lee los pendientes y, por cada uno, `OutboxProcessor.processOne` (**REQUIRES_NEW**, aislamiento por evento) lo deserializa a su tipo concreto y lo **republica** al bus interno tras el commit.
 - Los publicadores de **identity** y **attendance** ahora delegan en `OutboxWriter` en lugar de publicar directo. Los consumidores (audit, incidents, realtime, notifications) reciben los eventos vía el relay → ya **no** corren dentro de la transacción de negocio.
 - Migración **V12** añade `event_class` a `outbox_events` (para deserializar).
+- Migración **V26** añade el **autor** (usuario, correo, IP, user-agent, dispositivo). El relay publica en un hilo del scheduler, sin petición detrás: sin esto la auditoría no sabía quién había provocado el evento y registraba actor nulo (RN-60). El autor se captura al escribir la fila y se repone antes de publicar, junto con el tenant.
 
 ## Optimización — Caché Redis
 - `@Cacheable("dashboardSummary")` sobre `DashboardService.summary` (TTL 60s, `spring.cache.type=redis`) → alivia las consultas del dashboard (RNF-01). `DashboardSummary` es `Serializable`.

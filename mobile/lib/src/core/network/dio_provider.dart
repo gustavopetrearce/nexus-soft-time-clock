@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/domain/auth_models.dart';
 import '../config/app_config.dart';
+import '../storage/device_identity_store.dart';
 import '../storage/secure_token_store.dart';
 import 'session_events.dart';
 
 /// Cliente Dio con interceptores de sesión:
-/// - `onRequest` adjunta el Bearer JWT (excepto en los endpoints de auth).
+/// - `onRequest` adjunta el Bearer JWT (excepto en los endpoints de auth) y el identificador
+///   del dispositivo, que el servidor guarda en la bitacora (RN-60) y usa para el device
+///   binding (RF-28). Va tambien en el login: de un intento de acceso interesa sobre todo
+///   desde que aparato se hizo.
 /// - `onError` renueva el access token vencido (401) vía refresh token y reintenta la
 ///   petición original; si el refresh falla, señaliza el fin de sesión. La renovación se
 ///   serializa (single-flight) porque el refresh del backend es de uso único con detección
@@ -50,6 +54,10 @@ final dioProvider = Provider<Dio>((ref) {
   // Refresh en curso compartido por todas las peticiones que reciban 401 a la vez.
   Future<bool>? refreshing;
 
+  // El id del dispositivo no cambia en toda la vida de la app: leerlo del almacenamiento
+  // seguro en cada peticion seria pagar un acceso al Keystore por cabecera.
+  String? deviceId;
+
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -58,6 +66,13 @@ final dioProvider = Provider<Dio>((ref) {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+        }
+        try {
+          deviceId ??=
+              (await ref.read(deviceIdentityStoreProvider).current()).deviceId;
+          options.headers['X-Device-Id'] = deviceId;
+        } catch (_) {
+          // Un dato de auditoria no puede tumbar la peticion que lo acompana.
         }
         handler.next(options);
       },

@@ -1,5 +1,7 @@
 package com.condor.nexussoft.timeclock.platform.outbox;
 
+import com.condor.nexussoft.timeclock.platform.audit.AuditContext;
+import com.condor.nexussoft.timeclock.platform.tenant.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -35,8 +37,20 @@ public class OutboxProcessor {
         }
         Class<?> eventClass = Class.forName(row.getEventClass());
         Object event = objectMapper.readValue(row.getPayload(), eventClass);
-        publisher.publishEvent(event);            // consumidores síncronos dentro de esta tx aislada
-        row.markPublished(Instant.now());
+        // El relay corre en un hilo del scheduler, sin petición detrás: sin restaurar el autor y
+        // el tenant que se guardaron al escribir la fila, los consumidores (auditoría, incidencias)
+        // trabajarían a ciegas y la bitácora quedaría sin actor (RN-60).
+        AuditContext.set(row.actor());
+        if (row.getTenantId() != null) {
+            TenantContext.set(row.getTenantId());
+        }
+        try {
+            publisher.publishEvent(event);        // consumidores síncronos dentro de esta tx aislada
+            row.markPublished(Instant.now());
+        } finally {
+            AuditContext.clear();
+            TenantContext.clear();
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

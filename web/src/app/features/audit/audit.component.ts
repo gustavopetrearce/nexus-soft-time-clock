@@ -44,9 +44,9 @@ import { AuditService } from './audit.service';
                   <th mat-header-cell *matHeaderCellDef>Fecha/hora</th>
                   <td mat-cell *matCellDef="let e">{{ e.createdAt }}</td>
                 </ng-container>
-                <ng-container matColumnDef="actorUserId">
+                <ng-container matColumnDef="actor">
                   <th mat-header-cell *matHeaderCellDef>Usuario</th>
-                  <td mat-cell *matCellDef="let e">{{ e.actorUserId }}</td>
+                  <td mat-cell *matCellDef="let e">{{ actor(e) }}</td>
                 </ng-container>
                 <ng-container matColumnDef="action">
                   <th mat-header-cell *matHeaderCellDef>Acción</th>
@@ -55,6 +55,10 @@ import { AuditService } from './audit.service';
                 <ng-container matColumnDef="resource">
                   <th mat-header-cell *matHeaderCellDef>Recurso</th>
                   <td mat-cell *matCellDef="let e">{{ e.resourceType }} · {{ e.resourceId }}</td>
+                </ng-container>
+                <ng-container matColumnDef="ip">
+                  <th mat-header-cell *matHeaderCellDef>Origen</th>
+                  <td mat-cell *matCellDef="let e">{{ e.ip || '—' }}</td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="columns"></tr>
                 <tr mat-row *matRowDef="let row; columns: columns"
@@ -87,13 +91,20 @@ import { AuditService } from './audit.service';
           </div>
           <div class="drawer-body">
             <div class="detail-grid">
-              <div class="detail-row"><span class="k">Usuario</span><span class="v">{{ e.actorUserId }}</span></div>
+              <div class="detail-row"><span class="k">Usuario</span><span class="v">{{ actor(e) }}</span></div>
               <div class="detail-row"><span class="k">Acción</span><span class="v">{{ e.action }}</span></div>
               <div class="detail-row"><span class="k">Recurso</span><span class="v">{{ e.resourceType }}</span></div>
               <div class="detail-row"><span class="k">ID del recurso</span><span class="v">{{ e.resourceId }}</span></div>
+              <div class="detail-row"><span class="k">IP</span><span class="v">{{ e.ip || '—' }}</span></div>
+              <div class="detail-row"><span class="k">Navegador</span><span class="v">{{ e.userAgent || '—' }}</span></div>
+              <div class="detail-row"><span class="k">Dispositivo</span><span class="v">{{ e.deviceInfo || '—' }}</span></div>
+              @if (e.oldValues) {
+                <div class="detail-section-title">Valores anteriores</div>
+                <pre class="values-block">{{ pretty(e.oldValues) }}</pre>
+              }
               @if (e.newValues) {
                 <div class="detail-section-title">Valores nuevos</div>
-                <pre class="values-block">{{ e.newValues }}</pre>
+                <pre class="values-block">{{ pretty(e.newValues) }}</pre>
               }
             </div>
           </div>
@@ -118,7 +129,7 @@ import { AuditService } from './audit.service';
 export class AuditComponent {
   private readonly service = inject(AuditService);
 
-  protected readonly columns = ['createdAt', 'actorUserId', 'action', 'resource'];
+  protected readonly columns = ['createdAt', 'actor', 'action', 'resource', 'ip'];
   protected readonly entries = signal<AuditEntry[]>([]);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -146,6 +157,20 @@ export class AuditComponent {
         this.loading.set(false);
       },
     });
+  }
+
+  /** El correo identifica al autor mejor que su id; sin autor, la acción fue del sistema. */
+  protected actor(entry: AuditEntry): string {
+    return entry.actorEmail || entry.actorUserId || 'Sistema';
+  }
+
+  /** Los valores llegan como JSON en una línea; se indentan para poder leerlos. */
+  protected pretty(json: string): string {
+    try {
+      return JSON.stringify(JSON.parse(json), null, 2);
+    } catch {
+      return json;
+    }
   }
 
   protected select(entry: AuditEntry): void {

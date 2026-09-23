@@ -1,5 +1,7 @@
 package com.condor.nexussoft.timeclock.platform.outbox;
 
+import com.condor.nexussoft.timeclock.platform.audit.AuditActor;
+import com.condor.nexussoft.timeclock.platform.audit.AuditContext;
 import com.condor.nexussoft.timeclock.shared.domain.DomainEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
@@ -34,7 +36,10 @@ public class OutboxWriter {
                 event.eventType(),
                 event.getClass().getName(),
                 toJson(event),
-                event.occurredAt()));
+                event.occurredAt(),
+                // Todavía estamos en la petición: es el único momento en que se sabe quién
+                // provocó el evento. Después solo queda lo que se haya guardado aquí.
+                AuditContext.get().orElse(AuditActor.SYSTEM)));
     }
 
     private String toJson(DomainEvent event) {
