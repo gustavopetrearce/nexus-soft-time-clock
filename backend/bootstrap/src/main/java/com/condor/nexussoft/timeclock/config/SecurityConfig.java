@@ -37,6 +37,9 @@ public class SecurityConfig {
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
+                    // El handshake de /ws es anónimo a la fuerza (ni WebSocket ni SockJS pueden
+                    // enviar Authorization). La identidad se exige en la trama CONNECT y el
+                    // destino se acota al tenant en StompAuthorizationInterceptor.
                     "/ws/**"
                 ).permitAll()
                 .anyRequest().authenticated()

@@ -15,6 +15,7 @@
 
 ## Realtime (BC-13) — `backend/modules/realtime/`
 - **WebSocket STOMP** (ADR-011): endpoint `/ws` (SockJS), broker `/topic`.
+- **Autorización del canal**: `StompAuthorizationInterceptor` (bootstrap) autentica el CONNECT con el JWT y acota cada SUBSCRIBE al tenant del token (RN-30, RN-31). El broker simple entregaba cualquier destino a cualquier conectado, así que hasta entonces `/topic/tenant/{id}/attendance` de otra empresa se leía sin credenciales. El canal es además de solo lectura: un SEND del cliente se rechaza.
 - `RealtimeAttendanceListener` consume `AttendanceRegistered`/`AttendanceRejected` del bus in-process y los **proyecta** a `/topic/tenant/{id}/attendance` → mapa/dashboard en vivo (RF-25).
 
 ## Web (Angular)
