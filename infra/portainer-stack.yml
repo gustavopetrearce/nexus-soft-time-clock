@@ -146,10 +146,12 @@ services:
       - minio
     ports:
       - "${HTTP_PORT:-8081}:80"       # Redirige a HTTPS cuando hay certificados montados.
-      # Punto de entrada real con TLS (RNF-05, RN-42). Por defecto el 443 estándar, y no un
-      # puerto alto: la redirección desde HTTP se construye con $host, que no lleva puerto,
-      # así que publicar HTTPS en otro sitio deja esa redirección apuntando al vacío.
-      - "${HTTPS_PORT:-443}:443"
+      # Punto de entrada con TLS (RNF-05, RN-42). El defecto es un puerto alto A PROPÓSITO:
+      # si algo ya escucha en el 443 del host, NGINX no arranca y tumba el stack entero, y
+      # eso ocurriría en el primer redespliegue sin que nadie lo haya pedido. Al activar TLS
+      # de verdad hay que ponerlo en 443, porque la redirección desde HTTP se construye con
+      # $host, que no lleva puerto.
+      - "${HTTPS_PORT:-8443}:443"
     environment:
       # Rutas DENTRO del contenedor. Si ambas son legibles, el entrypoint levanta HTTPS y
       # el 80 pasa a redirigir; si no, sirve HTTP como hasta ahora y lo avisa por log.

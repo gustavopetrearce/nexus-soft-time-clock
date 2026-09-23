@@ -97,7 +97,7 @@ arranca sin ellas.
 | `DB_USER` | | `nexus` | Usuario de PostgreSQL |
 | `SPRING_PROFILES_ACTIVE` | | `prod` | Perfil de Spring |
 | `HTTP_PORT` | | `8081` | Puerto HTTP del host. Con TLS activo solo redirige a HTTPS |
-| `HTTPS_PORT` | | `443` | Puerto HTTPS del host. **Déjalo en 443**: la redirección desde HTTP se construye con `$host`, que no lleva puerto, así que en otro puerto lleva al vacío |
+| `HTTPS_PORT` | | `8443` | Puerto HTTPS del host. Alto por defecto para no chocar con lo que ya escuche en el 443 (NGINX no arrancaría y tumbaría el stack). **Al activar TLS de verdad, ponerlo en 443**: la redirección desde HTTP se construye con `$host`, que no lleva puerto |
 | `TLS_CERTS_DIR` | | `/etc/letsencrypt` | Directorio **del host** con los certificados, montado en `/etc/nginx/certs` |
 | `TLS_CERT_FILE` / `TLS_KEY_FILE` | | `/etc/nginx/certs/fullchain.pem` · `privkey.pem` | Rutas **dentro del contenedor**. Si ambas son legibles, NGINX levanta en HTTPS |
 | `CERTBOT_WEBROOT` | | `/var/www/certbot` | Raíz del desafío HTTP-01 para renovar sin parar el stack |
@@ -138,12 +138,16 @@ Con Let's Encrypt en el host:
 #    justamente el modo en el que está antes de tener certificado.
 sudo certbot certonly --webroot -w /var/www/certbot -d asistencia.tudominio.com
 
-# 2) Variables del stack en Portainer
+# 2) Comprueba que el 443 del host está libre ANTES de reclamarlo: si está ocupado,
+#    NGINX no arranca y se lleva por delante el stack entero.
+sudo ss -lntp | grep ':443' || echo "443 libre"
+
+# 3) Variables del stack en Portainer
 TLS_CERTS_DIR=/etc/letsencrypt/live/asistencia.tudominio.com
 HTTPS_PORT=443
 PUBLIC_BASE_URL=https://asistencia.tudominio.com
 
-# 3) Redespliega el stack y comprueba el modo en el log de nginx
+# 4) Redespliega el stack y comprueba el modo en el log de nginx
 curl -I https://asistencia.tudominio.com/actuator/health
 ```
 
@@ -154,6 +158,12 @@ curl -I https://asistencia.tudominio.com/actuator/health
 > La renovación no reinicia NGINX por su cuenta. Añade al cron de certbot un
 > `docker exec <contenedor-nginx> nginx -s reload` en el hook `--deploy-hook`, o el
 > certificado nuevo no se usará hasta el siguiente redespliegue.
+
+> ⚠️ **Las variables del stack se fijan en el repositorio, no a mano en la UI.** El
+> redespliegue **reemplaza** la configuración de entorno completa (`stack.Env = payload.Env`),
+> así que cualquier variable escrita solo en Portainer desaparece en el siguiente deploy. El
+> sitio correcto es `scripts/.env` (o los *secrets*/*variables* del repo para el workflow), que
+> es lo que `scripts/redeploy.sh` envía.
 
 > Si ya tienes un proxy (Traefik, Caddy, el NGINX del host) terminando TLS por delante, no
 > montes certificados aquí: el stack seguirá en HTTP dentro de la red y el proxy de delante

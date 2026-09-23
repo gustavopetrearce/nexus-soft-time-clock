@@ -14,6 +14,9 @@
 #   MINIO_PASSWORD        idem — credencial del storage de evidencias
 #   SECURITY_JWT_PRIVATE_KEY / SECURITY_JWT_PUBLIC_KEY
 #                         par RSA de firma del JWT, copiado del stack en Portainer
+# Opcional pero recomendado:
+#   SECURITY_METRICS_PASSWORD  credencial del scrape de /actuator/prometheus. Sin ella el
+#                         endpoint queda cerrado; la app funciona igual, pero no hay métricas.
 # Opcionales: el secret MINIO_KMS_SECRET_KEY (cifrado en reposo del bucket) y las
 # variables PORTAINER_URL, APP_URL, STACK_ID, etc. (solo si cambian).
 # =====================================================================
@@ -78,12 +81,24 @@ jobs:
           # tumba el stack completo (el script valida el formato antes de desplegar). Si se
           # omite, el bucket queda SIN cifrar y el backend lo avisa por log al arrancar.
           MINIO_KMS_SECRET_KEY: ${{ secrets.MINIO_KMS_SECRET_KEY }}
+          # Credencial del scrape de /actuator/prometheus, que ya no es público. Si se deja
+          # vacía el endpoint queda cerrado y la app funciona igual: se pierde la métrica.
+          # Va como secret porque, como el resto, el redeploy REEMPLAZA la env del stack:
+          # fijarla a mano en la UI de Portainer no sobrevive al siguiente despliegue.
+          SECURITY_METRICS_PASSWORD: ${{ secrets.SECURITY_METRICS_PASSWORD }}
           # Overrides opcionales (si no se definen, el script usa sus defaults).
           PORTAINER_URL: ${{ vars.PORTAINER_URL }}
           APP_URL: ${{ vars.APP_URL }}
           STACK_ID: ${{ vars.STACK_ID }}
           ENDPOINT_ID: ${{ vars.ENDPOINT_ID }}
           HTTP_PORT: ${{ vars.HTTP_PORT }}
+          # TLS (RNF-05). Mientras no existan certificados en el host, NGINX sigue sirviendo
+          # HTTP y estas tres no hacen falta. HTTPS_PORT por defecto es un puerto alto: pasarlo
+          # a 443 solo cuando el certificado esté emitido y el 443 del host esté libre.
+          HTTPS_PORT: ${{ vars.HTTPS_PORT }}
+          TLS_CERTS_DIR: ${{ vars.TLS_CERTS_DIR }}
+          CERTBOT_WEBROOT: ${{ vars.CERTBOT_WEBROOT }}
+          SECURITY_METRICS_USERNAME: ${{ vars.SECURITY_METRICS_USERNAME }}
           MINIO_USER: ${{ vars.MINIO_USER }}
           STORAGE_MINIO_BUCKET: ${{ vars.STORAGE_MINIO_BUCKET }}
           # Origen público con el que se firman las URLs de subida. Por defecto el script toma
