@@ -30,7 +30,13 @@ privada. Solo NGINX expone un puerto al exterior:
 
 - La web usa rutas **relativas** (`/api/v1`, `/ws`), por lo que **NGINX es
   obligatorio** como único punto de entrada: enruta `/` → web y
-  `/api`, `/ws`, `/actuator`, `/swagger-ui` → backend.
+  `/api`, `/ws`, `/swagger-ui` → backend.
+- De `/actuator` **solo sale `/actuator/health`**; el resto responde 404 desde NGINX.
+  `/actuator/prometheus` exponía el volumen de marcaciones, la topología y la memoria del
+  servidor sin credencial: ahora pide HTTP Basic (`SECURITY_METRICS_PASSWORD`) y se scrapea
+  por la red interna, sin pasar por NGINX.
+- NGINX sirve **HTTPS** en cuanto encuentra certificados montados (§3.1); si no los
+  encuentra arranca en HTTP y lo dice en su log.
 - `postgres` (PostGIS) y `redis` quedan **solo en la red interna** (sin puertos
   publicados). El backend se conecta por nombre de servicio (`postgres`, `redis`).
 - **Flyway** aplica las migraciones (`db/migration`) automáticamente al arrancar
@@ -63,7 +69,10 @@ Los ficheros clave ya viven en el repo:
 | `infra/portainer-stack.yml` | Compose del stack (este manual lo usa) |
 | `infra/backend.Dockerfile` | Build multi-stage del backend (JRE 21) |
 | `infra/web.Dockerfile` | Build Angular → NGINX |
-| `infra/nginx/nginx.conf` | Reverse proxy (rutas web/API/ws y `/evidence/` → MinIO) |
+| `infra/nginx/nginx.conf` | Reverse proxy: upstreams y ajustes globales |
+| `infra/nginx/locations.conf` | Rutas (web/API/ws, `/evidence/` → MinIO), compartidas por HTTP y HTTPS |
+| `infra/nginx/server-http.conf` · `server-tls.conf` | Los dos modos de servidor; el entrypoint elige |
+| `infra/nginx/40-tls.sh` | Elige modo según haya certificados legibles |
 
 ---
 
@@ -87,7 +96,13 @@ arranca sin ellas.
 | `DB_NAME` | | `nexus` | Nombre de la base de datos |
 | `DB_USER` | | `nexus` | Usuario de PostgreSQL |
 | `SPRING_PROFILES_ACTIVE` | | `prod` | Perfil de Spring |
-| `HTTP_PORT` | | `8081` | Puerto que NGINX publica en el host |
+| `HTTP_PORT` | | `8081` | Puerto HTTP del host. Con TLS activo solo redirige a HTTPS |
+| `HTTPS_PORT` | | `443` | Puerto HTTPS del host. **Déjalo en 443**: la redirección desde HTTP se construye con `$host`, que no lleva puerto, así que en otro puerto lleva al vacío |
+| `TLS_CERTS_DIR` | | `/etc/letsencrypt` | Directorio **del host** con los certificados, montado en `/etc/nginx/certs` |
+| `TLS_CERT_FILE` / `TLS_KEY_FILE` | | `/etc/nginx/certs/fullchain.pem` · `privkey.pem` | Rutas **dentro del contenedor**. Si ambas son legibles, NGINX levanta en HTTPS |
+| `CERTBOT_WEBROOT` | | `/var/www/certbot` | Raíz del desafío HTTP-01 para renovar sin parar el stack |
+| `SECURITY_METRICS_PASSWORD` | | — | Contraseña del scrape de `/actuator/prometheus`. **Sin ella el endpoint queda cerrado** (se pierde la métrica, no la privacidad) |
+| `SECURITY_METRICS_USERNAME` | | `prometheus` | Usuario del scrape |
 | `SECURITY_JWT_ACCESS_TTL_SECONDS` | | `900` | TTL del access token |
 | `SECURITY_JWT_REFRESH_TTL_DAYS` | | `30` | TTL del refresh token |
 | `MAIL_HOST` / `MAIL_PORT` | | `mailhog` / `1025` | SMTP de notificaciones |
@@ -109,6 +124,40 @@ arranca sin ellas.
 > delante, hay que actualizarla a `https://tu-dominio`.
 
 ---
+
+### 3.1 TLS (RNF-05, RN-42)
+
+El NGINX del stack sirve HTTPS **en cuanto encuentra certificados legibles**; mientras no los
+haya arranca en HTTP y lo avisa por log (`[nginx] Sin certificados legibles en …`). Al
+activarse, el puerto HTTP pasa a responder `301` hacia HTTPS y se añade HSTS de un año.
+
+Con Let's Encrypt en el host:
+
+```bash
+# 1) Primera emisión. El stack ya sirve /.well-known/acme-challenge/ en HTTP, que es
+#    justamente el modo en el que está antes de tener certificado.
+sudo certbot certonly --webroot -w /var/www/certbot -d asistencia.tudominio.com
+
+# 2) Variables del stack en Portainer
+TLS_CERTS_DIR=/etc/letsencrypt/live/asistencia.tudominio.com
+HTTPS_PORT=443
+PUBLIC_BASE_URL=https://asistencia.tudominio.com
+
+# 3) Redespliega el stack y comprueba el modo en el log de nginx
+curl -I https://asistencia.tudominio.com/actuator/health
+```
+
+> ⚠️ **`PUBLIC_BASE_URL` tiene que pasar a `https://`** al activar TLS. Con él se firman las
+> URLs prefirmadas de MinIO, y SigV4 firma el host y el esquema: una firma emitida contra
+> `http://` falla al servirse por `https://` con el opaco `SignatureDoesNotMatch`.
+
+> La renovación no reinicia NGINX por su cuenta. Añade al cron de certbot un
+> `docker exec <contenedor-nginx> nginx -s reload` en el hook `--deploy-hook`, o el
+> certificado nuevo no se usará hasta el siguiente redespliegue.
+
+> Si ya tienes un proxy (Traefik, Caddy, el NGINX del host) terminando TLS por delante, no
+> montes certificados aquí: el stack seguirá en HTTP dentro de la red y el proxy de delante
+> pone el `X-Forwarded-Proto`, que estas rutas ya propagan.
 
 ## 4. Método A — Desplegar desde el repositorio Git (recomendado)
 

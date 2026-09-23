@@ -84,6 +84,8 @@ services:
       STORAGE_MINIO_BUCKET: ${STORAGE_MINIO_BUCKET:-evidence}
       MINIO_USER: ${MINIO_USER:-minioadmin}
       MINIO_PASSWORD: ${MINIO_PASSWORD:-minioadmin}
+      # Credencial con la que Prometheus scrapea /actuator/prometheus, que ya no es público.
+      SECURITY_METRICS_PASSWORD: ${SECURITY_METRICS_PASSWORD:-prometheus-dev}
     ports:
       - "8080:8080"
 
@@ -97,7 +99,11 @@ services:
       - "4200:80"
 
   nginx:
-    image: nginx:1.27-alpine
+    # Se construye (y no se usa la imagen base con un bind-mount) porque la config se reparte
+    # en varios ficheros y el servidor lo elige el entrypoint según haya certificados.
+    build:
+      context: ..
+      dockerfile: infra/nginx.Dockerfile
     depends_on:
       - backend
       - web
@@ -106,7 +112,9 @@ services:
       - "8443:443"
       - "8081:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # En desarrollo no hay certificados y el contenedor arranca en HTTP: basta con dejar
+      # aquí un fullchain.pem/privkey.pem (autofirmados valen) para que levante en HTTPS.
+      - ./nginx/certs:/etc/nginx/certs:ro
 
   prometheus:
     image: prom/prometheus:latest

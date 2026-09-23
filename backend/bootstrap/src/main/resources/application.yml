@@ -60,6 +60,12 @@ security:
     key-id: ${SECURITY_JWT_KEY_ID:nexus-rsa}
     access-ttl-seconds: ${SECURITY_JWT_ACCESS_TTL_SECONDS:900}   # vida del access token (15 min)
     refresh-ttl-days: ${SECURITY_JWT_REFRESH_TTL_DAYS:30}        # vida del refresh token (ventana deslizante)
+  # Credencial con la que Prometheus scrapea /actuator/prometheus (HTTP Basic). Sin contraseña
+  # el endpoint queda CERRADO: es preferible quedarse sin métrica que publicar la telemetría del
+  # servidor. El perfil dev trae un valor por defecto para que el stack local funcione.
+  metrics:
+    username: ${SECURITY_METRICS_USERNAME:prometheus}
+    password: ${SECURITY_METRICS_PASSWORD:}
 
 # Almacenamiento de evidencias fotográficas (RF-18, ADR-008).
 # La subida es directa del cliente a MinIO con URL prefirmada, así que `public-endpoint` debe ser

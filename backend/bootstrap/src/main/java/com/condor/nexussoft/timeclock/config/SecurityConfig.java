@@ -35,7 +35,8 @@ public class SecurityConfig {
                     "/api/v1/ping",
                     "/actuator/health/**",
                     "/actuator/info",
-                    "/actuator/prometheus",
+                    // /actuator/prometheus NO va aquí: lo protege MetricsSecurityConfig con una
+                    // credencial propia. El resto de actuator cae en anyRequest().authenticated().
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",

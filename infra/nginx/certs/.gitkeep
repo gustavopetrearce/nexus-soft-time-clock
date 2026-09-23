@@ -1,0 +1,9 @@
+Directorio de certificados para el stack de desarrollo.
+
+Vacío, el NGINX arranca en HTTP. Para probar HTTPS en local, deja aquí un par autofirmado
+con estos nombres exactos (fullchain.pem / privkey.pem):
+
+  openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+    -keyout privkey.pem -out fullchain.pem -subj "/CN=localhost"
+
+Los .pem están ignorados por git: no subas certificados al repositorio.

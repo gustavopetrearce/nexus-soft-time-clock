@@ -116,6 +116,10 @@ services:
       STORAGE_MINIO_BUCKET: ${STORAGE_MINIO_BUCKET:-evidence}
       MINIO_USER: ${MINIO_USER:-minioadmin}
       MINIO_PASSWORD: ${MINIO_PASSWORD:?falta MINIO_PASSWORD}
+      # Credencial del scrape de métricas. /actuator/prometheus ya no es público y NGINX
+      # tampoco lo publica: sin esta variable el endpoint queda cerrado (y sin métricas).
+      SECURITY_METRICS_USERNAME: ${SECURITY_METRICS_USERNAME:-prometheus}
+      SECURITY_METRICS_PASSWORD: ${SECURITY_METRICS_PASSWORD:-}
       LOG_LEVEL_APP: ${LOG_LEVEL_APP:-INFO}
     networks: [nexus]
 
@@ -141,7 +145,23 @@ services:
       - web
       - minio
     ports:
-      - "${HTTP_PORT:-8081}:80"      # Único punto de entrada. Detrás poné TLS.
+      - "${HTTP_PORT:-8081}:80"       # Redirige a HTTPS cuando hay certificados montados.
+      # Punto de entrada real con TLS (RNF-05, RN-42). Por defecto el 443 estándar, y no un
+      # puerto alto: la redirección desde HTTP se construye con $host, que no lleva puerto,
+      # así que publicar HTTPS en otro sitio deja esa redirección apuntando al vacío.
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      # Rutas DENTRO del contenedor. Si ambas son legibles, el entrypoint levanta HTTPS y
+      # el 80 pasa a redirigir; si no, sirve HTTP como hasta ahora y lo avisa por log.
+      TLS_CERT_FILE: ${TLS_CERT_FILE:-/etc/nginx/certs/fullchain.pem}
+      TLS_KEY_FILE: ${TLS_KEY_FILE:-/etc/nginx/certs/privkey.pem}
+    volumes:
+      # Certificados del host en solo lectura. Con Let's Encrypt suele ser
+      # /etc/letsencrypt/live/<dominio>; ajusta TLS_CERT_FILE/TLS_KEY_FILE si los nombres
+      # difieren. El directorio puede no existir: el contenedor arrancará en HTTP.
+      - ${TLS_CERTS_DIR:-/etc/letsencrypt}:/etc/nginx/certs:ro
+      # Raíz del desafío HTTP-01, para renovar el certificado sin parar el stack.
+      - ${CERTBOT_WEBROOT:-/var/www/certbot}:/var/www/certbot:ro
     networks: [nexus]
 
 networks:

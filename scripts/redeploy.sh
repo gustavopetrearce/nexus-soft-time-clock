@@ -64,6 +64,9 @@ DB_USER="${DB_USER:-nexus}"
 HTTP_PORT="${HTTP_PORT:-8088}"
 SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-prod}"
 LOG_LEVEL_APP="${LOG_LEVEL_APP:-INFO}"
+# Al activar TLS (ver docs/iteracion-13-produccion/07-despliegue-portainer.md §3.1) hay que
+# apuntar APP_URL a https://<dominio>:<HTTPS_PORT>: el puerto HTTP pasa a redirigir, y la
+# verificación por POST de abajo no sigue redirecciones (un 301 convertiría el POST en GET).
 APP_URL="${APP_URL:-http://85.239.240.43:8088}"
 VERIFY_EMAIL="${VERIFY_EMAIL:-admin@demo.com}"
 VERIFY_PASSWORD="${VERIFY_PASSWORD:-Admin123!}"
@@ -218,7 +221,8 @@ fi
 log "Esperando a que el backend arranque (health UP)… hasta ~120 s"
 UP=false
 for i in $(seq 1 20); do
-  H=$(curl -s -m 8 "$APP_URL/actuator/health" 2>/dev/null || true)
+  # -L por si APP_URL apunta al puerto HTTP de un stack que ya sirve TLS y redirige.
+  H=$(curl -sL -m 8 "$APP_URL/actuator/health" 2>/dev/null || true)
   if printf '%s' "$H" | grep -q '"status":"UP"'; then UP=true; ok "Health UP (~$((i*6)) s)."; break; fi
   sleep 6
 done
