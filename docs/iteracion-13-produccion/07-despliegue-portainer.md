@@ -76,6 +76,33 @@ Los ficheros clave ya viven en el repo:
 
 ---
 
+## 2.1 La imagen de MinIO ya no se puede descargar
+
+**MinIO retiró sus imágenes de los registros públicos.** `quay.io/minio/minio` responde
+«no such manifest» incluso para `:latest`, y Docker Hub devuelve «denied». No es un problema
+de credenciales: quay.io sirve otros repositorios sin autenticar desde la misma máquina.
+
+Como `compose pull` aborta el despliegue entero si falla **una** imagen, esto dejó el stack
+sin poder redesplegarse aunque no hubiera cambiado nada del código. El servicio en marcha
+nunca se vio afectado: la imagen ya estaba en el host.
+
+El stack lleva `pull_policy: never` en ese servicio, así que compose la salta y reutiliza la
+copia local. **Es un parche, no una solución**: un host que pierda esa imagen —un `docker
+image prune`, un servidor nuevo, una migración— no podrá recuperarla y MinIO no arrancará.
+
+Antes de que eso ocurra, conviene elegir una de estas salidas:
+
+| Salida | Qué implica |
+|---|---|
+| **Copiar la imagen a un registro propio** | Lo más rápido y lo que menos cambia. Desde el host actual: `docker tag` + `docker push` al registry de la empresa, y apuntar el stack ahí. Requiere un registry con credenciales. |
+| **Guardar la imagen como respaldo** | `docker save` a un fichero y archivarlo. No resuelve el futuro, pero evita el escenario de perderla del todo. Hazlo hoy, cueste lo que cueste decidir el resto. |
+| **Migrar a otro almacenamiento S3** | La aplicación habla S3 estándar, así que el código no cambia. Las evidencias ya guardadas **sí** requieren migración: el formato en disco de MinIO no lo lee otro servidor. |
+
+> Lo mínimo e inmediato es el `docker save`: mientras la imagen solo exista en un host, un
+> `prune` rutinario deja el almacenamiento de evidencias sin forma de arrancar.
+
+---
+
 ## 3. Variables de entorno
 
 Configúralas en Portainer (pestaña **Environment variables** del stack). Las
