@@ -98,7 +98,7 @@ arranca sin ellas.
 | `SPRING_PROFILES_ACTIVE` | | `prod` | Perfil de Spring |
 | `HTTP_PORT` | | `8081` | Puerto HTTP del host. Con TLS activo solo redirige a HTTPS |
 | `HTTPS_PORT` | | `8443` | Puerto HTTPS del host. Alto por defecto para no chocar con lo que ya escuche en el 443 (NGINX no arrancaría y tumbaría el stack). **Al activar TLS de verdad, ponerlo en 443**: la redirección desde HTTP se construye con `$host`, que no lleva puerto |
-| `TLS_CERTS_DIR` | | `/etc/letsencrypt` | Directorio **del host** con los certificados, montado en `/etc/nginx/certs` |
+| `TLS_CERTS_DIR` | | `/etc/nexus/tls-certs` | Directorio **del host** con los certificados, montado en `/etc/nginx/certs`. El defecto no existe a propósito: el stack se queda en HTTP salvo que se monten certificados a conciencia. Para que termine TLS: `/etc/letsencrypt/live/<dominio>` |
 | `TLS_CERT_FILE` / `TLS_KEY_FILE` | | `/etc/nginx/certs/fullchain.pem` · `privkey.pem` | Rutas **dentro del contenedor**. Si ambas son legibles, NGINX levanta en HTTPS |
 | `CERTBOT_WEBROOT` | | `/var/www/certbot` | Raíz del desafío HTTP-01 para renovar sin parar el stack |
 | `SECURITY_METRICS_PASSWORD` | | — | Contraseña del scrape de `/actuator/prometheus`. **Sin ella el endpoint queda cerrado** (se pierde la métrica, no la privacidad) |
@@ -165,9 +165,15 @@ curl -I https://asistencia.tudominio.com/actuator/health
 > sitio correcto es `scripts/.env` (o los *secrets*/*variables* del repo para el workflow), que
 > es lo que `scripts/redeploy.sh` envía.
 
-> Si ya tienes un proxy (Traefik, Caddy, el NGINX del host) terminando TLS por delante, no
-> montes certificados aquí: el stack seguirá en HTTP dentro de la red y el proxy de delante
-> pone el `X-Forwarded-Proto`, que estas rutas ya propagan.
+> **Si ya hay un proxy delante terminando TLS** (Traefik, Caddy, openresty, el NGINX del host),
+> que es el caso del despliegue actual: **no** definas `TLS_CERTS_DIR` ni `HTTPS_PORT`. El stack
+> se queda en HTTP detrás del proxy, que es quien pone el `X-Forwarded-Proto` que estas rutas ya
+> propagan. Montar los certificados ahí sería contraproducente por partida doble: el contenedor
+> pelearía por el 443 que el proxy ya ocupa —y sin ese puerto no arranca, tumbando la entrada del
+> stack— y su puerto HTTP pasaría a devolver solo redirecciones, dejando al proxy en bucle.
+>
+> `PUBLIC_BASE_URL` **sí** lleva `https://` en ese caso: es el origen que ve el cliente, no el
+> esquema con el que hablan los contenedores entre ellos.
 
 ## 4. Método A — Desplegar desde el repositorio Git (recomendado)
 

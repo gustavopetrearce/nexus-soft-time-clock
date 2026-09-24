@@ -158,10 +158,13 @@ services:
       TLS_CERT_FILE: ${TLS_CERT_FILE:-/etc/nginx/certs/fullchain.pem}
       TLS_KEY_FILE: ${TLS_KEY_FILE:-/etc/nginx/certs/privkey.pem}
     volumes:
-      # Certificados del host en solo lectura. Con Let's Encrypt suele ser
-      # /etc/letsencrypt/live/<dominio>; ajusta TLS_CERT_FILE/TLS_KEY_FILE si los nombres
-      # difieren. El directorio puede no existir: el contenedor arrancará en HTTP.
-      - ${TLS_CERTS_DIR:-/etc/letsencrypt}:/etc/nginx/certs:ro
+      # Certificados del host en solo lectura. El defecto es una ruta que NO existe, a
+      # propósito: así el stack se queda en HTTP salvo que alguien monte certificados
+      # deliberadamente. Apuntarlo por defecto a /etc/letsencrypt era peligroso — un host
+      # donde otro proxy ya termina TLS tiene ahí certificados reales, y el stack se pondría
+      # a competir por el 443 con quien ya lo sirve.
+      # Para que ESTE stack termine TLS: TLS_CERTS_DIR=/etc/letsencrypt/live/<dominio>.
+      - ${TLS_CERTS_DIR:-/etc/nexus/tls-certs}:/etc/nginx/certs:ro
       # Raíz del desafío HTTP-01, para renovar el certificado sin parar el stack.
       - ${CERTBOT_WEBROOT:-/var/www/certbot}:/var/www/certbot:ro
     networks: [nexus]

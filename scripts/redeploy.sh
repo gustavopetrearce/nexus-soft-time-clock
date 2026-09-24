@@ -69,7 +69,7 @@ HTTP_PORT="${HTTP_PORT:-8088}"
 HTTPS_PORT="${HTTPS_PORT:-8443}"
 # Certificados del host que se montan en el contenedor. Si el directorio no existe, NGINX
 # arranca en HTTP y lo avisa por log; no hace falta tocar nada para seguir como hasta ahora.
-TLS_CERTS_DIR="${TLS_CERTS_DIR:-/etc/letsencrypt}"
+TLS_CERTS_DIR="${TLS_CERTS_DIR:-/etc/nexus/tls-certs}"
 CERTBOT_WEBROOT="${CERTBOT_WEBROOT:-/var/www/certbot}"
 # Credencial del scrape de métricas. Vacía = /actuator/prometheus cerrado (se pierde la
 # métrica, no la privacidad); la app funciona igual.
