@@ -39,6 +39,9 @@ public class JwtAccessTokenIssuer implements AccessTokenIssuerPort {
                 .issuedAt(now)
                 .expiresAt(expiresAt)
                 .subject(user.getId().toString())
+                // El correo viaja en el token para que la bitácora se lea sin resolver el id
+                // contra la tabla de usuarios en cada fila (RN-60, columna actor_email).
+                .claim("email", user.email().value())
                 .claim("roles", new ArrayList<>(user.roleCodes()))
                 .claim("permissions", new ArrayList<>(user.permissionCodes()))
                 .claim("platform_admin", user.platformAdmin());

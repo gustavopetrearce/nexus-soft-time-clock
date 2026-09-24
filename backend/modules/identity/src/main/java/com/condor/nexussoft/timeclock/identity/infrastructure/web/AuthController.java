@@ -3,6 +3,7 @@ package com.condor.nexussoft.timeclock.identity.infrastructure.web;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.AuthenticationUseCase;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.LoginCommand;
 import com.condor.nexussoft.timeclock.identity.infrastructure.web.dto.*;
+import com.condor.nexussoft.timeclock.platform.web.HttpRequestMetadata;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,7 @@ public class AuthController {
     public TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
         LoginCommand command = new LoginCommand(
                 request.companyCode(), request.email(), request.password(),
-                clientIp(http), http.getHeader("User-Agent"));
+                HttpRequestMetadata.clientIp(http), HttpRequestMetadata.userAgent(http));
         return TokenResponse.from(authentication.login(command));
     }
 
@@ -68,11 +69,4 @@ public class AuthController {
         return values == null ? List.of() : values;
     }
 
-    private static String clientIp(HttpServletRequest http) {
-        String forwarded = http.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return http.getRemoteAddr();
-    }
 }

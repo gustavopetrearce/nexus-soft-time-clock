@@ -26,11 +26,14 @@ public class AuditController {
         this.audit = audit;
     }
 
-    public record AuditResponse(UUID id, UUID actorUserId, String action, String resourceType,
-                                String resourceId, String newValues, Instant createdAt) {
+    public record AuditResponse(UUID id, UUID actorUserId, String actorEmail, String action,
+                                String resourceType, String resourceId, String ip, String userAgent,
+                                String deviceInfo, String oldValues, String newValues,
+                                Instant createdAt) {
         static AuditResponse from(AuditLogEntry e) {
-            return new AuditResponse(e.id(), e.actorUserId(), e.action(), e.resourceType(),
-                    e.resourceId(), e.newValuesJson(), e.createdAt());
+            return new AuditResponse(e.id(), e.actorUserId(), e.actorEmail(), e.action(),
+                    e.resourceType(), e.resourceId(), e.ip(), e.userAgent(), e.deviceInfo(),
+                    e.oldValuesJson(), e.newValuesJson(), e.createdAt());
         }
     }
 

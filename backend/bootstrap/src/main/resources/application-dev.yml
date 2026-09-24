@@ -13,6 +13,12 @@ spring:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}   # MailHog
 
+# El stack local trae su propio Prometheus: sin credencial no habría métricas en Grafana.
+# En producción esta variable es obligatoria (ver application.yml).
+security:
+  metrics:
+    password: ${SECURITY_METRICS_PASSWORD:prometheus-dev}
+
 logging:
   level:
     org.hibernate.SQL: DEBUG

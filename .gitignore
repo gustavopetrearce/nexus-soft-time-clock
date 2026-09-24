@@ -36,3 +36,10 @@ mobile/**/*.g.dart
 .DS_Store
 Thumbs.db
 mocks/
+
+# Certificados TLS: el stack los toma del host (o de infra/nginx/certs en desarrollo).
+# Una llave privada no entra nunca al repositorio.
+*.pem
+*.key
+*.crt
+*.p12

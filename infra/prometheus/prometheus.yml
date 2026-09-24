@@ -6,6 +6,12 @@ global:
 scrape_configs:
   - job_name: 'nexus-backend'
     metrics_path: '/actuator/prometheus'
+    # El endpoint dejó de ser público: expone volumen de marcaciones, topología y memoria.
+    # Esta es la credencial del stack de desarrollo; en producción, donde Prometheus vive
+    # fuera de este compose, usa `password_file` y no la contraseña en claro.
+    basic_auth:
+      username: 'prometheus'
+      password: 'prometheus-dev'
     static_configs:
       - targets: ['backend:8080']
         labels:

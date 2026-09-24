@@ -62,8 +62,24 @@ GIT_REF="${GIT_REF:-refs/heads/main}"
 DB_NAME="${DB_NAME:-nexus}"
 DB_USER="${DB_USER:-nexus}"
 HTTP_PORT="${HTTP_PORT:-8088}"
+# Puerto HTTPS publicado por NGINX. Por defecto un puerto alto y NO el 443: si algo ya escucha
+# en el 443 del host, el contenedor de NGINX no arranca y se lleva por delante el stack entero.
+# Cuando el TLS esté vivo de verdad, ponerlo en 443 — la redirección desde HTTP se construye
+# con $host, que no lleva puerto (ver docs/iteracion-13-produccion/07-despliegue-portainer.md §3.1).
+HTTPS_PORT="${HTTPS_PORT:-8443}"
+# Certificados del host que se montan en el contenedor. Si el directorio no existe, NGINX
+# arranca en HTTP y lo avisa por log; no hace falta tocar nada para seguir como hasta ahora.
+TLS_CERTS_DIR="${TLS_CERTS_DIR:-/etc/nexus/tls-certs}"
+CERTBOT_WEBROOT="${CERTBOT_WEBROOT:-/var/www/certbot}"
+# Credencial del scrape de métricas. Vacía = /actuator/prometheus cerrado (se pierde la
+# métrica, no la privacidad); la app funciona igual.
+SECURITY_METRICS_USERNAME="${SECURITY_METRICS_USERNAME:-prometheus}"
+SECURITY_METRICS_PASSWORD="${SECURITY_METRICS_PASSWORD:-}"
 SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-prod}"
 LOG_LEVEL_APP="${LOG_LEVEL_APP:-INFO}"
+# Al activar TLS (ver docs/iteracion-13-produccion/07-despliegue-portainer.md §3.1) hay que
+# apuntar APP_URL a https://<dominio>:<HTTPS_PORT>: el puerto HTTP pasa a redirigir, y la
+# verificación por POST de abajo no sigue redirecciones (un 301 convertiría el POST en GET).
 APP_URL="${APP_URL:-http://85.239.240.43:8088}"
 VERIFY_EMAIL="${VERIFY_EMAIL:-admin@demo.com}"
 VERIFY_PASSWORD="${VERIFY_PASSWORD:-Admin123!}"
@@ -188,6 +204,11 @@ PAYLOAD=$(cat <<JSON
     {"name":"SECURITY_JWT_PUBLIC_KEY","value":"$(json_escape "$SECURITY_JWT_PUBLIC_KEY")"},
     {"name":"SECURITY_JWT_KEY_ID","value":"$(json_escape "$SECURITY_JWT_KEY_ID")"},
     {"name":"HTTP_PORT","value":"$(json_escape "$HTTP_PORT")"},
+    {"name":"HTTPS_PORT","value":"$(json_escape "$HTTPS_PORT")"},
+    {"name":"TLS_CERTS_DIR","value":"$(json_escape "$TLS_CERTS_DIR")"},
+    {"name":"CERTBOT_WEBROOT","value":"$(json_escape "$CERTBOT_WEBROOT")"},
+    {"name":"SECURITY_METRICS_USERNAME","value":"$(json_escape "$SECURITY_METRICS_USERNAME")"},
+    {"name":"SECURITY_METRICS_PASSWORD","value":"$(json_escape "$SECURITY_METRICS_PASSWORD")"},
     {"name":"MINIO_USER","value":"$(json_escape "$MINIO_USER")"},
     {"name":"MINIO_PASSWORD","value":"$(json_escape "$MINIO_PASSWORD")"},
     {"name":"MINIO_KMS_SECRET_KEY","value":"$(json_escape "$MINIO_KMS_SECRET_KEY")"},
@@ -218,7 +239,8 @@ fi
 log "Esperando a que el backend arranque (health UP)… hasta ~120 s"
 UP=false
 for i in $(seq 1 20); do
-  H=$(curl -s -m 8 "$APP_URL/actuator/health" 2>/dev/null || true)
+  # -L por si APP_URL apunta al puerto HTTP de un stack que ya sirve TLS y redirige.
+  H=$(curl -sL -m 8 "$APP_URL/actuator/health" 2>/dev/null || true)
   if printf '%s' "$H" | grep -q '"status":"UP"'; then UP=true; ok "Health UP (~$((i*6)) s)."; break; fi
   sleep 6
 done

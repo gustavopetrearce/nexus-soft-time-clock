@@ -30,7 +30,13 @@ privada. Solo NGINX expone un puerto al exterior:
 
 - La web usa rutas **relativas** (`/api/v1`, `/ws`), por lo que **NGINX es
   obligatorio** como único punto de entrada: enruta `/` → web y
-  `/api`, `/ws`, `/actuator`, `/swagger-ui` → backend.
+  `/api`, `/ws`, `/swagger-ui` → backend.
+- De `/actuator` **solo sale `/actuator/health`**; el resto responde 404 desde NGINX.
+  `/actuator/prometheus` exponía el volumen de marcaciones, la topología y la memoria del
+  servidor sin credencial: ahora pide HTTP Basic (`SECURITY_METRICS_PASSWORD`) y se scrapea
+  por la red interna, sin pasar por NGINX.
+- NGINX sirve **HTTPS** en cuanto encuentra certificados montados (§3.1); si no los
+  encuentra arranca en HTTP y lo dice en su log.
 - `postgres` (PostGIS) y `redis` quedan **solo en la red interna** (sin puertos
   publicados). El backend se conecta por nombre de servicio (`postgres`, `redis`).
 - **Flyway** aplica las migraciones (`db/migration`) automáticamente al arrancar
@@ -63,7 +69,10 @@ Los ficheros clave ya viven en el repo:
 | `infra/portainer-stack.yml` | Compose del stack (este manual lo usa) |
 | `infra/backend.Dockerfile` | Build multi-stage del backend (JRE 21) |
 | `infra/web.Dockerfile` | Build Angular → NGINX |
-| `infra/nginx/nginx.conf` | Reverse proxy (rutas web/API/ws y `/evidence/` → MinIO) |
+| `infra/nginx/nginx.conf` | Reverse proxy: upstreams y ajustes globales |
+| `infra/nginx/locations.conf` | Rutas (web/API/ws, `/evidence/` → MinIO), compartidas por HTTP y HTTPS |
+| `infra/nginx/server-http.conf` · `server-tls.conf` | Los dos modos de servidor; el entrypoint elige |
+| `infra/nginx/40-tls.sh` | Elige modo según haya certificados legibles |
 
 ---
 
@@ -87,7 +96,13 @@ arranca sin ellas.
 | `DB_NAME` | | `nexus` | Nombre de la base de datos |
 | `DB_USER` | | `nexus` | Usuario de PostgreSQL |
 | `SPRING_PROFILES_ACTIVE` | | `prod` | Perfil de Spring |
-| `HTTP_PORT` | | `8081` | Puerto que NGINX publica en el host |
+| `HTTP_PORT` | | `8081` | Puerto HTTP del host. Con TLS activo solo redirige a HTTPS |
+| `HTTPS_PORT` | | `8443` | Puerto HTTPS del host. Alto por defecto para no chocar con lo que ya escuche en el 443 (NGINX no arrancaría y tumbaría el stack). **Al activar TLS de verdad, ponerlo en 443**: la redirección desde HTTP se construye con `$host`, que no lleva puerto |
+| `TLS_CERTS_DIR` | | `/etc/nexus/tls-certs` | Directorio **del host** con los certificados, montado en `/etc/nginx/certs`. El defecto no existe a propósito: el stack se queda en HTTP salvo que se monten certificados a conciencia. Para que termine TLS: `/etc/letsencrypt/live/<dominio>` |
+| `TLS_CERT_FILE` / `TLS_KEY_FILE` | | `/etc/nginx/certs/fullchain.pem` · `privkey.pem` | Rutas **dentro del contenedor**. Si ambas son legibles, NGINX levanta en HTTPS |
+| `CERTBOT_WEBROOT` | | `/var/www/certbot` | Raíz del desafío HTTP-01 para renovar sin parar el stack |
+| `SECURITY_METRICS_PASSWORD` | | — | Contraseña del scrape de `/actuator/prometheus`. **Sin ella el endpoint queda cerrado** (se pierde la métrica, no la privacidad) |
+| `SECURITY_METRICS_USERNAME` | | `prometheus` | Usuario del scrape |
 | `SECURITY_JWT_ACCESS_TTL_SECONDS` | | `900` | TTL del access token |
 | `SECURITY_JWT_REFRESH_TTL_DAYS` | | `30` | TTL del refresh token |
 | `MAIL_HOST` / `MAIL_PORT` | | `mailhog` / `1025` | SMTP de notificaciones |
@@ -109,6 +124,56 @@ arranca sin ellas.
 > delante, hay que actualizarla a `https://tu-dominio`.
 
 ---
+
+### 3.1 TLS (RNF-05, RN-42)
+
+El NGINX del stack sirve HTTPS **en cuanto encuentra certificados legibles**; mientras no los
+haya arranca en HTTP y lo avisa por log (`[nginx] Sin certificados legibles en …`). Al
+activarse, el puerto HTTP pasa a responder `301` hacia HTTPS y se añade HSTS de un año.
+
+Con Let's Encrypt en el host:
+
+```bash
+# 1) Primera emisión. El stack ya sirve /.well-known/acme-challenge/ en HTTP, que es
+#    justamente el modo en el que está antes de tener certificado.
+sudo certbot certonly --webroot -w /var/www/certbot -d asistencia.tudominio.com
+
+# 2) Comprueba que el 443 del host está libre ANTES de reclamarlo: si está ocupado,
+#    NGINX no arranca y se lleva por delante el stack entero.
+sudo ss -lntp | grep ':443' || echo "443 libre"
+
+# 3) Variables del stack en Portainer
+TLS_CERTS_DIR=/etc/letsencrypt/live/asistencia.tudominio.com
+HTTPS_PORT=443
+PUBLIC_BASE_URL=https://asistencia.tudominio.com
+
+# 4) Redespliega el stack y comprueba el modo en el log de nginx
+curl -I https://asistencia.tudominio.com/actuator/health
+```
+
+> ⚠️ **`PUBLIC_BASE_URL` tiene que pasar a `https://`** al activar TLS. Con él se firman las
+> URLs prefirmadas de MinIO, y SigV4 firma el host y el esquema: una firma emitida contra
+> `http://` falla al servirse por `https://` con el opaco `SignatureDoesNotMatch`.
+
+> La renovación no reinicia NGINX por su cuenta. Añade al cron de certbot un
+> `docker exec <contenedor-nginx> nginx -s reload` en el hook `--deploy-hook`, o el
+> certificado nuevo no se usará hasta el siguiente redespliegue.
+
+> ⚠️ **Las variables del stack se fijan en el repositorio, no a mano en la UI.** El
+> redespliegue **reemplaza** la configuración de entorno completa (`stack.Env = payload.Env`),
+> así que cualquier variable escrita solo en Portainer desaparece en el siguiente deploy. El
+> sitio correcto es `scripts/.env` (o los *secrets*/*variables* del repo para el workflow), que
+> es lo que `scripts/redeploy.sh` envía.
+
+> **Si ya hay un proxy delante terminando TLS** (Traefik, Caddy, openresty, el NGINX del host),
+> que es el caso del despliegue actual: **no** definas `TLS_CERTS_DIR` ni `HTTPS_PORT`. El stack
+> se queda en HTTP detrás del proxy, que es quien pone el `X-Forwarded-Proto` que estas rutas ya
+> propagan. Montar los certificados ahí sería contraproducente por partida doble: el contenedor
+> pelearía por el 443 que el proxy ya ocupa —y sin ese puerto no arranca, tumbando la entrada del
+> stack— y su puerto HTTP pasaría a devolver solo redirecciones, dejando al proxy en bucle.
+>
+> `PUBLIC_BASE_URL` **sí** lleva `https://` en ese caso: es el origen que ve el cliente, no el
+> esquema con el que hablan los contenedores entre ellos.
 
 ## 4. Método A — Desplegar desde el repositorio Git (recomendado)
 

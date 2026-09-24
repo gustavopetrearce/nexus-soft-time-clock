@@ -40,5 +40,7 @@ Topología en [`docs/iteracion-02-arquitectura/08-despliegue.md`](../iteracion-0
 Extensión recomendada para release: build y push de imágenes al registry, escaneo de vulnerabilidades (imagen + dependencias), y despliegue por entorno (staging → prod) con aprobación.
 
 ## Observabilidad
-- Métricas: `/actuator/prometheus` → Prometheus → Grafana (dashboards).
+- Métricas: `/actuator/prometheus` → Prometheus → Grafana (dashboards). El endpoint pide HTTP
+  Basic (`SECURITY_METRICS_USERNAME` / `SECURITY_METRICS_PASSWORD`) y no se publica por NGINX:
+  el scrape va por la red interna. Sin contraseña configurada queda cerrado.
 - Alertas básicas: latencia p95 de registro, tasa de rechazos, backlog del outbox, errores 5xx.

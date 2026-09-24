@@ -8,8 +8,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 /**
  * Configuración STOMP para el tiempo real (ADR-011). Los clientes se conectan a {@code /ws}
- * y se suscriben a destinos por tenant ({@code /topic/tenant/{id}/attendance}). El filtrado
- * de autorización por destino se refuerza en una iteración posterior (interceptor STOMP).
+ * y se suscriben a destinos por tenant ({@code /topic/tenant/{id}/attendance}).
+ *
+ * <p>Aquí solo se declaran endpoint y broker. Quién puede conectarse y a qué destino lo decide
+ * {@code StompAuthorizationInterceptor} (bootstrap): autentica el CONNECT con el JWT de la API
+ * y rechaza toda suscripción ajena al tenant del token (RN-30, RN-31).
  */
 @Configuration
 @EnableWebSocketMessageBroker

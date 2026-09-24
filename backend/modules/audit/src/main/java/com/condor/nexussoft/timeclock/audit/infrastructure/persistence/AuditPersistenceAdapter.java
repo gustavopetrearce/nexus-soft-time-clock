@@ -30,7 +30,8 @@ public class AuditPersistenceAdapter implements AuditLogRepositoryPort {
     public void append(AuditLogEntry e) {
         // persist() garantiza INSERT (la tabla es append-only; UPDATE/DELETE bloqueados por trigger).
         entityManager.persist(new AuditLogJpaEntity(e.id(), e.tenantId(), e.createdAt(),
-                e.actorUserId(), e.action(), e.resourceType(), e.resourceId(), e.newValuesJson()));
+                e.actorUserId(), e.actorEmail(), e.action(), e.resourceType(), e.resourceId(),
+                e.ip(), e.userAgent(), e.deviceInfo(), e.oldValuesJson(), e.newValuesJson()));
     }
 
     @Override
@@ -42,7 +43,8 @@ public class AuditPersistenceAdapter implements AuditLogRepositoryPort {
     }
 
     private AuditLogEntry toDomain(AuditLogJpaEntity e) {
-        return new AuditLogEntry(e.getId(), e.getTenantId(), e.getActorUserId(), e.getAction(),
-                e.getResourceType(), e.getResourceId(), e.getNewValues(), e.getCreatedAt());
+        return new AuditLogEntry(e.getId(), e.getTenantId(), e.getActorUserId(), e.getActorEmail(),
+                e.getAction(), e.getResourceType(), e.getResourceId(), e.getIp(), e.getUserAgent(),
+                e.getDeviceInfo(), e.getOldValues(), e.getNewValues(), e.getCreatedAt());
     }
 }
