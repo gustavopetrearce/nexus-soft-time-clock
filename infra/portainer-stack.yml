@@ -55,6 +55,20 @@ services:
   # problema de credenciales y ningún `docker login` lo arregla: no devolver el prefijo.
   minio:
     image: quay.io/minio/minio:RELEASE.2024-10-13T13-34-11Z
+    # MinIO dejó de publicar sus imágenes de forma anónima: quay.io responde "no such
+    # manifest" incluso para :latest y Docker Hub devuelve "denied" — no es un problema de
+    # credenciales de quay, que sirve otros repos sin autenticar. Como `compose pull` aborta
+    # el despliegue ENTERO cuando una sola imagen falla, el stack se quedó sin poder
+    # redesplegarse pese a que nada del código había cambiado.
+    #
+    # `never` hace que compose salte esta imagen y use la que ya está en el host, que es la
+    # que lleva corriendo desde el despliegue anterior. El resto del stack sigue
+    # descargándose y construyéndose con normalidad.
+    #
+    # OJO: con esta política, un host que pierda la imagen (prune, servidor nuevo) no puede
+    # recuperarla de ningún registro público y MinIO no arrancará. El arreglo duradero es
+    # copiarla a un registro propio — ver el aviso en la guía de despliegue.
+    pull_policy: never
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
