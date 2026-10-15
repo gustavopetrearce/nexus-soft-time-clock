@@ -7,6 +7,9 @@ Vocabulario compartido entre negocio y desarrollo. Estos términos serán los no
 | **Tenant / Empresa (Company)** | Organización cliente de la plataforma. Unidad de aislamiento de datos multi-tenant. |
 | **Colaborador (Employee)** | Persona que registra asistencia. Pertenece a un tenant. |
 | **Usuario (User)** | Cuenta de acceso al sistema, con uno o más roles. Un colaborador tiene un usuario. |
+| **Colaborador activo (ActiveCollaborator)** | Colaborador **habilitado para registrar accesos** (rol con `attendance:register` y cuenta no dada de baja), con independencia de su frecuencia de uso. Es la unidad que consume cupo (RN-35). |
+| **Cupo / Capacidad contratada (TenantCapacity)** | Máximo de colaboradores activos de un tenant: cupo base (150) más los bloques adicionales contratados (RN-34). |
+| **Bloque de capacidad (CapacityBlock)** | Incremento **indivisible** de 50 colaboradores activos sobre el cupo base; acumulativo y administrado por la plataforma (RF-29). |
 | **Rol (Role)** | Conjunto nombrado de permisos (RBAC). |
 | **Permiso (Permission)** | Autorización granular `recurso:acción`. |
 | **Centro de trabajo (WorkSite)** | Ubicación física autorizada para registrar asistencia. Tiene coordenadas y geocerca. |

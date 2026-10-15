@@ -51,8 +51,13 @@ public class AuthenticationService implements AuthenticationUseCase {
         this.clock = clock;
     }
 
+    /**
+     * {@code noRollbackFor}: un intento fallido incrementa el contador (y puede bloquear la cuenta,
+     * RN-40) y <em>después</em> lanza la excepción. Con el rollback por defecto ante
+     * {@code RuntimeException}, ese incremento se perdía y el bloqueo nunca llegaba.
+     */
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public AuthTokens login(LoginCommand command) {
         Instant now = clock.instant();
         Email email = Email.of(command.email());
@@ -77,8 +82,13 @@ public class AuthenticationService implements AuthenticationUseCase {
         return issueTokens(user, now);
     }
 
+    /**
+     * {@code noRollbackFor}: la reutilización de un token y la sesión de una cuenta dada de baja
+     * revocan la familia y <em>después</em> lanzan la excepción. Sin esto el rollback deshacía la
+     * revocación y la familia seguía viva.
+     */
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public AuthTokens refresh(String rawRefreshToken) {
         Instant now = clock.instant();
         String hash = opaqueTokens.hash(rawRefreshToken);
@@ -95,6 +105,16 @@ public class AuthenticationService implements AuthenticationUseCase {
         }
 
         User user = users.findById(stored.userId()).orElseThrow(InvalidRefreshTokenException::new);
+
+        // El estado de la cuenta se revalida en cada rotación, no solo en el login: una baja o un
+        // bloqueo deben cortar la sesión viva. Sin esto, un colaborador dado de baja seguiría
+        // renovando su refresh hasta 30 días y registrando asistencia con el cupo ya liberado y
+        // reasignado a otro (RN-36). Se revoca la familia completa para que el refresh en manos
+        // del cliente no sirva tampoco en el siguiente intento.
+        if (!user.canAuthenticate(now)) {
+            refreshTokens.revokeFamily(stored.familyId());
+            throw new InvalidRefreshTokenException();
+        }
 
         // Rotación: se emite un nuevo refresh en la misma familia y se invalida el anterior.
         String rawNew = opaqueTokens.generate();

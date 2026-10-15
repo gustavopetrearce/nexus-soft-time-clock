@@ -34,6 +34,7 @@ Formato `recurso:acción`. Acciones: `read`, `create`, `update`, `delete`, `expo
 | Permiso | Descripción |
 |---|---|
 | `company:manage` | Alta/baja/edición de empresas (solo SUPER_ADMIN) |
+| `company:capacity` | Administración del cupo de colaboradores activos y de los bloques adicionales de un tenant (solo SUPER_ADMIN) |
 | `user:manage` | Gestión de usuarios del tenant |
 | `role:manage` | Gestión de roles y permisos |
 | `worksite:manage` | Gestión de centros de trabajo |
@@ -53,6 +54,7 @@ Formato `recurso:acción`. Acciones: `read`, `create`, `update`, `delete`, `expo
 | Permiso | SUPER_ADMIN | COMPANY_ADMIN | HR_ADMIN | SUPERVISOR | AUDITOR | EMPLOYEE |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|
 | `company:manage` | ✅ | — | — | — | — | — |
+| `company:capacity` | ✅ | — | — | — | — | — |
 | `user:manage` | — | ✅ | — | — | — | — |
 | `role:manage` | — | ✅ | — | — | — | — |
 | `worksite:manage` | — | ✅ | — | — | — | — |
@@ -75,6 +77,16 @@ Formato `recurso:acción`. Acciones: `read`, `create`, `update`, `delete`, `expo
 > tenant. Esta decisión se implementa recortando los permisos del rol plantilla SUPER_ADMIN
 > (migración `V19`); el modelo RBAC sigue soportando técnicamente concederle más permisos si en el
 > futuro se optara por un modo cross-tenant o selector de tenant.
+
+> **Excepción acotada: la capacidad contratada (RF-29).** El cupo de colaboradores activos de cada
+> empresa es una decisión **comercial de plataforma**, no operativa del tenant, por lo que se
+> administra con `company:capacity` (solo SUPER_ADMIN). Para ejercerlo, el super admin ve de cada
+> tenant **únicamente el agregado** —límite vigente, bloques contratados, usados y disponibles—,
+> nunca el padrón de colaboradores ni ningún dato operativo. El COMPANY_ADMIN consulta ese mismo
+> agregado **en modo lectura**, gated por `user:manage` (el permiso con el que da de alta
+> colaboradores), para entender por qué un alta se rechaza; no puede modificarlo. Ver
+> [RN-34..RN-37](04-reglas-de-negocio.md) y
+> [ADR-012](../iteracion-02-arquitectura/adr/ADR-012-capacidad-tenant.md).
 
 > El aislamiento **multi-tenant** es transversal a toda la matriz: ningún rol puede acceder a datos
 > de otro tenant, y SUPER_ADMIN directamente no opera sobre datos de tenants. Ver

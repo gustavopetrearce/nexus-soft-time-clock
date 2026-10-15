@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import { PageResponse } from '../../../core/models/common.models';
@@ -10,6 +10,7 @@ import {
   CreateCompany,
   ProvisionAdmin,
   ProvisionedAdmin,
+  TenantCapacity,
   UpdateCompany,
 } from './company.models';
 
@@ -46,6 +47,33 @@ export class CompanyService {
 
   setStatus(id: string, status: CompanyStatus): Observable<Company> {
     return this.http.patch<Company>(`${this.base}/${id}/status`, { status });
+  }
+
+  /** Cupo de colaboradores activos de una empresa (SUPER_ADMIN, permiso company:capacity). */
+  getCapacity(id: string): Observable<TenantCapacity> {
+    return this.http.get<TenantCapacity>(`${this.base}/${id}/capacity`);
+  }
+
+  /**
+   * Cupo de varias empresas en una sola petición: el listado necesita el consumo de toda la
+   * página y pedirlo fila por fila sería un N+1 por pantalla.
+   */
+  getCapacities(ids: string[]): Observable<TenantCapacity[]> {
+    if (!ids.length) {
+      return of([]);
+    }
+    const params = new HttpParams().set('ids', ids.join(','));
+    return this.http.get<TenantCapacity[]>(`${this.base}/capacities`, { params });
+  }
+
+  /** Fija el total de bloques adicionales contratados (no un incremento). */
+  setExtraBlocks(id: string, extraBlocks: number): Observable<TenantCapacity> {
+    return this.http.put<TenantCapacity>(`${this.base}/${id}/capacity`, { extraBlocks });
+  }
+
+  /** Cupo de la propia empresa, en modo lectura, para quien administra sus colaboradores. */
+  getMyCapacity(): Observable<TenantCapacity> {
+    return this.http.get<TenantCapacity>(`${this.base}/me/capacity`);
   }
 
   /** Aprovisiona el administrador inicial (COMPANY_ADMIN) de la empresa (solo SUPER_ADMIN). */

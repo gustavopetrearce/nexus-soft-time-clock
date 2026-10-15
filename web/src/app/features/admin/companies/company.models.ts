@@ -46,3 +46,17 @@ export interface ProvisionedAdmin {
   status: string;
   roles: string[];
 }
+
+/**
+ * Cupo de colaboradores activos de una empresa (RF-29). El límite vigente es
+ * `baseLimit + extraBlocks * blockSize`; los bloques son completos y acumulativos.
+ */
+export interface TenantCapacity {
+  companyId: string;
+  baseLimit: number;
+  blockSize: number;
+  extraBlocks: number;
+  limit: number;
+  used: number;
+  available: number;
+}

@@ -15,6 +15,7 @@ import { forkJoin, of } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
 import { NotificationService } from '../../../core/ui/notification.service';
+import { problemMessage } from '../../../core/ui/problem-detail';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { Role } from '../roles/role.models';
 import { Device, DEVICE_STATUS_LABELS } from './device.models';
@@ -481,9 +482,11 @@ export class UserEditDialogComponent {
         this.notify.success('Usuario actualizado.');
         this.close(true);
       },
-      error: () => {
+      error: (err) => {
         this.saving.set(false);
-        this.notify.error('No se pudieron guardar todos los cambios.');
+        // Reactivar o dar el rol que registra asistencia puede chocar con el cupo (RN-34):
+        // el detalle del backend trae límite, usados y disponibles.
+        this.notify.error(problemMessage(err, 'No se pudieron guardar todos los cambios.'));
       },
     });
   }

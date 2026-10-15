@@ -5,6 +5,7 @@ Modelo relacional normalizado. `tenant_id` presente en todas las tablas de negoc
 ```mermaid
 erDiagram
     companies ||--o| company_settings : "configura"
+    companies ||--o| company_capacity : "contrata"
     companies ||--o{ users : "emplea"
     companies ||--o{ work_sites : "posee"
     companies ||--o{ projects : "tiene"
@@ -46,6 +47,13 @@ erDiagram
         citext email_domain UK
         varchar timezone
         varchar status
+    }
+    company_capacity {
+        uuid company_id PK
+        integer base_limit
+        integer block_size
+        integer extra_blocks
+        uuid updated_by
     }
     users {
         uuid id PK

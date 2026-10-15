@@ -17,16 +17,22 @@ public class CompanyPersistenceAdapter implements CompanyRepositoryPort {
 
     private final CompanyJpaRepository companies;
     private final CompanySettingsJpaRepository settings;
+    private final CompanyCapacityJpaRepository capacities;
 
-    public CompanyPersistenceAdapter(CompanyJpaRepository companies, CompanySettingsJpaRepository settings) {
+    public CompanyPersistenceAdapter(CompanyJpaRepository companies, CompanySettingsJpaRepository settings,
+                                     CompanyCapacityJpaRepository capacities) {
         this.companies = companies;
         this.settings = settings;
+        this.capacities = capacities;
     }
 
     @Override
     public Company save(Company company) {
         companies.save(toEntity(company));
         settings.save(new CompanySettingsJpaEntity(company.id()));  // configuración por defecto
+        // Cupo contratado por defecto (150 + 0 bloques, RF-29). Sin esta fila el tenant seguiría
+        // operando con los mismos valores, pero el cupo no tendría dónde bloquearse (RN-37).
+        capacities.save(new CompanyCapacityJpaEntity(company.id()));
         return company;
     }
 

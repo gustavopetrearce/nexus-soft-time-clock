@@ -31,7 +31,7 @@ Reglas expresadas de forma **verificable**. Cada una será cubierta por pruebas 
 | **RN-27** | **Device binding (RF-28):** un colaborador opera con dispositivo(s) registrado(s); un dispositivo no reconocido genera verificación adicional o bloqueo según política. |
 | **RN-28** | Toda **bandera antifraude** queda registrada en el evento y visible para el supervisor, independientemente de si bloqueó o no el registro. |
 
-## Grupo C — Multi-tenant y seguridad (RF-13, RF-22)
+## Grupo C — Multi-tenant y seguridad (RF-13, RF-22, RF-29)
 
 | Código | Regla |
 |---|---|
@@ -39,6 +39,10 @@ Reglas expresadas de forma **verificable**. Cada una será cubierta por pruebas 
 | **RN-31** | El `tenant_id` se deriva del **token/contexto de sesión**, nunca de un parámetro manipulable por el cliente. |
 | **RN-32** | Un usuario (salvo SUPER_ADMIN) pertenece a **un solo tenant**. |
 | **RN-33** | Un supervisor solo accede a datos de los **centros/proyectos** que tiene asignados. |
+| **RN-34** | **Cupo de colaboradores activos (RF-29).** Cada tenant tiene un límite de colaboradores activos igual a `cupo_base + bloques × tamaño_bloque`, con **150** de base y bloques de **50**. Los bloques son **completos y acumulativos**: no se fraccionan ni se prorratean, y a partir del colaborador **151** se exige el primer bloque. Habilitar un colaborador por encima del límite se rechaza con `CAPACITY_EXCEEDED` (HTTP 409) informando límite, usados y disponibles. |
+| **RN-35** | **Qué consume cupo.** Es *colaborador activo* todo usuario del tenant **habilitado para registrar accesos** —con un rol que incluya el permiso `attendance:register`— cuyo estado sea `ACTIVE`, `INVITED` o `LOCKED`, **con independencia de su frecuencia de uso**. Solo el estado `INACTIVE` (**baja**) libera cupo. El bloqueo temporal por intentos fallidos (RN-40) **no** libera cupo: es transitorio y su desbloqueo automático dejaría al tenant por encima del límite sin autorización. Las cuentas sin `attendance:register` (administración, RR.HH., supervisión, auditoría) **no** consumen cupo. El conteo se hace por **permiso efectivo**, no por código de rol, para que un rol futuro con `attendance:register` no quede fuera del límite. |
+| **RN-36** | **Efecto de la baja.** La baja de un colaborador es un **cambio de estado, nunca un borrado**: su historia de asistencia, incidencias y auditoría se conservan conforme a la política de retención. Al darse de baja —o al desactivarse la cuenta por cualquier vía— se **revocan sus refresh tokens** y su sesión viva deja de servir: de lo contrario el cupo quedaría liberado y reasignado mientras el colaborador dado de baja sigue registrando, y el uso real superaría el límite. |
+| **RN-37** | **Consistencia del conteo.** La verificación del cupo y la operación que lo consume ocurren en la **misma transacción**, serializadas por tenant (bloqueo de la fila de capacidad), de modo que dos operaciones concurrentes no puedan superar el límite. Los caminos que consumen cupo son tres: **alta** de usuario con rol que registra, **cambio de estado a `ACTIVE`** (reactivación) y **asignación de un rol con `attendance:register`** a un usuario existente. |
 | **RN-40** | Tras `N` (configurable, p.ej. 5) intentos fallidos de login, la cuenta se bloquea temporalmente (backoff). |
 | **RN-41** | Los `accessToken` son de **vida corta**; los `refreshToken` rotan en cada uso y se **revoca la familia** ante reutilización. |
 | **RN-42** | La información sensible (credenciales, datos personales, evidencias) se almacena **cifrada**; el transporte es **siempre HTTPS/TLS**. |

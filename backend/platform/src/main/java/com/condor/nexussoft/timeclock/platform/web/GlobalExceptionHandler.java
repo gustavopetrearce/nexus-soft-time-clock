@@ -1,6 +1,7 @@
 package com.condor.nexussoft.timeclock.platform.web;
 
 import com.condor.nexussoft.timeclock.shared.domain.AuthorizationException;
+import com.condor.nexussoft.timeclock.shared.domain.ConflictException;
 import com.condor.nexussoft.timeclock.shared.domain.DomainException;
 import com.condor.nexussoft.timeclock.shared.domain.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +41,22 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleAuthorization(AuthorizationException ex, HttpServletRequest request) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
         pd.setTitle("Acción no autorizada");
+        pd.setType(URI.create("urn:nexus:error:" + ex.getCode().toLowerCase()));
+        pd.setProperty("code", ex.getCode());
+        pd.setProperty("timestamp", Instant.now());
+        pd.setProperty("path", request.getRequestURI());
+        return pd;
+    }
+
+    /**
+     * Conflicto con el estado actual (p.ej. cupo de colaboradores agotado, RN-34). Va antes que
+     * {@link #handleDomain} por ser más específico: Spring elige el manejador más cercano en la
+     * jerarquía, así que un {@code ConflictException} sale como 409 y no como 422.
+     */
+    @ExceptionHandler(ConflictException.class)
+    public ProblemDetail handleConflict(ConflictException ex, HttpServletRequest request) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Conflicto con el estado actual");
         pd.setType(URI.create("urn:nexus:error:" + ex.getCode().toLowerCase()));
         pd.setProperty("code", ex.getCode());
         pd.setProperty("timestamp", Instant.now());

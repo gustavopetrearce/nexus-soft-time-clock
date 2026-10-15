@@ -134,4 +134,24 @@ class AuthenticationServiceTest {
 
         verify(refreshTokens).revokeFamily(familyId);
     }
+
+    @Test
+    void refresh_deColaboradorDadoDeBaja_cortaLaSesionEnVezDeRotarla() {
+        UUID familyId = UUID.randomUUID();
+        User baja = new User(UUID.randomUUID(), tenantId, false, Email.of("baja@demo.com"),
+                "hash", "Berta", "Baja", UserStatus.INACTIVE, 0, null, Set.of());
+        RefreshToken vigente = new RefreshToken(UUID.randomUUID(), familyId, baja.getId(), tenantId,
+                "hashed", Instant.parse("2026-08-21T10:00:00Z"), null, null);
+        when(opaqueTokens.hash("raw")).thenReturn("hashed");
+        when(refreshTokens.findByHash("hashed")).thenReturn(Optional.of(vigente));
+        when(users.findById(baja.getId())).thenReturn(Optional.of(baja));
+
+        assertThatThrownBy(() -> service.refresh("raw"))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+
+        // Sin esto, la baja libera cupo pero el colaborador sigue renovando sesión 30 días (RN-36).
+        verify(refreshTokens).revokeFamily(familyId);
+        verify(refreshTokens, never()).save(any());
+        verifyNoInteractions(accessTokenIssuer);
+    }
 }

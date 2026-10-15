@@ -17,6 +17,9 @@ import java.util.UUID;
 @Repository
 public class UserAdminPersistenceAdapter implements UserAdminRepositoryPort {
 
+    /** Permiso que define a un colaborador como "habilitado para registrar accesos" (RN-35). */
+    private static final String ATTENDANCE_REGISTER = "attendance:register";
+
     private final UserJpaRepository users;
     private final RoleJpaRepository roles;
 
@@ -28,6 +31,16 @@ public class UserAdminPersistenceAdapter implements UserAdminRepositoryPort {
     @Override
     public boolean existsByTenantAndEmail(UUID tenantId, String email) {
         return users.existsByTenantIdAndEmail(tenantId, email);
+    }
+
+    @Override
+    public boolean rolesEnableAttendanceRegister(Set<String> roleCodes) {
+        if (roleCodes == null || roleCodes.isEmpty()) {
+            return false;
+        }
+        return resolveRoles(roleCodes).stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .anyMatch(permission -> ATTENDANCE_REGISTER.equals(permission.getCode()));
     }
 
     @Override

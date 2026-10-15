@@ -3,6 +3,6 @@
 class AppConfig {
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://85.239.240.43:8088/api/v1',
+    defaultValue: 'https://nexustime.i-condor.com/api/v1',
   );
 }

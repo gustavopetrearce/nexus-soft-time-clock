@@ -91,6 +91,7 @@ Como **super administrador** quiero dar de alta y configurar empresas (tenants) 
 Como **administrador de empresa** quiero crear usuarios y asignarles roles para controlar el acceso.
 - **CA1:** No puedo asignar roles de mayor privilegio que el mío.
 - **CA2:** Los usuarios pertenecen a un único tenant (excepto SUPER_ADMIN).
+- **CA3:** Si la empresa agotó su **cupo de colaboradores activos** ([RF-29](01-objetivos-y-alcance.md), [HU-27](#hu-27--capacidad-contratada-de-colaboradores-activos-rf-29)), el alta, la reactivación o la asignación de un rol que permita registrar asistencia se rechazan con un error que indica límite, usados y disponibles. Puedo consultar el cupo en modo lectura, pero no ampliarlo: eso lo hace el super administrador.
 
 ### HU-22 — Gestión de centros de trabajo y proyectos (RF-07, RF-23)
 Como **administrador** quiero gestionar centros de trabajo y proyectos con su ubicación para asociar la asistencia.
@@ -112,6 +113,17 @@ Como **administrador** quiero generar/rotar el QR de un centro para el registro 
 ### HU-26 — Gestión de incidencias (RF-09)
 Como **RR.HH./supervisor** quiero revisar y resolver incidencias (retardos, faltas, permisos) para mantener la asistencia correcta.
 - **CA1:** Puedo aprobar/rechazar justificaciones con comentario, quedando auditado.
+
+### HU-27 — Capacidad contratada de colaboradores activos (RF-29)
+Como **super administrador** quiero fijar y ampliar el cupo de colaboradores activos de cada empresa para alinear el uso de la plataforma con lo contratado.
+- **CA1:** Toda empresa nace con un cupo **base de 150** colaboradores activos y **0** bloques adicionales.
+- **CA2:** Cada bloque adicional habilita **50** colaboradores más. Los bloques son **completos** (no se fraccionan ni se prorratean) y **acumulativos**: límite vigente = `150 + 50 × bloques`. A partir del colaborador **151** se requiere el primer bloque.
+- **CA3:** Solo yo (permiso `company:capacity`) puedo cambiar los bloques; el COMPANY_ADMIN los ve en modo lectura.
+- **CA4:** Al intentar habilitar un colaborador por encima del límite, la operación se rechaza con `CAPACITY_EXCEEDED` informando límite, usados y disponibles ([RN-34](04-reglas-de-negocio.md)).
+- **CA5:** Una **baja** libera cupo de inmediato y **no borra** historia: asistencias, incidencias y auditoría se conservan según la política de retención ([RN-36](04-reglas-de-negocio.md)).
+- **CA6:** No puedo reducir bloques por debajo del uso actual: el sistema lo rechaza e indica cuántas bajas faltan ([D-09](10-supuestos-y-decisiones-abiertas.md)).
+- **CA7:** Veo de cada empresa solo el **agregado** (límite, bloques, usados, disponibles), nunca el padrón de colaboradores.
+- **CA8:** Cada cambio de cupo queda **auditado** (quién, cuándo, valores antes/después) — [RN-43](04-reglas-de-negocio.md).
 
 ---
 

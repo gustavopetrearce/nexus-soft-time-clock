@@ -12,6 +12,14 @@ public interface UserAdminRepositoryPort {
 
     boolean existsByTenantAndEmail(UUID tenantId, String email);
 
+    /**
+     * ¿Alguno de esos roles habilita a registrar accesos, es decir, incluye el permiso
+     * {@code attendance:register}? Se consulta por <b>permiso efectivo</b> y no comparando contra
+     * el código {@code EMPLOYEE}: hoy son equivalentes, pero un rol nuevo con ese permiso también
+     * debe consumir cupo (RN-35).
+     */
+    boolean rolesEnableAttendanceRegister(Set<String> roleCodes);
+
     UserView create(UUID tenantId, String email, String passwordHash, String firstName,
                     String lastName, String employeeCode, Set<String> roleCodes);
 
