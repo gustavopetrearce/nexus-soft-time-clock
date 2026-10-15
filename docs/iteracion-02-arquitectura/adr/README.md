@@ -15,3 +15,4 @@ Registro de decisiones arquitectónicas significativas (formato Michael Nygard).
 | [ADR-009](ADR-009-postgis.md) | PostgreSQL + PostGIS para geoespacial | Aceptado |
 | [ADR-010](ADR-010-redis.md) | Redis para caché, rate limiting y anti-replay | Aceptado |
 | [ADR-011](ADR-011-websocket-realtime.md) | WebSocket (STOMP) para tiempo real | Aceptado |
+| [ADR-012](ADR-012-capacidad-tenant.md) | Capacidad de colaboradores activos por tenant (cupo + bloques) | Aceptado |

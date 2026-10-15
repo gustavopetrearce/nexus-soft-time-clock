@@ -9,10 +9,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
+import { TenantCapacity } from '../companies/company.models';
+import { CompanyService } from '../companies/company.service';
 import { ROLE_OPTIONS, Role, roleLabel } from '../roles/role.models';
 import { RoleService } from '../roles/role.service';
 import { UserEditDialogComponent } from './user-edit-dialog.component';
@@ -42,16 +45,32 @@ const STATUS_LABELS: Record<string, string> = {
     MatFormFieldModule,
     MatInputModule,
     MatProgressBarModule,
+    MatTooltipModule,
     PageHeaderComponent,
     StatusChipComponent,
     EmptyStateComponent,
   ],
   template: `
     <app-page-header title="Usuarios" subtitle="Administra las personas con acceso al sistema y su información laboral">
+      @if (capacity(); as cap) {
+        <span class="cap-chip" [class.cap-chip-full]="cap.available === 0" [matTooltip]="capacityTooltip(cap)">
+          <mat-icon>groups</mat-icon>
+          Cupo {{ cap.used }}/{{ cap.limit }}
+        </span>
+      }
       <button mat-flat-button color="primary" (click)="openCreate()">
         <mat-icon>person_add</mat-icon> Nuevo usuario
       </button>
     </app-page-header>
+
+    @if (capacity()?.available === 0) {
+      <p class="cap-banner">
+        <mat-icon>info</mat-icon>
+        La empresa agotó su cupo de colaboradores activos ({{ capacity()?.limit }}). Podés seguir
+        creando cuentas de portal, pero habilitar a otro colaborador exige dar de baja a alguien o
+        pedirle al super administrador un bloque adicional de {{ capacity()?.blockSize }}.
+      </p>
+    }
 
     <mat-card>
       <mat-card-content>
@@ -183,6 +202,22 @@ const STATUS_LABELS: Record<string, string> = {
       .role-tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
       .role-tag { background: var(--brand-soft); border: 1px solid var(--brand-border); color: var(--brand); border-radius: 999px; padding: 2px 10px; font-size: var(--font-small); font-weight: 600; white-space: nowrap; }
 
+      .cap-chip {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 12px; border-radius: 999px;
+        background: var(--brand-soft); border: 1px solid var(--brand-border); color: var(--brand);
+        font-size: var(--font-small); font-weight: 600; font-variant-numeric: tabular-nums;
+      }
+      .cap-chip mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      .cap-chip-full { background: var(--warning-bg); border-color: var(--warning); color: var(--warning); }
+
+      .cap-banner {
+        display: flex; align-items: flex-start; gap: 8px;
+        margin: 0 0 16px; padding: 10px 14px; border-radius: 10px;
+        background: var(--warning-bg); color: var(--warning); font-size: var(--font-small);
+      }
+      .cap-banner mat-icon { font-size: 18px; width: 18px; height: 18px; flex: none; }
+
       .fcell { padding-top: 6px !important; padding-bottom: 6px !important; background: var(--surface-2); }
       .col-filter { width: 100%; min-width: 90px; padding: 7px 9px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: var(--font-small); }
       .col-filter:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
@@ -194,6 +229,7 @@ export class UsersComponent {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(UserService);
   private readonly roleService = inject(RoleService);
+  private readonly companyService = inject(CompanyService);
   private readonly dialog = inject(MatDialog);
 
   protected readonly columns = ['user', 'employeeCode', 'status', 'roles', 'actions'];
@@ -210,6 +246,8 @@ export class UsersComponent {
   protected readonly total = signal(0);
 
   protected readonly assignableRoles = signal<Role[]>([]);
+  /** Cupo de la propia empresa, en modo lectura (RF-29): explica los rechazos por límite. */
+  protected readonly capacity = signal<TenantCapacity | null>(null);
   protected readonly searchControl = this.fb.nonNullable.control('');
 
   // Filtros por columna (sobre la página cargada)
@@ -241,7 +279,23 @@ export class UsersComponent {
       next: (roles) => this.assignableRoles.set(roles),
       error: () => void 0,
     });
+    this.reloadCapacity();
     this.reload();
+  }
+
+  /** El cupo cambia con cada alta o baja, así que se relee tras cada cambio del listado. */
+  protected reloadCapacity(): void {
+    this.companyService.getMyCapacity().subscribe({
+      next: (capacity) => this.capacity.set(capacity),
+      error: () => this.capacity.set(null),
+    });
+  }
+
+  protected capacityTooltip(cap: TenantCapacity): string {
+    const base = `Colaboradores habilitados para registrar accesos. Cupo base ${cap.baseLimit} + ${cap.extraBlocks} bloque(s) de ${cap.blockSize}`;
+    return cap.available === 0
+      ? `${base}. Sin cupo disponible.`
+      : `${base}. ${cap.available} disponible(s).`;
   }
 
   protected initials(u: User): string {
@@ -323,7 +377,10 @@ export class UsersComponent {
       data: { assignableRoles: this.assignableRoles() },
     });
     ref.afterClosed().subscribe((created) => {
-      if (created) this.reload();
+      if (created) {
+        this.reload();
+        this.reloadCapacity();
+      }
     });
   }
 
@@ -335,7 +392,10 @@ export class UsersComponent {
       data: { user, assignableRoles: this.assignableRoles() },
     });
     ref.afterClosed().subscribe((changed) => {
-      if (changed) this.reload();
+      if (changed) {
+        this.reload();
+        this.reloadCapacity();
+      }
     });
   }
 }

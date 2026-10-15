@@ -30,6 +30,7 @@
 | K | Dashboards y **mapa en tiempo real**; estado de sincronización |
 | L | Notificaciones (push/email); monitoreo (Prometheus/Grafana) |
 | M | Arquitectura preparada para IA futura (Spring AI) — sin funcionalidades de IA en esta fase |
+| N | **Capacidad contratada por tenant**: cupo de colaboradores activos (150 de base) ampliable por bloques de 50, administrado por la plataforma |
 
 ## 1.4 Alcance — Fuera (Out of scope, fase inicial)
 
@@ -71,5 +72,6 @@
 | RF-26 | Estado de sincronización (visibilidad admin) | 220 |
 | RF-27 | Notificaciones (push/email) | 139, 389 |
 | RF-28 | Validación del dispositivo (device binding) | 208 |
+| RF-29 | Capacidad de colaboradores activos por tenant (cupo base + bloques) | Requerimiento 2026-10-14 |
 
 > Los Requisitos No Funcionales (RNF-##) se detallan en [06 — Requisitos no funcionales](06-requisitos-no-funcionales.md).

@@ -32,5 +32,6 @@ Traza cada **Requisito Funcional (RF)** con sus **Historias (HU)**, **Reglas de 
 | RF-26 | Estado de sincronización | HU-32 | RN-54 | CU-05, CU-11 | BC-08, BC-13 |
 | RF-27 | Notificaciones | HU-35 | RN-43 | — | BC-12 |
 | RF-28 | Validación del dispositivo | HU-10 | RN-27 | CU-02 | BC-01, BC-07 |
+| RF-29 | Capacidad de colaboradores activos | HU-27, HU-21 | RN-34..RN-37, RN-43 | (CRUD estándar) | BC-01, BC-02 |
 
-**Cobertura:** 28/28 RF trazados. Sin requisitos huérfanos.
+**Cobertura:** 29/29 RF trazados. Sin requisitos huérfanos.

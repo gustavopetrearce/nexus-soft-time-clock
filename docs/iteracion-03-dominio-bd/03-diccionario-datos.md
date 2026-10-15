@@ -7,6 +7,7 @@ Resumen de tablas por bounded context. El detalle autoritativo (columnas, tipos,
 |---|---|---|
 | `companies` | Empresa/tenant | `code`(UK), `email_domain`(UK), `timezone`, `status` |
 | `company_settings` | Políticas por defecto del tenant | `default_gps_accuracy_max_m`, `*_policy`, `qr_ttl_seconds`, `max_failed_logins` |
+| `company_capacity` | Cupo de colaboradores activos del tenant (RF-29, `V27`) | `base_limit` (150), `block_size` (50), `extra_blocks`, `updated_by` |
 
 ## Identity & Access (BC-01)
 | Tabla | Propósito | Columnas clave |

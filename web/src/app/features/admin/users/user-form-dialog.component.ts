@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { catchError, map, of, switchMap } from 'rxjs';
 
 import { NotificationService } from '../../../core/ui/notification.service';
+import { problemMessage } from '../../../core/ui/problem-detail';
 import { Role } from '../roles/role.models';
 import { EmployeeProfile, GENDERS } from './employee-profile.models';
 import { EmployeeProfileService } from './employee-profile.service';
@@ -275,9 +276,11 @@ export class UserFormDialogComponent {
           this.notify.success('Usuario creado.');
           this.dialogRef.close(true);
         },
-        error: () => {
+        error: (err) => {
           this.saving.set(false);
-          this.notify.error('No se pudo crear el usuario.');
+          // El backend explica el motivo con números —cupo agotado, correo duplicado— y ese
+          // mensaje es el útil: un "no se pudo crear" genérico deja a quien administra a ciegas.
+          this.notify.error(problemMessage(err, 'No se pudo crear el usuario.'));
         },
       });
   }

@@ -15,6 +15,8 @@
 | S-09 | Idioma base | Español (i18n habilitado para agregar más). |
 | S-10 | Zona horaria | Almacenamiento en **UTC**; presentación/cálculo con la zona del centro/tenant. |
 | S-11 | Identidad de login | Email + contraseña por defecto; el "identificador de empresa" puede derivarse del email/subdominio (a confirmar). |
+| S-12 | Cupo de colaboradores activos (RF-29) | **150** de base por tenant + bloques **completos** de **50** (sin fracciones ni prorrateo). Los tres valores (base, tamaño de bloque, bloques contratados) se **persisten por tenant**, para que un cambio comercial futuro no altere retroactivamente los contratos vigentes. |
+| S-13 | Alcance del cupo | Solo consumen cupo las cuentas **habilitadas para registrar accesos** (`attendance:register`). Las cuentas de portal (COMPANY_ADMIN, HR_ADMIN, SUPERVISOR, AUDITOR) no consumen cupo ni tienen tope propio. |
 
 ## 10.2 Decisiones abiertas (a confirmar con el negocio)
 
@@ -28,5 +30,6 @@
 | D-06 | ¿Qué **canales de notificación** en fase inicial: push, email, ambos? | Bajo | Push (FCM) + email transaccional. |
 | D-07 | ¿Hay requisitos de **cumplimiento** específicos (LFPDPPP/GDPR, retención de datos biométricos)? | Alto — legal | Confirmar antes de tratar datos biométricos (RNF-22). |
 | D-08 | ¿Nivel de **detalle geográfico** requerido en el mapa en tiempo real (por empleado vs por centro)? | Medio — privacidad/UX | Por centro/agregado por defecto; por empleado según permiso. |
+| D-09 | ¿Qué ocurre al **reducir** bloques por debajo del uso actual del tenant? | Medio — facturación y operación del tenant | **Rechazar** la reducción (409) indicando cuántas bajas faltan. Se descarta el “exceso tolerado” por obligar a modelar un estado de gracia y a decidir a quién se desactiva. |
 
 > Estas decisiones **no bloquean** el avance de las Iteraciones 2-4: los defaults propuestos permiten diseñar arquitectura, dominio y BD. Se marcarán como ADRs (Iteración 2) y se ajustarán al confirmarse.

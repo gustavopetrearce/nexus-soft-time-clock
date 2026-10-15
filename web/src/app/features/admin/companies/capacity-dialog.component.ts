@@ -1,0 +1,237 @@
+import { Component, computed, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+
+import { NotificationService } from '../../../core/ui/notification.service';
+import { problemMessage } from '../../../core/ui/problem-detail';
+import { Company, TenantCapacity } from './company.models';
+import { CompanyService } from './company.service';
+
+export interface CapacityDialogData {
+  company: Company;
+  /** Cupo ya cargado por el listado; evita una segunda petición al abrir. */
+  capacity?: TenantCapacity;
+}
+
+/**
+ * Cupo de colaboradores activos de una empresa (RF-29, HU-27).
+ *
+ * Solo el SUPER_ADMIN llega aquí (`company:capacity`). Se edita el **total** de bloques, no un
+ * incremento, y la pantalla muestra el límite resultante antes de guardar para que nadie tenga que
+ * multiplicar de cabeza. La reducción por debajo del uso la rechaza el backend (RN-34/D-09): aquí
+ * se avisa antes para no gastar un viaje, pero el mensaje que manda es el suyo.
+ */
+@Component({
+  selector: 'app-capacity-dialog',
+  standalone: true,
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule],
+  template: `
+    <h2 mat-dialog-title>Cupo de colaboradores — {{ data.company.name }}</h2>
+
+    <mat-dialog-content>
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      @if (!loading() && !capacity()) {
+        <p class="error-text">{{ error() }}</p>
+      }
+      @if (capacity(); as c) {
+        <div class="usage">
+          <div class="usage-head">
+            <span class="big">{{ c.used }}</span>
+            <span class="of">de {{ c.limit }} colaboradores activos</span>
+          </div>
+          <div class="bar" [class.full]="c.available === 0">
+            <div class="fill" [style.width.%]="fillPercent()"></div>
+          </div>
+          <p class="hint">
+            {{ c.available }} disponible(s) · cupo base {{ c.baseLimit }} + {{ c.extraBlocks }}
+            bloque(s) de {{ c.blockSize }}
+          </p>
+        </div>
+
+        <div class="blocks">
+          <span class="label">Bloques adicionales</span>
+          <div class="stepper">
+            <button
+              mat-icon-button
+              type="button"
+              aria-label="Quitar un bloque"
+              [disabled]="blocks() === 0 || saving()"
+              (click)="step(-1)"
+            >
+              <mat-icon>remove</mat-icon>
+            </button>
+            <span class="count">{{ blocks() }}</span>
+            <button
+              mat-icon-button
+              type="button"
+              aria-label="Agregar un bloque"
+              [disabled]="saving()"
+              (click)="step(1)"
+            >
+              <mat-icon>add</mat-icon>
+            </button>
+          </div>
+          <span class="result">
+            Límite resultante: <strong>{{ proposedLimit() }}</strong>
+            @if (proposedLimit() !== c.limit) { <em>(actual {{ c.limit }})</em> }
+          </span>
+        </div>
+
+        @if (belowUsage()) {
+          <p class="warn">
+            <mat-icon>warning</mat-icon>
+            Con {{ blocks() }} bloque(s) el límite sería {{ proposedLimit() }} y la empresa ya tiene
+            {{ c.used }} colaboradores activos. Primero hay que dar de baja
+            {{ c.used - proposedLimit() }}.
+          </p>
+        }
+      }
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+      <button mat-button [disabled]="saving()" (click)="close(false)">Cancelar</button>
+      <button
+        mat-flat-button
+        color="primary"
+        [disabled]="saving() || loading() || !dirty() || belowUsage()"
+        (click)="save()"
+      >
+        Guardar cupo
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [
+    `
+      mat-dialog-content { min-width: min(460px, 80vw); }
+
+      .usage-head { display: flex; align-items: baseline; gap: 8px; }
+      .usage-head .big { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+      .usage-head .of { color: var(--text-muted); }
+
+      .bar {
+        margin: 10px 0 6px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        overflow: hidden;
+      }
+      .bar .fill { height: 100%; background: var(--brand); transition: width 0.2s ease; }
+      .bar.full .fill { background: var(--warning); }
+
+      .hint { margin: 0; color: var(--text-muted); font-size: var(--font-small); }
+
+      .blocks {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+      .blocks .label { font-weight: 600; }
+      .stepper { display: flex; align-items: center; gap: 4px; }
+      .stepper .count {
+        min-width: 2.5ch;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        font-size: 1.1rem;
+      }
+      .blocks .result { color: var(--text-muted); font-size: var(--font-small); }
+
+      .warn {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin: 16px 0 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--warning-bg);
+        color: var(--warning);
+        font-size: var(--font-small);
+      }
+      .warn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    `,
+  ],
+})
+export class CapacityDialogComponent {
+  private readonly service = inject(CompanyService);
+  private readonly notify = inject(NotificationService);
+  private readonly dialogRef = inject(MatDialogRef<CapacityDialogComponent, boolean>);
+  protected readonly data = inject<CapacityDialogData>(MAT_DIALOG_DATA);
+
+  protected readonly capacity = signal<TenantCapacity | null>(this.data.capacity ?? null);
+  protected readonly blocks = signal(this.data.capacity?.extraBlocks ?? 0);
+  protected readonly loading = signal(!this.data.capacity);
+  protected readonly saving = signal(false);
+  protected readonly error = signal<string | null>(null);
+
+  protected readonly proposedLimit = computed(() => {
+    const c = this.capacity();
+    return c ? c.baseLimit + this.blocks() * c.blockSize : 0;
+  });
+
+  protected readonly dirty = computed(() => this.blocks() !== (this.capacity()?.extraBlocks ?? 0));
+
+  protected readonly belowUsage = computed(() => {
+    const c = this.capacity();
+    return !!c && c.used > this.proposedLimit();
+  });
+
+  protected readonly fillPercent = computed(() => {
+    const c = this.capacity();
+    if (!c || c.limit === 0) {
+      return 0;
+    }
+    return Math.min(100, Math.round((c.used / c.limit) * 100));
+  });
+
+  constructor() {
+    if (!this.data.capacity) {
+      this.load();
+    }
+  }
+
+  private load(): void {
+    this.service.getCapacity(this.data.company.id).subscribe({
+      next: (capacity) => {
+        this.capacity.set(capacity);
+        this.blocks.set(capacity.extraBlocks);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(problemMessage(err, 'No se pudo cargar el cupo de la empresa.'));
+        this.loading.set(false);
+      },
+    });
+  }
+
+  protected step(delta: number): void {
+    this.blocks.set(Math.max(0, this.blocks() + delta));
+  }
+
+  protected save(): void {
+    this.saving.set(true);
+    this.service.setExtraBlocks(this.data.company.id, this.blocks()).subscribe({
+      next: (capacity) => {
+        this.saving.set(false);
+        this.capacity.set(capacity);
+        this.notify.success(`Cupo actualizado: ${capacity.limit} colaboradores activos.`);
+        this.close(true);
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(problemMessage(err, 'No se pudo actualizar el cupo.'));
+      },
+    });
+  }
+
+  protected close(changed: boolean): void {
+    this.dialogRef.close(changed);
+  }
+}

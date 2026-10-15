@@ -43,6 +43,7 @@ public class DevDataSeeder implements CommandLineRunner {
                         + "VALUES (?, 'DEMO', 'Empresa Demo', 'demo.com', 'America/Mexico_City', 'es', 'ACTIVE')",
                 tenantId);
         jdbc.update("INSERT INTO company_settings (company_id) VALUES (?)", tenantId);
+        jdbc.update("INSERT INTO company_capacity (company_id) VALUES (?)", tenantId);  // cupo base (RF-29)
 
         UUID superAdminId = UUID.randomUUID();
         jdbc.update("INSERT INTO users (id, tenant_id, is_platform_admin, email, password_hash, "

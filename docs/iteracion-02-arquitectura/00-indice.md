@@ -14,7 +14,7 @@
 | [06 — Diagramas de secuencia](06-diagramas-secuencia.md) | Login, registro de asistencia, sync offline, tiempo real |
 | [07 — Modelo de eventos y CQRS](07-modelo-eventos-cqrs.md) | Eventos de dominio, read-models, integración interna |
 | [08 — Despliegue (Docker / Kubernetes)](08-despliegue.md) | Topología de despliegue y escalado |
-| [ADR](adr/) | Architecture Decision Records (ADR-001 … ADR-011) |
+| [ADR](adr/) | Architecture Decision Records (ADR-001 … ADR-012) |
 
 **Criterios de aceptación de la iteración**
 
