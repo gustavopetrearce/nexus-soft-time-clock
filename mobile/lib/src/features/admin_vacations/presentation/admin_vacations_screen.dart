@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/l10n.dart';
+
 import '../application/admin_vacations_controller.dart';
 import '../domain/admin_vacation_models.dart';
 
@@ -9,25 +11,25 @@ import '../domain/admin_vacation_models.dart';
 class AdminVacationsScreen extends ConsumerWidget {
   const AdminVacationsScreen({super.key});
 
-  static const _filters = <(String, String)>[
-    ('PENDING', 'Pendientes'),
-    ('APPROVED', 'Aprobadas'),
-    ('REJECTED', 'Rechazadas'),
-    ('', 'Todas'),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(adminVacationsControllerProvider);
     final controller = ref.read(adminVacationsControllerProvider.notifier);
+    final l10n = context.l10n;
+    final filters = <(String, String)>[
+      ('PENDING', l10n.adminVacationsFilterPending),
+      ('APPROVED', l10n.adminVacationsFilterApproved),
+      ('REJECTED', l10n.adminVacationsFilterRejected),
+      ('', l10n.adminVacationsFilterAll),
+    ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Aprobar vacaciones')),
+      appBar: AppBar(title: Text(l10n.homeApproveVacationsTitle)),
       body: Column(
         children: [
           _FilterBar(
             selected: state.statusFilter,
-            filters: _filters,
+            filters: filters,
             onSelected: controller.setStatus,
           ),
           Expanded(
@@ -82,7 +84,7 @@ class _Body extends StatelessWidget {
       return const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()));
     }
     if (state.error != null && state.items.isEmpty) {
-      return _messageList(child: Text(state.error!, textAlign: TextAlign.center));
+      return _messageList(child: Text(_errorText(context, state.error!), textAlign: TextAlign.center));
     }
     if (state.items.isEmpty) {
       return _messageList(child: _empty(context));
@@ -98,7 +100,7 @@ class _Body extends StatelessWidget {
             child: Center(
               child: state.loadingMore
                   ? const CircularProgressIndicator()
-                  : OutlinedButton(onPressed: controller.loadMore, child: const Text('Cargar más')),
+                  : OutlinedButton(onPressed: controller.loadMore, child: Text(context.l10n.adminVacationsLoadMore)),
             ),
           );
         }
@@ -109,6 +111,11 @@ class _Body extends StatelessWidget {
       },
     );
   }
+
+  String _errorText(BuildContext context, AdminVacationsError error) => switch (error) {
+        AdminVacationsError.load => context.l10n.adminVacationsLoadError,
+        AdminVacationsError.loadMore => context.l10n.adminVacationsLoadMoreError,
+      };
 
   // La lista debe poder desplazarse para que RefreshIndicator funcione aun cuando está vacía.
   Widget _messageList({required Widget child}) => ListView(
@@ -122,7 +129,7 @@ class _Body extends StatelessWidget {
       children: [
         Icon(Icons.beach_access_outlined, size: 44, color: theme.colorScheme.onSurfaceVariant),
         const SizedBox(height: 12),
-        Text('No hay solicitudes para mostrar.', style: theme.textTheme.bodyMedium),
+        Text(context.l10n.adminVacationsEmpty, style: theme.textTheme.bodyMedium),
       ],
     );
   }
@@ -137,7 +144,7 @@ class _RequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final s = statusStyle(request.status, theme);
+    final s = statusStyle(request.status, theme, context.l10n);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
@@ -153,8 +160,8 @@ class _RequestCard extends StatelessWidget {
             if (request.employeeCode != null && request.employeeCode!.isNotEmpty)
               Text(request.employeeCode!, style: theme.textTheme.bodySmall),
             const SizedBox(height: 2),
-            Text('${fmtDate(request.startDate)} – ${fmtDate(request.endDate)} · '
-                '${request.days} ${request.days == 1 ? 'día' : 'días'}'),
+            Text('${shortIsoDate(context, request.startDate)} – ${shortIsoDate(context, request.endDate)} · '
+                '${context.l10n.vacationsDays(request.days)}'),
             const SizedBox(height: 6),
             _StatusPill(status: request.status),
           ],
@@ -173,7 +180,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final s = statusStyle(status, theme);
+    final s = statusStyle(status, theme, context.l10n);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: s.$2.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(999)),
@@ -225,15 +232,16 @@ class _ResolveSheetState extends State<_ResolveSheet> {
       note: _note.text.trim(),
     );
     if (!mounted) return;
+    final l10n = context.l10n;
     if (ok) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(approve ? 'Solicitud aprobada.' : 'Solicitud rechazada.')),
+        SnackBar(content: Text(approve ? l10n.adminVacationsApproved : l10n.adminVacationsRejected)),
       );
     } else {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo resolver la solicitud.')),
+        SnackBar(content: Text(l10n.adminVacationsResolveError)),
       );
     }
   }
@@ -242,6 +250,7 @@ class _ResolveSheetState extends State<_ResolveSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final r = widget.request;
+    final l10n = context.l10n;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 4, 20, 20 + bottom),
@@ -253,20 +262,20 @@ class _ResolveSheetState extends State<_ResolveSheet> {
           if (r.employeeCode != null && r.employeeCode!.isNotEmpty)
             Text(r.employeeCode!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           const SizedBox(height: 16),
-          _detailRow(theme, 'Periodo', '${fmtDate(r.startDate)} – ${fmtDate(r.endDate)}'),
-          _detailRow(theme, 'Días solicitados', '${r.days}'),
-          if (r.reason != null && r.reason!.isNotEmpty) _detailRow(theme, 'Motivo', r.reason!),
-          _detailRow(theme, 'Estado', statusStyle(r.status, theme).$1),
-          if (r.resolvedBy != null && r.resolvedBy!.isNotEmpty) _detailRow(theme, 'Resuelto por', r.resolvedBy!),
+          _detailRow(theme, l10n.adminVacationsPeriod, '${shortIsoDate(context, r.startDate)} – ${shortIsoDate(context, r.endDate)}'),
+          _detailRow(theme, l10n.adminVacationsRequestedDays, '${r.days}'),
+          if (r.reason != null && r.reason!.isNotEmpty) _detailRow(theme, l10n.adminVacationsReason, r.reason!),
+          _detailRow(theme, l10n.adminVacationsStatus, statusStyle(r.status, theme, l10n).$1),
+          if (r.resolvedBy != null && r.resolvedBy!.isNotEmpty) _detailRow(theme, l10n.adminVacationsResolvedBy, r.resolvedBy!),
           if (r.resolutionNote != null && r.resolutionNote!.isNotEmpty)
-            _detailRow(theme, 'Nota', r.resolutionNote!),
+            _detailRow(theme, l10n.adminVacationsNote, r.resolutionNote!),
           if (r.isPending) ...[
             const SizedBox(height: 16),
             TextField(
               controller: _note,
               maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Nota para el colaborador (opcional)',
+              decoration: InputDecoration(
+                labelText: l10n.adminVacationsNoteLabel,
                 alignLabelWithHint: true,
               ),
             ),
@@ -277,7 +286,7 @@ class _ResolveSheetState extends State<_ResolveSheet> {
                   child: OutlinedButton.icon(
                     onPressed: _saving ? null : () => _resolve(false),
                     icon: const Icon(Icons.close),
-                    label: const Text('Rechazar'),
+                    label: Text(l10n.adminVacationsReject),
                     style: OutlinedButton.styleFrom(foregroundColor: theme.colorScheme.error),
                   ),
                 ),
@@ -288,7 +297,7 @@ class _ResolveSheetState extends State<_ResolveSheet> {
                     icon: _saving
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.check),
-                    label: const Text('Aprobar'),
+                    label: Text(l10n.adminVacationsApprove),
                   ),
                 ),
               ],
@@ -315,22 +324,15 @@ class _ResolveSheetState extends State<_ResolveSheet> {
 }
 
 /// Estilo (etiqueta, color) por estado — mismo criterio que la pantalla del colaborador.
-(String, Color) statusStyle(String status, ThemeData theme) {
+(String, Color) statusStyle(String status, ThemeData theme, AppLocalizations l10n) {
   switch (status) {
     case 'APPROVED':
-      return ('Aprobada', Colors.green.shade600);
+      return (l10n.vacationStatusApproved, Colors.green.shade600);
     case 'REJECTED':
-      return ('Rechazada', theme.colorScheme.error);
+      return (l10n.vacationStatusRejected, theme.colorScheme.error);
     case 'CANCELLED':
-      return ('Cancelada', theme.colorScheme.onSurfaceVariant);
+      return (l10n.vacationStatusCancelled, theme.colorScheme.onSurfaceVariant);
     default:
-      return ('Pendiente', Colors.orange.shade700);
+      return (l10n.vacationStatusPending, Colors.orange.shade700);
   }
-}
-
-/// Formatea una fecha ISO (yyyy-MM-dd...) a dd/MM; devuelve el original si no aplica.
-String fmtDate(String iso) {
-  if (iso.length < 10) return iso;
-  final p = iso.substring(0, 10).split('-');
-  return p.length == 3 ? '${p[2]}/${p[1]}' : iso;
 }

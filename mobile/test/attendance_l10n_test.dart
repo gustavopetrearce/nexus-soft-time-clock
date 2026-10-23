@@ -29,4 +29,17 @@ void main() {
     expect(en.rejectionPhrase('SOMETHING_NEW'), 'SOMETHING_NEW');
     expect(en.rejectionPhrase(null), 'unknown reason');
   });
+
+  test('tipos de evento: el nombre sembrado se traduce, uno propio de la empresa se respeta', () {
+    expect(en.eventTypeLabel('INICIO_DESCANSO', 'Inicio de descanso'), 'Break start');
+    expect(es.eventTypeLabel('INICIO_DESCANSO', 'Inicio de descanso'), 'Inicio de descanso');
+    expect(en.eventTypeLabel('INICIO_DESCANSO', 'Comida'), 'Comida');
+    expect(en.eventTypeLabel('CAMBIO_SITIO', ''), en.eventCambioSitio);
+  });
+
+  test('plurales de vacaciones', () {
+    expect(en.vacationsDays(1), '1 day');
+    expect(es.vacationsDays(12), '12 días');
+    expect(en.vacationsYearsOfService(3), '3 years at the company');
+  });
 }

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/admin_vacation_repository.dart';
 import '../domain/admin_vacation_models.dart';
 
+/// Error de la bandeja; la pantalla lo traduce al idioma activo.
+enum AdminVacationsError { load, loadMore }
+
 /// Estado de la bandeja de aprobación de vacaciones. Paginación por append
 /// ("Cargar más") sobre un filtro de estado (por defecto PENDING).
 class AdminVacationsState {
@@ -21,7 +24,7 @@ class AdminVacationsState {
   final bool loading;
   final bool loadingMore;
   final bool saving;
-  final String? error;
+  final AdminVacationsError? error;
 
   /// Filtro de estado enviado al servidor; cadena vacía = todas.
   final String statusFilter;
@@ -45,7 +48,7 @@ class AdminVacationsState {
         loading: loading ?? this.loading,
         loadingMore: loadingMore ?? this.loadingMore,
         saving: saving ?? this.saving,
-        error: identical(error, _sentinel) ? this.error : error as String?,
+        error: identical(error, _sentinel) ? this.error : error as AdminVacationsError?,
         statusFilter: statusFilter ?? this.statusFilter,
         page: page ?? this.page,
         total: total ?? this.total,
@@ -79,7 +82,7 @@ class AdminVacationsController extends Notifier<AdminVacationsState> {
     } catch (_) {
       state = state.copyWith(
         loading: false,
-        error: 'No se pudo cargar la bandeja de solicitudes.',
+        error: AdminVacationsError.load,
       );
     }
   }
@@ -97,7 +100,7 @@ class AdminVacationsController extends Notifier<AdminVacationsState> {
         loadingMore: false,
       );
     } catch (_) {
-      state = state.copyWith(loadingMore: false, error: 'No se pudieron cargar más solicitudes.');
+      state = state.copyWith(loadingMore: false, error: AdminVacationsError.loadMore);
     }
   }
 

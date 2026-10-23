@@ -17,9 +17,6 @@ class AttendanceHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScreen> {
-  static final DateFormat _rangeFormat = DateFormat('dd/MM/yyyy');
-  static final DateFormat _stampFormat = DateFormat('dd/MM/yyyy HH:mm');
-
   late DateTimeRange _range;
   late Future<List<AttendanceRecord>> _future;
 
@@ -59,12 +56,15 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final rangeFormat = DateFormat.yMd(context.intlLocale);
+    final stampFormat = DateFormat.yMd(context.intlLocale).add_Hm();
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi historial de asistencia')),
+      appBar: AppBar(title: Text(l10n.historyTitle)),
       body: Column(
         children: [
           _RangeBar(
-            label: '${_rangeFormat.format(_range.start)} — ${_rangeFormat.format(_range.end)}',
+            label: '${rangeFormat.format(_range.start)} — ${rangeFormat.format(_range.end)}',
             onTap: _pickRange,
           ),
           Expanded(
@@ -79,17 +79,17 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
                   if (snapshot.hasError) {
                     return _MessageState(
                       icon: Icons.cloud_off_outlined,
-                      title: 'No se pudo cargar tu historial',
-                      subtitle: 'Revisa tu conexión e inténtalo de nuevo.',
+                      title: l10n.historyLoadError,
+                      subtitle: l10n.historyLoadErrorHint,
                       onRetry: _reload,
                     );
                   }
                   final records = snapshot.data ?? const [];
                   if (records.isEmpty) {
-                    return const _MessageState(
+                    return _MessageState(
                       icon: Icons.event_busy_outlined,
-                      title: 'Sin registros en este rango',
-                      subtitle: 'Ajusta las fechas para ver tus asistencias.',
+                      title: l10n.historyEmpty,
+                      subtitle: l10n.historyEmptyHint,
                     );
                   }
                   return ListView.separated(
@@ -98,7 +98,7 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, i) => _RecordTile(
                       record: records[i],
-                      stampFormat: _stampFormat,
+                      stampFormat: stampFormat,
                       theme: theme,
                     ),
                   );
@@ -273,7 +273,7 @@ class _MessageState extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
+                  label: Text(context.l10n.commonRetry),
                 ),
               ],
             ],

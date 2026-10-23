@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../core/i18n/l10n.dart';
+
 /// Escáner de cámara para leer el QR firmado del centro. Devuelve por [Navigator.pop]
 /// el valor crudo del primer código detectado, o `null` si el usuario cancela.
 class QrScannerScreen extends StatefulWidget {
@@ -44,11 +46,11 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
-        title: const Text('Escanear QR del centro'),
+        title: Text(context.l10n.qrTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.flash_on),
-            tooltip: 'Linterna',
+            tooltip: context.l10n.qrTorch,
             onPressed: () => _controller.toggleTorch(),
           ),
         ],
@@ -112,9 +114,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 color: Colors.black.withValues(alpha: 0.55),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Text(
-                'Apunta al QR del centro',
-                style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500),
+              child: Text(
+                context.l10n.qrHint,
+                style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500),
               ),
             ),
           ),
@@ -167,9 +169,7 @@ class _ScannerError extends StatelessWidget {
             const Icon(Icons.no_photography, size: 48, color: Colors.white70),
             const SizedBox(height: 16),
             Text(
-              denied
-                  ? 'Permiso de cámara denegado. Habilítalo en los ajustes para escanear el QR.'
-                  : 'No se pudo iniciar la cámara.',
+              denied ? context.l10n.qrPermissionDenied : context.l10n.qrCameraError,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white),
             ),
