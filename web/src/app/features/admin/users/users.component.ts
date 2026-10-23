@@ -10,27 +10,21 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { TenantCapacity } from '../companies/company.models';
 import { CompanyService } from '../companies/company.service';
-import { ROLE_OPTIONS, Role, roleLabel } from '../roles/role.models';
+import { ROLE_CODES, Role, roleLabel } from '../roles/role.models';
 import { RoleService } from '../roles/role.service';
 import { UserEditDialogComponent } from './user-edit-dialog.component';
 import { UserFormDialogComponent } from './user-form-dialog.component';
 import { USER_STATUSES, User, UserStatus } from './user.models';
 import { UserService } from './user.service';
 
-const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: 'Activo',
-  INACTIVE: 'Inactivo',
-  LOCKED: 'Bloqueado',
-  INVITED: 'Invitado',
-};
-
-/** Administración de usuarios del tenant (RF-06, RF-22): alta/edición en modal, roles en español y filtros por columna. */
+/** Administración de usuarios del tenant (RF-06, RF-22): alta/edición en modal, roles traducidos y filtros por columna. */
 @Component({
   selector: 'app-users',
   standalone: true,
@@ -49,26 +43,25 @@ const STATUS_LABELS: Record<string, string> = {
     PageHeaderComponent,
     StatusChipComponent,
     EmptyStateComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header title="Usuarios" subtitle="Administra las personas con acceso al sistema y su información laboral">
+    <app-page-header [title]="'users.title' | transloco" [subtitle]="'users.subtitle' | transloco">
       @if (capacity(); as cap) {
         <span class="cap-chip" [class.cap-chip-full]="cap.available === 0" [matTooltip]="capacityTooltip(cap)">
           <mat-icon>groups</mat-icon>
-          Cupo {{ cap.used }}/{{ cap.limit }}
+          {{ 'users.capacityChip' | transloco: { used: cap.used, limit: cap.limit } }}
         </span>
       }
       <button mat-flat-button color="primary" (click)="openCreate()">
-        <mat-icon>person_add</mat-icon> Nuevo usuario
+        <mat-icon>person_add</mat-icon> {{ 'users.new' | transloco }}
       </button>
     </app-page-header>
 
     @if (capacity()?.available === 0) {
       <p class="cap-banner">
         <mat-icon>info</mat-icon>
-        La empresa agotó su cupo de colaboradores activos ({{ capacity()?.limit }}). Podés seguir
-        creando cuentas de portal, pero habilitar a otro colaborador exige dar de baja a alguien o
-        pedirle al super administrador un bloque adicional de {{ capacity()?.blockSize }}.
+        {{ 'users.capacityFull' | transloco: { limit: capacity()?.limit, size: capacity()?.blockSize } }}
       </p>
     }
 
@@ -77,12 +70,12 @@ const STATUS_LABELS: Record<string, string> = {
         <div class="filter-bar">
           <mat-form-field appearance="outline" class="search">
             <mat-icon matPrefix>search</mat-icon>
-            <mat-label>Buscar por nombre o correo</mat-label>
+            <mat-label>{{ 'users.search' | transloco }}</mat-label>
             <input matInput [formControl]="searchControl" (keyup.enter)="applySearch()" />
           </mat-form-field>
-          <button mat-stroked-button type="button" (click)="applySearch()">Buscar</button>
+          <button mat-stroked-button type="button" (click)="applySearch()">{{ 'common.search' | transloco }}</button>
           @if (hasColumnFilters()) {
-            <button mat-button type="button" (click)="clearColumnFilters()"><mat-icon>filter_alt_off</mat-icon> Limpiar filtros</button>
+            <button mat-button type="button" (click)="clearColumnFilters()"><mat-icon>filter_alt_off</mat-icon> {{ 'common.clearFilters' | transloco }}</button>
           }
         </div>
 
@@ -93,7 +86,7 @@ const STATUS_LABELS: Record<string, string> = {
           <table mat-table [dataSource]="filtered()" class="users-table" style="width:100%">
             <!-- Colaborador: avatar + nombre + correo -->
             <ng-container matColumnDef="user">
-              <th mat-header-cell *matHeaderCellDef>Colaborador</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'users.employee' | transloco }}</th>
               <td mat-cell *matCellDef="let u">
                 <div class="u-cell">
                   <div class="av" [style.background]="avatarColor(u).bg" [style.color]="avatarColor(u).fg">{{ initials(u) }}</div>
@@ -105,15 +98,15 @@ const STATUS_LABELS: Record<string, string> = {
               </td>
             </ng-container>
             <ng-container matColumnDef="employeeCode">
-              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.code' | transloco }}</th>
               <td mat-cell *matCellDef="let u"><span class="code">{{ u.employeeCode || '—' }}</span></td>
             </ng-container>
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | transloco }}</th>
               <td mat-cell *matCellDef="let u"><app-status-chip [status]="u.status" /></td>
             </ng-container>
             <ng-container matColumnDef="roles">
-              <th mat-header-cell *matHeaderCellDef>Roles</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'users.roles' | transloco }}</th>
               <td mat-cell *matCellDef="let u">
                 @if (u.roles.length) {
                   <span class="role-tags">
@@ -125,25 +118,25 @@ const STATUS_LABELS: Record<string, string> = {
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let u" style="text-align:right;white-space:nowrap">
-                <button mat-stroked-button (click)="openEdit(u); $event.stopPropagation()"><mat-icon>edit</mat-icon> Editar</button>
+                <button mat-stroked-button (click)="openEdit(u); $event.stopPropagation()"><mat-icon>edit</mat-icon> {{ 'common.edit' | transloco }}</button>
               </td>
             </ng-container>
 
             <!-- Fila de filtros por columna (estilo Excel) -->
             <ng-container matColumnDef="user-f">
               <th mat-header-cell *matHeaderCellDef class="fcell">
-                <input class="col-filter" placeholder="Filtrar nombre o correo…" [value]="fUser()" (input)="fUser.set(asValue($event))" />
+                <input class="col-filter" [placeholder]="'users.filterUser' | transloco" [value]="fUser()" (input)="fUser.set(asValue($event))" />
               </th>
             </ng-container>
             <ng-container matColumnDef="employeeCode-f">
               <th mat-header-cell *matHeaderCellDef class="fcell">
-                <input class="col-filter" placeholder="Filtrar…" [value]="fCode()" (input)="fCode.set(asValue($event))" />
+                <input class="col-filter" [placeholder]="'common.filter' | transloco" [value]="fCode()" (input)="fCode.set(asValue($event))" />
               </th>
             </ng-container>
             <ng-container matColumnDef="status-f">
               <th mat-header-cell *matHeaderCellDef class="fcell">
                 <select class="col-filter" [value]="fStatus()" (change)="fStatus.set(asValue($event))">
-                  <option value="">Todos</option>
+                  <option value="">{{ 'common.all' | transloco }}</option>
                   @for (s of statuses; track s) { <option [value]="s">{{ statusLabel(s) }}</option> }
                 </select>
               </th>
@@ -151,8 +144,8 @@ const STATUS_LABELS: Record<string, string> = {
             <ng-container matColumnDef="roles-f">
               <th mat-header-cell *matHeaderCellDef class="fcell">
                 <select class="col-filter" [value]="fRole()" (change)="fRole.set(asValue($event))">
-                  <option value="">Todos</option>
-                  @for (r of roleOptions; track r.code) { <option [value]="r.code">{{ r.label }}</option> }
+                  <option value="">{{ 'common.all' | transloco }}</option>
+                  @for (r of roleCodes; track r) { <option [value]="r">{{ label(r) }}</option> }
                 </select>
               </th>
             </ng-container>
@@ -167,7 +160,7 @@ const STATUS_LABELS: Record<string, string> = {
         </div>
 
         @if (!loading() && filtered().length === 0) {
-          <app-empty-state icon="group" message="No hay usuarios que coincidan." />
+          <app-empty-state icon="group" [message]="'users.empty' | transloco" />
         }
 
         <mat-paginator
@@ -231,11 +224,12 @@ export class UsersComponent {
   private readonly roleService = inject(RoleService);
   private readonly companyService = inject(CompanyService);
   private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly columns = ['user', 'employeeCode', 'status', 'roles', 'actions'];
   protected readonly filterColumns = ['user-f', 'employeeCode-f', 'status-f', 'roles-f', 'actions-f'];
   protected readonly statuses = USER_STATUSES;
-  protected readonly roleOptions = ROLE_OPTIONS;
+  protected readonly roleCodes = ROLE_CODES;
 
   protected readonly users = signal<User[]>([]);
   protected readonly loading = signal(false);
@@ -292,10 +286,11 @@ export class UsersComponent {
   }
 
   protected capacityTooltip(cap: TenantCapacity): string {
-    const base = `Colaboradores habilitados para registrar accesos. Cupo base ${cap.baseLimit} + ${cap.extraBlocks} bloque(s) de ${cap.blockSize}`;
-    return cap.available === 0
-      ? `${base}. Sin cupo disponible.`
-      : `${base}. ${cap.available} disponible(s).`;
+    const params = { base: cap.baseLimit, blocks: cap.extraBlocks, size: cap.blockSize, available: cap.available };
+    return this.transloco.translate(
+      cap.available === 0 ? 'users.capacityTooltipFull' : 'users.capacityTooltip',
+      params,
+    );
   }
 
   protected initials(u: User): string {
@@ -327,7 +322,7 @@ export class UsersComponent {
   }
 
   protected statusLabel(code: string): string {
-    return STATUS_LABELS[code] ?? code;
+    return this.transloco.translate(`status.${code}`);
   }
 
   protected asValue(event: Event): string {
@@ -352,7 +347,7 @@ export class UsersComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No se pudo cargar el listado (¿permiso user:manage?).');
+        this.error.set(this.transloco.translate('users.loadError'));
         this.loading.set(false);
       },
     });

@@ -5,11 +5,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
 import { AuditEntry } from './audit.models';
 import { AuditService } from './audit.service';
+import { AppDatePipe } from '../../core/i18n/app-date.pipe';
 
 /**
  * Bitácora de auditoría (RF-12): consulta paginada de solo lectura. Los registros son
@@ -27,9 +29,11 @@ import { AuditService } from './audit.service';
     MatButtonModule,
     PageHeaderComponent,
     EmptyStateComponent,
+    TranslocoPipe,
+    AppDatePipe,
   ],
   template: `
-    <app-page-header title="Auditoría" subtitle="Consulta los registros de actividad del sistema" />
+    <app-page-header [title]="'layout.nav.audit' | transloco" [subtitle]="'audit.subtitle' | transloco" />
 
     <div class="split-layout">
       <div class="split-main">
@@ -41,23 +45,23 @@ import { AuditService } from './audit.service';
             <div class="table-wrap">
               <table mat-table [dataSource]="entries()" style="width:100%">
                 <ng-container matColumnDef="createdAt">
-                  <th mat-header-cell *matHeaderCellDef>Fecha/hora</th>
-                  <td mat-cell *matCellDef="let e">{{ e.createdAt }}</td>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'attendanceEvents.col.date' | transloco }}</th>
+                  <td mat-cell *matCellDef="let e">{{ e.createdAt | appDate: 'medium' }}</td>
                 </ng-container>
                 <ng-container matColumnDef="actor">
-                  <th mat-header-cell *matHeaderCellDef>Usuario</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'scheduling.user' | transloco }}</th>
                   <td mat-cell *matCellDef="let e">{{ actor(e) }}</td>
                 </ng-container>
                 <ng-container matColumnDef="action">
-                  <th mat-header-cell *matHeaderCellDef>Acción</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'audit.action' | transloco }}</th>
                   <td mat-cell *matCellDef="let e">{{ e.action }}</td>
                 </ng-container>
                 <ng-container matColumnDef="resource">
-                  <th mat-header-cell *matHeaderCellDef>Recurso</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'audit.resource' | transloco }}</th>
                   <td mat-cell *matCellDef="let e">{{ e.resourceType }} · {{ e.resourceId }}</td>
                 </ng-container>
                 <ng-container matColumnDef="ip">
-                  <th mat-header-cell *matHeaderCellDef>Origen</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'attendanceEvents.detail.source' | transloco }}</th>
                   <td mat-cell *matCellDef="let e">{{ e.ip || '—' }}</td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -69,7 +73,7 @@ import { AuditService } from './audit.service';
             </div>
 
             @if (!loading() && entries().length === 0) {
-              <app-empty-state icon="fact_check" message="No hay registros de auditoría." />
+              <app-empty-state icon="fact_check" [message]="'audit.empty' | transloco" />
             }
 
             <mat-paginator
@@ -86,24 +90,24 @@ import { AuditService } from './audit.service';
       @if (selected(); as e) {
         <aside class="split-drawer">
           <div class="drawer-header">
-            <div class="titles"><h3>{{ e.action }}</h3><p class="sub">{{ e.createdAt }}</p></div>
-            <button mat-icon-button (click)="selected.set(null)" aria-label="Cerrar"><mat-icon>close</mat-icon></button>
+            <div class="titles"><h3>{{ e.action }}</h3><p class="sub">{{ e.createdAt | appDate: 'medium' }}</p></div>
+            <button mat-icon-button (click)="selected.set(null)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
           </div>
           <div class="drawer-body">
             <div class="detail-grid">
-              <div class="detail-row"><span class="k">Usuario</span><span class="v">{{ actor(e) }}</span></div>
-              <div class="detail-row"><span class="k">Acción</span><span class="v">{{ e.action }}</span></div>
-              <div class="detail-row"><span class="k">Recurso</span><span class="v">{{ e.resourceType }}</span></div>
-              <div class="detail-row"><span class="k">ID del recurso</span><span class="v">{{ e.resourceId }}</span></div>
+              <div class="detail-row"><span class="k">{{ 'scheduling.user' | transloco }}</span><span class="v">{{ actor(e) }}</span></div>
+              <div class="detail-row"><span class="k">{{ 'audit.action' | transloco }}</span><span class="v">{{ e.action }}</span></div>
+              <div class="detail-row"><span class="k">{{ 'audit.resource' | transloco }}</span><span class="v">{{ e.resourceType }}</span></div>
+              <div class="detail-row"><span class="k">{{ 'audit.resourceId' | transloco }}</span><span class="v">{{ e.resourceId }}</span></div>
               <div class="detail-row"><span class="k">IP</span><span class="v">{{ e.ip || '—' }}</span></div>
-              <div class="detail-row"><span class="k">Navegador</span><span class="v">{{ e.userAgent || '—' }}</span></div>
-              <div class="detail-row"><span class="k">Dispositivo</span><span class="v">{{ e.deviceInfo || '—' }}</span></div>
+              <div class="detail-row"><span class="k">{{ 'audit.browser' | transloco }}</span><span class="v">{{ e.userAgent || '—' }}</span></div>
+              <div class="detail-row"><span class="k">{{ 'audit.device' | transloco }}</span><span class="v">{{ e.deviceInfo || '—' }}</span></div>
               @if (e.oldValues) {
-                <div class="detail-section-title">Valores anteriores</div>
+                <div class="detail-section-title">{{ 'audit.oldValues' | transloco }}</div>
                 <pre class="values-block">{{ pretty(e.oldValues) }}</pre>
               }
               @if (e.newValues) {
-                <div class="detail-section-title">Valores nuevos</div>
+                <div class="detail-section-title">{{ 'audit.newValues' | transloco }}</div>
                 <pre class="values-block">{{ pretty(e.newValues) }}</pre>
               }
             </div>
@@ -128,6 +132,7 @@ import { AuditService } from './audit.service';
 })
 export class AuditComponent {
   private readonly service = inject(AuditService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly columns = ['createdAt', 'actor', 'action', 'resource', 'ip'];
   protected readonly entries = signal<AuditEntry[]>([]);
@@ -153,7 +158,7 @@ export class AuditComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No se pudo cargar la bitácora (¿permiso audit:read?).');
+        this.error.set(this.transloco.translate('audit.loadError'));
         this.loading.set(false);
       },
     });
@@ -161,7 +166,7 @@ export class AuditComponent {
 
   /** El correo identifica al autor mejor que su id; sin autor, la acción fue del sistema. */
   protected actor(entry: AuditEntry): string {
-    return entry.actorEmail || entry.actorUserId || 'Sistema';
+    return entry.actorEmail || entry.actorUserId || this.transloco.translate('audit.system');
   }
 
   /** Los valores llegan como JSON en una línea; se indentan para poder leerlos. */

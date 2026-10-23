@@ -7,22 +7,17 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import * as XLSX from 'xlsx';
 
 import { LanguageService } from '../../core/i18n/language.service';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
 import { StatusChipComponent } from '../../core/ui/status-chip.component';
-import { ROLE_OPTIONS, roleLabel } from '../admin/roles/role.models';
+import { ROLE_CODES, roleLabel } from '../admin/roles/role.models';
 import { ColumnDef, Person, defaultColumns } from './people.models';
 import { PeopleService } from './people.service';
 
-const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: 'Activo', INACTIVE: 'Inactivo', LOCKED: 'Bloqueado', INVITED: 'Invitado',
-};
-const GENDER_LABELS: Record<string, string> = {
-  FEMALE: 'Femenino', MALE: 'Masculino', OTHER: 'Otro', UNDISCLOSED: 'Prefiere no decir',
-};
 const STATUSES = ['ACTIVE', 'INACTIVE', 'LOCKED', 'INVITED'];
 type Dim = 'roles' | 'status' | 'gender' | 'tenure';
 
@@ -37,44 +32,44 @@ type Dim = 'roles' | 'status' | 'gender' | 'tenure';
   imports: [
     MatCardModule, MatTableModule, MatButtonModule, MatIconModule, MatMenuModule,
     MatCheckboxModule, MatTooltipModule, MatProgressBarModule,
-    PageHeaderComponent, StatusChipComponent, EmptyStateComponent,
+    PageHeaderComponent, StatusChipComponent, EmptyStateComponent, TranslocoPipe,
   ],
   template: `
-    <app-page-header title="Personas" subtitle="Reporte del personal: todos los datos, columnas a tu medida, filtros, gráficas y exportación">
-      <button mat-stroked-button [matMenuTriggerFor]="colMenu"><mat-icon>view_column</mat-icon> Columnas</button>
+    <app-page-header [title]="'people.title' | transloco" [subtitle]="'people.subtitle' | transloco">
+      <button mat-stroked-button [matMenuTriggerFor]="colMenu"><mat-icon>view_column</mat-icon> {{ 'people.columns' | transloco }}</button>
       <button mat-stroked-button (click)="reload()"><mat-icon>refresh</mat-icon></button>
-      <button mat-flat-button color="primary" (click)="exportExcel()"><mat-icon>download</mat-icon> Exportar Excel</button>
+      <button mat-flat-button color="primary" (click)="exportExcel()"><mat-icon>download</mat-icon> {{ 'people.exportExcel' | transloco }}</button>
     </app-page-header>
 
     <mat-menu #colMenu="matMenu" class="col-menu">
       <div (click)="$event.stopPropagation()" class="col-menu-body">
         @for (c of columns(); track c.key) {
-          <mat-checkbox [checked]="c.visible" [disabled]="c.key === 'person'" (change)="toggleColumn(c.key)">{{ c.label }}</mat-checkbox>
+          <mat-checkbox [checked]="c.visible" [disabled]="c.key === 'person'" (change)="toggleColumn(c.key)">{{ c.label | transloco }}</mat-checkbox>
         }
       </div>
     </mat-menu>
 
     <!-- KPIs -->
     <div class="kpis">
-      <div class="kpi"><div class="k-ic brand"><mat-icon>groups</mat-icon></div><div><div class="k-n">{{ people().length }}</div><div class="k-l">Personas</div></div></div>
-      <div class="kpi"><div class="k-ic pink"><mat-icon>cake</mat-icon></div><div><div class="k-n">{{ birthdays() }}</div><div class="k-l">Cumpleaños hoy</div></div></div>
-      <div class="kpi"><div class="k-ic danger"><mat-icon>beach_access</mat-icon></div><div><div class="k-n">{{ vacationsPending() }}</div><div class="k-l">Vac. por aprobar</div></div></div>
-      <div class="kpi"><div class="k-ic success"><mat-icon>celebration</mat-icon></div><div><div class="k-n">{{ anniversaries() }}</div><div class="k-l">Aniversarios hoy</div></div></div>
+      <div class="kpi"><div class="k-ic brand"><mat-icon>groups</mat-icon></div><div><div class="k-n">{{ people().length }}</div><div class="k-l">{{ 'people.kpi.people' | transloco }}</div></div></div>
+      <div class="kpi"><div class="k-ic pink"><mat-icon>cake</mat-icon></div><div><div class="k-n">{{ birthdays() }}</div><div class="k-l">{{ 'people.kpi.birthdays' | transloco }}</div></div></div>
+      <div class="kpi"><div class="k-ic danger"><mat-icon>beach_access</mat-icon></div><div><div class="k-n">{{ vacationsPending() }}</div><div class="k-l">{{ 'people.col.vacation' | transloco }}</div></div></div>
+      <div class="kpi"><div class="k-ic success"><mat-icon>celebration</mat-icon></div><div><div class="k-n">{{ anniversaries() }}</div><div class="k-l">{{ 'people.kpi.anniversaries' | transloco }}</div></div></div>
     </div>
 
     <!-- Gráfica -->
     <mat-card class="chart-card">
       <mat-card-content>
         <div class="chart-head">
-          <h3>Distribución</h3>
+          <h3>{{ 'people.distribution' | transloco }}</h3>
           <div class="dim-seg">
             @for (d of dims; track d.key) {
-              <button [class.on]="dim() === d.key" (click)="dim.set(d.key)">{{ d.label }}</button>
+              <button [class.on]="dim() === d.key" (click)="dim.set(d.key)">{{ d.label | transloco }}</button>
             }
           </div>
         </div>
         @if (chartData().length === 0) {
-          <p class="muted">Sin datos para graficar.</p>
+          <p class="muted">{{ 'people.noChartData' | transloco }}</p>
         } @else {
           <div class="bars">
             @for (b of chartData(); track b.label) {
@@ -94,15 +89,15 @@ type Dim = 'roles' | 'status' | 'gender' | 'tenure';
         @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
         @if (error()) { <p class="error-text">{{ error() }}</p> }
         @if (hasFilters()) {
-          <div class="filter-actions"><button mat-button (click)="clearFilters()"><mat-icon>filter_alt_off</mat-icon> Limpiar filtros</button>
-            <span class="muted">{{ filtered().length }} de {{ people().length }}</span></div>
+          <div class="filter-actions"><button mat-button (click)="clearFilters()"><mat-icon>filter_alt_off</mat-icon> {{ 'common.clearFilters' | transloco }}</button>
+            <span class="muted">{{ 'people.countOf' | transloco: { shown: filtered().length, total: people().length } }}</span></div>
         }
 
         <div class="table-wrap">
           <table mat-table [dataSource]="filtered()" class="people-table">
             <!-- ===== Columnas ===== -->
             <ng-container matColumnDef="person">
-              <th mat-header-cell *matHeaderCellDef>Colaborador</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.person' | transloco }}</th>
               <td mat-cell *matCellDef="let p">
                 <div class="u-cell">
                   <div class="av" [style.background]="avatarColor(p).bg" [style.color]="avatarColor(p).fg">{{ initials(p) }}</div>
@@ -111,69 +106,69 @@ type Dim = 'roles' | 'status' | 'gender' | 'tenure';
               </td>
             </ng-container>
             <ng-container matColumnDef="employeeCode">
-              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.employeeCode' | transloco }}</th>
               <td mat-cell *matCellDef="let p"><span class="mono">{{ p.employeeCode || '—' }}</span></td>
             </ng-container>
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.status' | transloco }}</th>
               <td mat-cell *matCellDef="let p"><app-status-chip [status]="p.status" /></td>
             </ng-container>
             <ng-container matColumnDef="roles">
-              <th mat-header-cell *matHeaderCellDef>Roles</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.roles' | transloco }}</th>
               <td mat-cell *matCellDef="let p">
                 @if (p.roles.length) { <span class="role-tags">@for (r of p.roles; track r) { <span class="role-tag">{{ rl(r) }}</span> }</span> } @else { — }
               </td>
             </ng-container>
             <ng-container matColumnDef="birthday">
-              <th mat-header-cell *matHeaderCellDef>Cumpleaños</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.birthday' | transloco }}</th>
               <td mat-cell *matCellDef="let p">
                 @if (p.isBirthdayToday) {
-                  <span class="pill pink" matTooltip="¡Cumpleaños hoy!"><mat-icon>cake</mat-icon> Hoy</span>
+                  <span class="pill pink" [matTooltip]="'people.birthdayToday' | transloco"><mat-icon>cake</mat-icon> {{ 'people.today' | transloco }}</span>
                 } @else if (p.birthDate) { <span class="muted">{{ fmtShort(p.birthDate) }}</span> } @else { — }
               </td>
             </ng-container>
             <ng-container matColumnDef="vacation">
-              <th mat-header-cell *matHeaderCellDef>Vac. por aprobar</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.vacation' | transloco }}</th>
               <td mat-cell *matCellDef="let p">
                 @if (p.pendingVacations > 0) {
-                  <span class="pill danger" matTooltip="Solicitudes de vacaciones por aprobar"><mat-icon>beach_access</mat-icon> {{ p.pendingVacations }}</span>
+                  <span class="pill danger" [matTooltip]="'people.vacationsTooltip' | transloco"><mat-icon>beach_access</mat-icon> {{ p.pendingVacations }}</span>
                 } @else { — }
               </td>
             </ng-container>
             <ng-container matColumnDef="anniversary">
-              <th mat-header-cell *matHeaderCellDef>Aniversario</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.anniversary' | transloco }}</th>
               <td mat-cell *matCellDef="let p">
                 @if (p.isAnniversaryToday) {
-                  <span class="pill success" matTooltip="Aniversario en la empresa"><mat-icon>celebration</mat-icon> {{ p.yearsOfService }} años</span>
+                  <span class="pill success" [matTooltip]="'people.anniversaryTooltip' | transloco"><mat-icon>celebration</mat-icon> {{ years(p.yearsOfService) }}</span>
                 } @else { — }
               </td>
             </ng-container>
             <ng-container matColumnDef="years">
-              <th mat-header-cell *matHeaderCellDef>Antigüedad</th>
-              <td mat-cell *matCellDef="let p">{{ p.yearsOfService === null ? '—' : (p.yearsOfService + (p.yearsOfService === 1 ? ' año' : ' años')) }}</td>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.years' | transloco }}</th>
+              <td mat-cell *matCellDef="let p">{{ p.yearsOfService === null ? '—' : years(p.yearsOfService) }}</td>
             </ng-container>
             <ng-container matColumnDef="hireDate">
-              <th mat-header-cell *matHeaderCellDef>Ingreso</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.hireDate' | transloco }}</th>
               <td mat-cell *matCellDef="let p">{{ fmtDate(p.hireDate) }}</td>
             </ng-container>
             <ng-container matColumnDef="birthDate">
-              <th mat-header-cell *matHeaderCellDef>Nacimiento</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.birthDate' | transloco }}</th>
               <td mat-cell *matCellDef="let p">{{ fmtDate(p.birthDate) }}</td>
             </ng-container>
             <ng-container matColumnDef="gender">
-              <th mat-header-cell *matHeaderCellDef>Género</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.gender' | transloco }}</th>
               <td mat-cell *matCellDef="let p">{{ genderLabel(p.gender) }}</td>
             </ng-container>
             <ng-container matColumnDef="phone">
-              <th mat-header-cell *matHeaderCellDef>Teléfono</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.phone' | transloco }}</th>
               <td mat-cell *matCellDef="let p">{{ p.phone || '—' }}</td>
             </ng-container>
             <ng-container matColumnDef="address">
-              <th mat-header-cell *matHeaderCellDef>Dirección</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.address' | transloco }}</th>
               <td mat-cell *matCellDef="let p">{{ p.address || '—' }}</td>
             </ng-container>
             <ng-container matColumnDef="emergency">
-              <th mat-header-cell *matHeaderCellDef>Contacto emergencia</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'people.col.emergency' | transloco }}</th>
               <td mat-cell *matCellDef="let p">{{ emergency(p) }}</td>
             </ng-container>
 
@@ -182,23 +177,23 @@ type Dim = 'roles' | 'status' | 'gender' | 'tenure';
               <ng-container [matColumnDef]="c.key + '-f'">
                 <th mat-header-cell *matHeaderCellDef class="fcell">
                   @switch (c.filter) {
-                    @case ('text') { <input class="col-filter" placeholder="Filtrar…" [value]="filters()[c.key] || ''" (input)="setFilter(c.key, $event)" /> }
+                    @case ('text') { <input class="col-filter" [placeholder]="'common.filter' | transloco" [value]="filters()[c.key] || ''" (input)="setFilter(c.key, $event)" /> }
                     @case ('status') {
                       <select class="col-filter" [value]="filters()[c.key] || ''" (change)="setFilter(c.key, $event)">
-                        <option value="">Todos</option>
+                        <option value="">{{ 'common.all' | transloco }}</option>
                         @for (s of statuses; track s) { <option [value]="s">{{ statusLabel(s) }}</option> }
                       </select>
                     }
                     @case ('roles') {
                       <select class="col-filter" [value]="filters()[c.key] || ''" (change)="setFilter(c.key, $event)">
-                        <option value="">Todos</option>
-                        @for (r of roleOptions; track r.code) { <option [value]="r.code">{{ r.label }}</option> }
+                        <option value="">{{ 'common.all' | transloco }}</option>
+                        @for (r of roleCodes; track r) { <option [value]="r">{{ rl(r) }}</option> }
                       </select>
                     }
                     @case ('flag') {
                       <select class="col-filter" [value]="filters()[c.key] || ''" (change)="setFilter(c.key, $event)">
-                        <option value="">Todos</option>
-                        <option value="yes">Solo con</option>
+                        <option value="">{{ 'common.all' | transloco }}</option>
+                        <option value="yes">{{ 'people.onlyWith' | transloco }}</option>
                       </select>
                     }
                   }
@@ -213,7 +208,7 @@ type Dim = 'roles' | 'status' | 'gender' | 'tenure';
         </div>
 
         @if (!loading() && filtered().length === 0) {
-          <app-empty-state icon="groups" message="No hay personas que coincidan." />
+          <app-empty-state icon="groups" [message]="'people.empty' | transloco" />
         }
       </mat-card-content>
     </mat-card>
@@ -271,12 +266,13 @@ type Dim = 'roles' | 'status' | 'gender' | 'tenure';
 export class PeopleComponent {
   private readonly service = inject(PeopleService);
   private readonly language = inject(LanguageService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly statuses = STATUSES;
-  protected readonly roleOptions = ROLE_OPTIONS;
+  protected readonly roleCodes = ROLE_CODES;
   protected readonly dims: { key: Dim; label: string }[] = [
-    { key: 'roles', label: 'Rol' }, { key: 'status', label: 'Estado' },
-    { key: 'gender', label: 'Género' }, { key: 'tenure', label: 'Antigüedad' },
+    { key: 'roles', label: 'people.dim.roles' }, { key: 'status', label: 'common.status' },
+    { key: 'gender', label: 'profile.gender' }, { key: 'tenure', label: 'people.col.years' },
   ];
 
   protected readonly people = signal<Person[]>([]);
@@ -309,12 +305,13 @@ export class PeopleComponent {
   protected readonly vacationsPending = computed(() => this.people().reduce((s, p) => s + p.pendingVacations, 0));
 
   protected readonly chartData = computed(() => {
+    this.language.lang(); // las etiquetas de las barras dependen del idioma
     const rows = this.filtered();
     const counts = new Map<string, number>();
     const add = (k: string) => counts.set(k, (counts.get(k) ?? 0) + 1);
     for (const p of rows) {
       switch (this.dim()) {
-        case 'roles': if (p.roles.length) p.roles.forEach((r) => add(roleLabel(r))); else add('Sin rol'); break;
+        case 'roles': if (p.roles.length) p.roles.forEach((r) => add(roleLabel(r))); else add(this.transloco.translate('people.noRole')); break;
         case 'status': add(this.statusLabel(p.status)); break;
         case 'gender': add(this.genderLabel(p.gender)); break;
         case 'tenure': add(this.tenureBucket(p.yearsOfService)); break;
@@ -335,7 +332,7 @@ export class PeopleComponent {
     this.error.set(null);
     this.service.list().subscribe({
       next: (people) => { this.people.set(people); this.loading.set(false); },
-      error: () => { this.error.set('No se pudo cargar el reporte de personas.'); this.loading.set(false); },
+      error: () => { this.error.set(this.transloco.translate('people.loadError')); this.loading.set(false); },
     });
   }
 
@@ -377,9 +374,9 @@ export class PeopleComponent {
       case 'employeeCode': return p.employeeCode ?? '';
       case 'status': return this.statusLabel(p.status);
       case 'roles': return p.roles.map(roleLabel).join(', ');
-      case 'birthday': return p.isBirthdayToday ? 'Hoy' : this.fmtDate(p.birthDate);
+      case 'birthday': return p.isBirthdayToday ? this.transloco.translate('people.today') : this.fmtDate(p.birthDate);
       case 'vacation': return String(p.pendingVacations);
-      case 'anniversary': return p.isAnniversaryToday ? 'Hoy' : '';
+      case 'anniversary': return p.isAnniversaryToday ? this.transloco.translate('people.today') : '';
       case 'years': return p.yearsOfService === null ? '' : String(p.yearsOfService);
       case 'hireDate': return this.fmtDate(p.hireDate);
       case 'birthDate': return this.fmtDate(p.birthDate);
@@ -393,11 +390,11 @@ export class PeopleComponent {
 
   protected exportExcel(): void {
     const cols = this.columns().filter((c) => c.visible);
-    const header = cols.map((c) => c.label);
+    const header = cols.map((c) => this.transloco.translate(c.label));
     const rows = this.filtered().map((p) => cols.map((c) => this.textFor(p, c.key)));
     const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const book = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(book, sheet, 'Personas');
+    XLSX.utils.book_append_sheet(book, sheet, this.transloco.translate('people.title'));
     XLSX.writeFile(book, `personas-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
@@ -412,8 +409,11 @@ export class PeopleComponent {
     return this.avatarPalette[h % this.avatarPalette.length];
   }
   protected rl(code: string): string { return roleLabel(code); }
-  protected statusLabel(code: string): string { return STATUS_LABELS[code] ?? code; }
-  protected genderLabel(code?: string): string { return code ? (GENDER_LABELS[code] ?? code) : '—'; }
+  protected statusLabel(code: string): string { return this.transloco.translate(`status.${code}`); }
+  protected genderLabel(code?: string): string { return code ? this.transloco.translate(`gender.${code}`) : '—'; }
+  protected years(n: number): string {
+    return this.transloco.translate(n === 1 ? 'people.yearOne' : 'people.yearMany', { n });
+  }
   protected emergency(p: Person): string {
     const n = p.emergencyContactName, t = p.emergencyContactPhone;
     return n || t ? [n, t].filter(Boolean).join(' · ') : '—';
@@ -429,10 +429,10 @@ export class PeopleComponent {
     return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(this.language.intlLocale(), { day: '2-digit', month: 'short' });
   }
   private tenureBucket(y: number | null): string {
-    if (y === null) return 'Sin dato';
-    if (y < 1) return 'Menos de 1 año';
-    if (y <= 2) return '1–2 años';
-    if (y <= 5) return '3–5 años';
-    return 'Más de 5 años';
+    if (y === null) return this.transloco.translate('people.tenure.none');
+    if (y < 1) return this.transloco.translate('people.tenure.lt1');
+    if (y <= 2) return this.transloco.translate('people.tenure.y1to2');
+    if (y <= 5) return this.transloco.translate('people.tenure.y3to5');
+    return this.transloco.translate('people.tenure.gt5');
   }
 }

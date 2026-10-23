@@ -2,6 +2,7 @@ import { AfterViewInit, Component, ElementRef, ViewChild, computed, inject, sign
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import * as L from 'leaflet';
 
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
@@ -9,6 +10,8 @@ import { PageHeaderComponent } from '../../core/ui/page-header.component';
 import { WorkSite } from '../admin/work-sites/work-site.models';
 import { WorkSiteService } from '../admin/work-sites/work-site.service';
 import { AttendanceEvent, RealtimeService } from './realtime.service';
+import { AppDatePipe } from '../../core/i18n/app-date.pipe';
+import { eventLabel, rejectionLabel } from '../attendance-events/attendance-events.models';
 
 /**
  * Mapa en tiempo real (RF-25, CU-11): grafica los registros de asistencia aceptados sobre
@@ -18,12 +21,12 @@ import { AttendanceEvent, RealtimeService } from './realtime.service';
 @Component({
   selector: 'app-realtime-map',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatListModule, PageHeaderComponent, EmptyStateComponent],
+  imports: [MatCardModule, MatIconModule, MatListModule, PageHeaderComponent, EmptyStateComponent, TranslocoPipe, AppDatePipe],
   template: `
-    <app-page-header title="Mapa en tiempo real" subtitle="Visualiza los fichajes de tu operación a medida que ocurren">
+    <app-page-header [title]="'layout.nav.map' | transloco" [subtitle]="'map.subtitle' | transloco">
       <span class="conn-badge" [class.on]="connected()">
         <mat-icon>{{ connected() ? 'sensors' : 'sensors_off' }}</mat-icon>
-        {{ connected() ? 'Conectado en tiempo real' : 'Reconectando…' }}
+        {{ (connected() ? 'map.connected' : 'map.reconnecting') | transloco }}
       </span>
     </app-page-header>
 
@@ -36,15 +39,15 @@ import { AttendanceEvent, RealtimeService } from './realtime.service';
 
       <mat-card class="feed-card">
         <mat-card-header>
-          <mat-card-title>Eventos recientes</mat-card-title>
+          <mat-card-title>{{ 'map.recent' | transloco }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <div class="feed-stats">
-            <span class="stat success"><mat-icon>check_circle</mat-icon> {{ acceptedCount() }} aceptados</span>
-            <span class="stat danger"><mat-icon>cancel</mat-icon> {{ rejectedCount() }} rechazados</span>
+            <span class="stat success"><mat-icon>check_circle</mat-icon> {{ 'map.accepted' | transloco: { n: acceptedCount() } }}</span>
+            <span class="stat danger"><mat-icon>cancel</mat-icon> {{ 'map.rejected' | transloco: { n: rejectedCount() } }}</span>
           </div>
           @if (feed().length === 0) {
-            <app-empty-state icon="sensors" message="Esperando eventos de asistencia…" />
+            <app-empty-state icon="sensors" [message]="'map.waiting' | transloco" />
           }
           <mat-list>
             @for (e of feed(); track e.attendanceId) {
@@ -52,8 +55,8 @@ import { AttendanceEvent, RealtimeService } from './realtime.service';
                 <mat-icon matListItemIcon [style.color]="e.type === 'ACCEPTED' ? 'var(--success)' : 'var(--danger)'">
                   {{ e.type === 'ACCEPTED' ? 'check_circle' : 'cancel' }}
                 </mat-icon>
-                <span matListItemTitle>{{ e.type === 'ACCEPTED' ? (e.eventKind || 'Registro') : (e.reason || 'Rechazo') }}</span>
-                <span matListItemLine class="muted">{{ e.occurredAt }}</span>
+                <span matListItemTitle>{{ feedTitle(e) }}</span>
+                <span matListItemLine class="muted">{{ e.occurredAt | appDate: 'mediumTime' }}</span>
               </mat-list-item>
             }
           </mat-list>
@@ -103,6 +106,7 @@ export class RealtimeMapComponent implements AfterViewInit, OnDestroy {
 
   private readonly workSiteService = inject(WorkSiteService);
   private readonly realtime = inject(RealtimeService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly connected = signal(false);
   protected readonly feed = signal<AttendanceEvent[]>([]);
@@ -172,5 +176,13 @@ export class RealtimeMapComponent implements AfterViewInit, OnDestroy {
   private pulse(marker: L.CircleMarker): void {
     marker.setStyle({ color: '#0f7a52', fillColor: '#0f7a52', radius: 14 });
     setTimeout(() => marker.setStyle({ color: '#3949ab', fillColor: '#3949ab', radius: 8 }), 1200);
+  }
+
+  /** Título de un evento del feed: tipo de marcación si se aceptó, motivo si se rechazó. */
+  protected feedTitle(e: { type: string; eventKind?: string | null; reason?: string | null }): string {
+    if (e.type === 'ACCEPTED') {
+      return e.eventKind ? eventLabel(e.eventKind) : this.transloco.translate('map.record');
+    }
+    return e.reason ? rejectionLabel(e.reason) : this.transloco.translate('map.rejection');
   }
 }

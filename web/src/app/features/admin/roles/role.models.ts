@@ -42,7 +42,5 @@ export function roleLabel(code: string): string {
   return translateOr(`roles.${code}`, ROLE_LABELS[code] ?? code);
 }
 
-/** Lista de roles para filtros (código + etiqueta en español). */
-export const ROLE_OPTIONS: { code: string; label: string }[] = Object.entries(ROLE_LABELS).map(
-  ([code, label]) => ({ code, label }),
-);
+/** Códigos de rol para filtros, en orden de privilegio; la etiqueta sale de `roleLabel`. */
+export const ROLE_CODES: readonly string[] = Object.keys(ROLE_LABELS);

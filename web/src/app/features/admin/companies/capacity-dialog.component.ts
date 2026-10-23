@@ -3,9 +3,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { NotificationService } from '../../../core/ui/notification.service';
-import { problemMessage } from '../../../core/ui/problem-detail';
+import { localizedProblem } from '../../../core/ui/problem-detail';
 import { Company, TenantCapacity } from './company.models';
 import { CompanyService } from './company.service';
 
@@ -26,9 +27,9 @@ export interface CapacityDialogData {
 @Component({
   selector: 'app-capacity-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslocoPipe],
   template: `
-    <h2 mat-dialog-title>Cupo de colaboradores — {{ data.company.name }}</h2>
+    <h2 mat-dialog-title>{{ 'capacity.title' | transloco: { name: data.company.name } }}</h2>
 
     <mat-dialog-content>
       @if (loading()) {
@@ -41,24 +42,23 @@ export interface CapacityDialogData {
         <div class="usage">
           <div class="usage-head">
             <span class="big">{{ c.used }}</span>
-            <span class="of">de {{ c.limit }} colaboradores activos</span>
+            <span class="of">{{ 'capacity.ofActive' | transloco: { limit: c.limit } }}</span>
           </div>
           <div class="bar" [class.full]="c.available === 0">
             <div class="fill" [style.width.%]="fillPercent()"></div>
           </div>
           <p class="hint">
-            {{ c.available }} disponible(s) · cupo base {{ c.baseLimit }} + {{ c.extraBlocks }}
-            bloque(s) de {{ c.blockSize }}
+            {{ 'capacity.summary' | transloco: { available: c.available, base: c.baseLimit, blocks: c.extraBlocks, size: c.blockSize } }}
           </p>
         </div>
 
         <div class="blocks">
-          <span class="label">Bloques adicionales</span>
+          <span class="label">{{ 'capacity.extraBlocks' | transloco }}</span>
           <div class="stepper">
             <button
               mat-icon-button
               type="button"
-              aria-label="Quitar un bloque"
+              [attr.aria-label]="'capacity.removeBlock' | transloco"
               [disabled]="blocks() === 0 || saving()"
               (click)="step(-1)"
             >
@@ -68,7 +68,7 @@ export interface CapacityDialogData {
             <button
               mat-icon-button
               type="button"
-              aria-label="Agregar un bloque"
+              [attr.aria-label]="'capacity.addBlock' | transloco"
               [disabled]="saving()"
               (click)="step(1)"
             >
@@ -76,31 +76,29 @@ export interface CapacityDialogData {
             </button>
           </div>
           <span class="result">
-            Límite resultante: <strong>{{ proposedLimit() }}</strong>
-            @if (proposedLimit() !== c.limit) { <em>(actual {{ c.limit }})</em> }
+            {{ 'capacity.resultingLimit' | transloco }} <strong>{{ proposedLimit() }}</strong>
+            @if (proposedLimit() !== c.limit) { <em>{{ 'capacity.current' | transloco: { limit: c.limit } }}</em> }
           </span>
         </div>
 
         @if (belowUsage()) {
           <p class="warn">
             <mat-icon>warning</mat-icon>
-            Con {{ blocks() }} bloque(s) el límite sería {{ proposedLimit() }} y la empresa ya tiene
-            {{ c.used }} colaboradores activos. Primero hay que dar de baja
-            {{ c.used - proposedLimit() }}.
+            {{ 'capacity.belowUsage' | transloco: { blocks: blocks(), limit: proposedLimit(), used: c.used, excess: c.used - proposedLimit() } }}
           </p>
         }
       }
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button [disabled]="saving()" (click)="close(false)">Cancelar</button>
+      <button mat-button [disabled]="saving()" (click)="close(false)">{{ 'common.cancel' | transloco }}</button>
       <button
         mat-flat-button
         color="primary"
         [disabled]="saving() || loading() || !dirty() || belowUsage()"
         (click)="save()"
       >
-        Guardar cupo
+        {{ 'capacity.save' | transloco }}
       </button>
     </mat-dialog-actions>
   `,
@@ -162,6 +160,7 @@ export interface CapacityDialogData {
 export class CapacityDialogComponent {
   private readonly service = inject(CompanyService);
   private readonly notify = inject(NotificationService);
+  private readonly transloco = inject(TranslocoService);
   private readonly dialogRef = inject(MatDialogRef<CapacityDialogComponent, boolean>);
   protected readonly data = inject<CapacityDialogData>(MAT_DIALOG_DATA);
 
@@ -205,7 +204,7 @@ export class CapacityDialogComponent {
         this.loading.set(false);
       },
       error: (err) => {
-        this.error.set(problemMessage(err, 'No se pudo cargar el cupo de la empresa.'));
+        this.error.set(localizedProblem(this.transloco, err, 'capacity.loadError'));
         this.loading.set(false);
       },
     });
@@ -221,12 +220,12 @@ export class CapacityDialogComponent {
       next: (capacity) => {
         this.saving.set(false);
         this.capacity.set(capacity);
-        this.notify.success(`Cupo actualizado: ${capacity.limit} colaboradores activos.`);
+        this.notify.success(this.transloco.translate('capacity.updated', { limit: capacity.limit }));
         this.close(true);
       },
       error: (err) => {
         this.saving.set(false);
-        this.notify.error(problemMessage(err, 'No se pudo actualizar el cupo.'));
+        this.notify.error(localizedProblem(this.transloco, err, 'capacity.updateError'));
       },
     });
   }

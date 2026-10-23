@@ -9,6 +9,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
@@ -36,11 +37,12 @@ import { WorkSiteService } from './work-site.service';
     PageHeaderComponent,
     StatusChipComponent,
     EmptyStateComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header title="Centros de trabajo" subtitle="Administra los centros de trabajo de la empresa">
+    <app-page-header [title]="'workSites.title' | transloco" [subtitle]="'workSites.subtitle' | transloco">
       <button mat-flat-button color="primary" (click)="router.navigate(['/work-sites/new'])">
-        <mat-icon>add_location_alt</mat-icon> Nuevo centro
+        <mat-icon>add_location_alt</mat-icon> {{ 'workSites.newShort' | transloco }}
       </button>
     </app-page-header>
 
@@ -52,33 +54,33 @@ import { WorkSiteService } from './work-site.service';
         <div class="table-wrap">
           <table mat-table [dataSource]="sites()" style="width:100%">
             <ng-container matColumnDef="code">
-              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.code' | transloco }}</th>
               <td mat-cell *matCellDef="let s">{{ s.code }}</td>
             </ng-container>
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.name' | transloco }}</th>
               <td mat-cell *matCellDef="let s">{{ s.name }}</td>
             </ng-container>
             <ng-container matColumnDef="location">
-              <th mat-header-cell *matHeaderCellDef>Ubicación</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'workSites.location' | transloco }}</th>
               <td mat-cell *matCellDef="let s">{{ s.latitude | number: '1.4-6' }}, {{ s.longitude | number: '1.4-6' }}</td>
             </ng-container>
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | transloco }}</th>
               <td mat-cell *matCellDef="let s"><app-status-chip [status]="s.status" /></td>
             </ng-container>
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let s" style="text-align:right;white-space:nowrap">
-                <a mat-icon-button [routerLink]="['/work-sites', s.id, 'geofence']" matTooltip="Geocerca y QR" (click)="$event.stopPropagation()">
+                <a mat-icon-button [routerLink]="['/work-sites', s.id, 'geofence']" [matTooltip]="'workSites.geofenceQr' | transloco" (click)="$event.stopPropagation()">
                   <mat-icon>my_location</mat-icon>
                 </a>
                 @if (s.status === 'ACTIVE') {
-                  <button mat-icon-button (click)="toggleStatus(s); $event.stopPropagation()" matTooltip="Desactivar"><mat-icon>block</mat-icon></button>
+                  <button mat-icon-button (click)="toggleStatus(s); $event.stopPropagation()" [matTooltip]="'common.deactivate' | transloco"><mat-icon>block</mat-icon></button>
                 } @else {
-                  <button mat-icon-button (click)="toggleStatus(s); $event.stopPropagation()" matTooltip="Activar"><mat-icon>check_circle</mat-icon></button>
+                  <button mat-icon-button (click)="toggleStatus(s); $event.stopPropagation()" [matTooltip]="'common.activate' | transloco"><mat-icon>check_circle</mat-icon></button>
                 }
-                <button mat-icon-button (click)="edit(s)" aria-label="Editar"><mat-icon>chevron_right</mat-icon></button>
+                <button mat-icon-button (click)="edit(s)" [attr.aria-label]="'common.edit' | transloco"><mat-icon>chevron_right</mat-icon></button>
               </td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -87,7 +89,7 @@ import { WorkSiteService } from './work-site.service';
         </div>
 
         @if (!loading() && sites().length === 0) {
-          <app-empty-state icon="place" message="No hay centros de trabajo para mostrar." />
+          <app-empty-state icon="place" [message]="'workSites.empty' | transloco" />
         }
 
         <mat-paginator
@@ -106,6 +108,7 @@ export class WorkSitesComponent {
   private readonly notify = inject(NotificationService);
   private readonly dialog = inject(MatDialog);
   protected readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly columns = ['code', 'name', 'location', 'status', 'actions'];
   protected readonly sites = signal<WorkSite[]>([]);
@@ -130,7 +133,7 @@ export class WorkSitesComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No se pudo cargar el listado (¿permiso worksite:manage?).');
+        this.error.set(this.transloco.translate('workSites.loadError'));
         this.loading.set(false);
       },
     });
@@ -151,8 +154,11 @@ export class WorkSitesComponent {
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
-          title: next === 'INACTIVE' ? 'Desactivar centro' : 'Activar centro',
-          message: `¿Confirmás cambiar el estado de "${site.name}" a ${next}?`,
+          title: this.transloco.translate(next === 'INACTIVE' ? 'workSites.deactivate' : 'workSites.activate'),
+          message: this.transloco.translate('companies.confirmStatus', {
+            name: site.name,
+            status: this.transloco.translate(`status.${next}`),
+          }),
           color: next === 'INACTIVE' ? 'warn' : 'primary',
         },
       })
@@ -163,10 +169,10 @@ export class WorkSitesComponent {
         }
         this.service.setStatus(site.id, next).subscribe({
           next: () => {
-            this.notify.success('Estado actualizado.');
+            this.notify.success(this.transloco.translate('common.statusUpdated'));
             this.reload();
           },
-          error: () => this.notify.error('No se pudo cambiar el estado.'),
+          error: () => this.notify.error(this.transloco.translate('common.statusError')),
         });
       });
   }

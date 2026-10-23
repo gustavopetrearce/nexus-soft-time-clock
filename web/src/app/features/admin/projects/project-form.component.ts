@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { BreadcrumbComponent } from '../../../core/ui/breadcrumb.component';
 import { NotificationService } from '../../../core/ui/notification.service';
@@ -31,16 +32,17 @@ import { ProjectService } from './project.service';
     BreadcrumbComponent,
     PageHeaderComponent,
     StatusChipComponent,
+    TranslocoPipe,
   ],
   template: `
     <app-breadcrumb
       [items]="[
-        { label: 'Planificación', route: '/projects' },
-        { label: 'Proyectos', route: '/projects' },
-        { label: isEdit() ? (project()?.name ?? '') : 'Nuevo proyecto' },
+        { label: ('layout.group.planning' | transloco), route: '/projects' },
+        { label: ('projects.title' | transloco), route: '/projects' },
+        { label: isEdit() ? (project()?.name ?? '') : ('projects.new' | transloco) },
       ]"
     />
-    <app-page-header [title]="isEdit() ? 'Editar proyecto' : 'Nuevo proyecto'" />
+    <app-page-header [title]="(isEdit() ? 'projects.edit' : 'projects.new') | transloco" />
 
     @if (loading()) { <mat-progress-bar mode="indeterminate" style="margin-bottom:16px" /> }
     @if (error()) { <p class="error-text">{{ error() }}</p> }
@@ -49,70 +51,70 @@ import { ProjectService } from './project.service';
       <div class="form-page-main">
         <form [formGroup]="form">
           <div class="form-section">
-            <h3 class="form-section-title">Información del proyecto</h3>
+            <h3 class="form-section-title">{{ 'projects.form.info' | transloco }}</h3>
             <div class="form-grid-2">
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Código</mat-label>
+                <mat-label>{{ 'common.code' | transloco }}</mat-label>
                 <input matInput formControlName="code" />
-                <mat-hint>Código único que identifica al proyecto.</mat-hint>
+                <mat-hint>{{ 'projects.form.codeHint' | transloco }}</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Nombre</mat-label>
+                <mat-label>{{ 'common.name' | transloco }}</mat-label>
                 <input matInput formControlName="name" />
-                <mat-hint>Nombre con el que se identifica el proyecto.</mat-hint>
+                <mat-hint>{{ 'projects.form.nameHint' | transloco }}</mat-hint>
               </mat-form-field>
               @if (isEdit()) {
                 <mat-form-field appearance="outline" class="drawer-field">
-                  <mat-label>Estado</mat-label>
+                  <mat-label>{{ 'common.status' | transloco }}</mat-label>
                   <mat-select formControlName="status">
-                    @for (s of statuses; track s) { <mat-option [value]="s">{{ s }}</mat-option> }
+                    @for (s of statuses; track s) { <mat-option [value]="s">{{ 'projects.status.' + s | transloco }}</mat-option> }
                   </mat-select>
-                  <mat-hint>Solo los proyectos activos pueden utilizarse para asignaciones.</mat-hint>
+                  <mat-hint>{{ 'projects.form.statusHint' | transloco }}</mat-hint>
                 </mat-form-field>
               }
             </div>
           </div>
 
           <div class="form-section">
-            <h3 class="form-section-title">Fechas del proyecto (opcional)</h3>
+            <h3 class="form-section-title">{{ 'projects.form.dates' | transloco }}</h3>
             <div class="form-grid-2">
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Inicio</mat-label>
+                <mat-label>{{ 'projects.form.start' | transloco }}</mat-label>
                 <input matInput type="date" formControlName="startsOn" />
-                <mat-hint>Fecha en que inicia el proyecto.</mat-hint>
+                <mat-hint>{{ 'projects.form.startHint' | transloco }}</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Fin</mat-label>
+                <mat-label>{{ 'projects.form.end' | transloco }}</mat-label>
                 <input matInput type="date" formControlName="endsOn" />
-                <mat-hint>Fecha estimada de finalización del proyecto.</mat-hint>
+                <mat-hint>{{ 'projects.form.endHint' | transloco }}</mat-hint>
               </mat-form-field>
             </div>
           </div>
         </form>
 
         <div class="form-actions">
-          <button mat-button type="button" (click)="cancel()">Cancelar</button>
+          <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
           <button mat-flat-button color="primary" [disabled]="!formValid() || saving()" (click)="save()">
-            <mat-icon>save</mat-icon> {{ isEdit() ? 'Guardar cambios' : 'Guardar proyecto' }}
+            <mat-icon>save</mat-icon> {{ (isEdit() ? 'common.saveChanges' : 'projects.form.save') | transloco }}
           </button>
         </div>
       </div>
 
       <div class="form-page-side">
         <div class="info-card tip">
-          <h3 class="info-card-title">Información importante</h3>
+          <h3 class="info-card-title">{{ 'companies.form.importantInfo' | transloco }}</h3>
           <div class="icon-row">
             <mat-icon>shield</mat-icon>
             <div>
-              <p class="row-title">¿Qué es un proyecto?</p>
-              <p class="row-desc">Un proyecto agrupa horarios y asignaciones para una obra o iniciativa específica dentro de tu organización.</p>
+              <p class="row-title">{{ 'projects.form.whatIs' | transloco }}</p>
+              <p class="row-desc">{{ 'projects.form.whatIsText' | transloco }}</p>
             </div>
           </div>
           <div class="icon-row">
             <mat-icon>badge</mat-icon>
             <div>
-              <p class="row-title">Código único</p>
-              <p class="row-desc">El código de proyecto no puede modificarse después de crearlo.</p>
+              <p class="row-title">{{ 'companies.form.uniqueCode' | transloco }}</p>
+              <p class="row-desc">{{ 'projects.form.uniqueCodeText' | transloco }}</p>
             </div>
           </div>
         </div>
@@ -126,7 +128,7 @@ import { ProjectService } from './project.service';
                 <app-status-chip [status]="p.status" />
               </div>
             </div>
-            <div class="info-row"><span class="k">Código</span><span class="v">{{ p.code }}</span></div>
+            <div class="info-row"><span class="k">{{ 'common.code' | transloco }}</span><span class="v">{{ p.code }}</span></div>
           </div>
         }
       </div>
@@ -139,6 +141,7 @@ export class ProjectFormComponent {
   private readonly router = inject(Router);
   private readonly service = inject(ProjectService);
   private readonly notify = inject(NotificationService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly statuses = PROJECT_STATUSES;
   protected readonly projectId = this.route.snapshot.paramMap.get('id');
@@ -177,7 +180,7 @@ export class ProjectFormComponent {
           this.loading.set(false);
         },
         error: () => {
-          this.error.set('No se pudo cargar el proyecto.');
+          this.error.set(this.transloco.translate('projects.form.loadError'));
           this.loading.set(false);
         },
       });
@@ -209,12 +212,12 @@ export class ProjectFormComponent {
         });
     request$.subscribe({
       next: () => {
-        this.notify.success(this.projectId ? 'Proyecto actualizado.' : 'Proyecto creado.');
+        this.notify.success(this.transloco.translate(this.projectId ? 'projects.form.updated' : 'projects.form.created'));
         void this.router.navigate(['/projects']);
       },
       error: () => {
         this.saving.set(false);
-        this.notify.error('No se pudo guardar el proyecto.');
+        this.notify.error(this.transloco.translate('projects.form.saveError'));
       },
     });
   }

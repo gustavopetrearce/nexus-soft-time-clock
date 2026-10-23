@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AuthStore } from '../../../core/auth/auth.store';
 import { NotificationService } from '../../../core/ui/notification.service';
@@ -34,28 +35,26 @@ import { VacationPolicyService } from './vacation-policy.service';
     MatProgressBarModule,
     PageHeaderComponent,
     CompanyQrCardComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header title="Configuración" subtitle="Parámetros generales de la empresa. Aplican a todo el tenant." />
+    <app-page-header [title]="'layout.nav.settings' | transloco" [subtitle]="'settings.subtitle' | transloco" />
     @if (error()) { <p class="error-text">{{ error() }}</p> }
     @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
 
     @if (canEditPolicy()) {
       <mat-card class="policy-card">
         <mat-card-content>
-          <div class="card-head"><mat-icon>verified_user</mat-icon><h3>Políticas de registro</h3></div>
-          <p class="muted sub">
-            Valores por defecto para todos los centros. Cada centro puede sobrescribirlos desde su ficha;
-            los que queden en «Heredar» usarán lo definido aquí.
-          </p>
+          <div class="card-head"><mat-icon>verified_user</mat-icon><h3>{{ 'settings.policy.title' | transloco }}</h3></div>
+          <p class="muted sub">{{ 'settings.policy.text' | transloco }}</p>
           @if (policyError()) { <p class="error-text">{{ policyError() }}</p> }
           @if (loadingPolicy()) { <mat-progress-bar mode="indeterminate" /> }
 
           <div class="cfg-item">
             <div class="ci-ic"><mat-icon>photo_camera</mat-icon></div>
             <div class="ci-txt">
-              <h4>Evidencia fotográfica obligatoria</h4>
-              <p>El colaborador debe adjuntar una foto para que se acepte su registro.</p>
+              <h4>{{ 'settings.policy.photo' | transloco }}</h4>
+              <p>{{ 'settings.policy.photoText' | transloco }}</p>
             </div>
             <mat-slide-toggle [(ngModel)]="policy.requirePhoto" color="primary" />
           </div>
@@ -63,8 +62,8 @@ import { VacationPolicyService } from './vacation-policy.service';
           <div class="cfg-item">
             <div class="ci-ic"><mat-icon>fingerprint</mat-icon></div>
             <div class="ci-txt">
-              <h4>Verificación biométrica obligatoria</h4>
-              <p>Se exige huella o rostro del dispositivo antes de registrar.</p>
+              <h4>{{ 'settings.policy.biometric' | transloco }}</h4>
+              <p>{{ 'settings.policy.biometricText' | transloco }}</p>
             </div>
             <mat-slide-toggle [(ngModel)]="policy.requireBiometric" color="primary" />
           </div>
@@ -72,8 +71,8 @@ import { VacationPolicyService } from './vacation-policy.service';
           <div class="cfg-item">
             <div class="ci-ic"><mat-icon>smartphone</mat-icon></div>
             <div class="ci-txt">
-              <h4>Validar dispositivo del colaborador</h4>
-              <p>Solo se admiten dispositivos reconocidos previamente.</p>
+              <h4>{{ 'settings.policy.device' | transloco }}</h4>
+              <p>{{ 'settings.policy.deviceText' | transloco }}</p>
             </div>
             <mat-slide-toggle [(ngModel)]="policy.deviceBindingEnabled" color="primary" />
           </div>
@@ -82,12 +81,12 @@ import { VacationPolicyService } from './vacation-policy.service';
             <div class="cfg-item">
               <div class="ci-ic"><mat-icon>gpp_maybe</mat-icon></div>
               <div class="ci-txt">
-                <h4>Ante un dispositivo desconocido</h4>
-                <p>Rechazar bloquea el registro; marcar lo permite y lo deja señalado para revisión.</p>
+                <h4>{{ 'settings.policy.unknownDevice' | transloco }}</h4>
+                <p>{{ 'settings.policy.unknownDeviceText' | transloco }}</p>
               </div>
               <mat-button-toggle-group [(ngModel)]="policy.deviceBindingAction">
-                <mat-button-toggle value="REJECT">Rechazar</mat-button-toggle>
-                <mat-button-toggle value="FLAG">Marcar</mat-button-toggle>
+                <mat-button-toggle value="REJECT">{{ 'settings.policy.reject' | transloco }}</mat-button-toggle>
+                <mat-button-toggle value="FLAG">{{ 'settings.policy.flag' | transloco }}</mat-button-toggle>
               </mat-button-toggle-group>
             </div>
           }
@@ -95,8 +94,8 @@ import { VacationPolicyService } from './vacation-policy.service';
           <div class="cfg-item">
             <div class="ci-ic"><mat-icon>my_location</mat-icon></div>
             <div class="ci-txt">
-              <h4>Precisión GPS máxima por defecto (m)</h4>
-              <p>Un registro con precisión peor que este umbral se rechaza. Entre 5 y 500 metros.</p>
+              <h4>{{ 'settings.policy.gps' | transloco }}</h4>
+              <p>{{ 'settings.policy.gpsText' | transloco }}</p>
             </div>
             <input class="inline-num" type="number" min="5" max="500" [(ngModel)]="policy.defaultGpsAccuracyMaxM" />
           </div>
@@ -104,20 +103,16 @@ import { VacationPolicyService } from './vacation-policy.service';
           <div class="cfg-item">
             <div class="ci-ic"><mat-icon>travel_explore</mat-icon></div>
             <div class="ci-txt">
-              <h4>Permitir registro sin centro de trabajo</h4>
-              <p>
-                Para personal sin sede fija. Se ficha con un QR de empresa: la ubicación se guarda pero
-                <b>no se compara con ninguna geocerca</b>, y la foto pasa a ser obligatoria aunque esté
-                desactivada arriba. El camino con centro sigue funcionando igual.
-              </p>
+              <h4>{{ 'settings.policy.siteless' | transloco }}</h4>
+              <p [innerHTML]="'settings.policy.sitelessText' | transloco"></p>
             </div>
             <mat-slide-toggle [(ngModel)]="policy.sitelessAttendanceEnabled" color="primary" />
           </div>
 
           <div class="actions">
-            <button mat-button type="button" [disabled]="savingPolicy()" (click)="loadPolicy()">Descartar</button>
+            <button mat-button type="button" [disabled]="savingPolicy()" (click)="loadPolicy()">{{ 'common.discard' | transloco }}</button>
             <button mat-flat-button color="primary" [disabled]="savingPolicy()" (click)="savePolicy()">
-              <mat-icon>save</mat-icon> Guardar políticas
+              <mat-icon>save</mat-icon> {{ 'settings.policy.save' | transloco }}
             </button>
           </div>
         </mat-card-content>
@@ -132,41 +127,41 @@ import { VacationPolicyService } from './vacation-policy.service';
     <div class="cfg-grid">
       <mat-card>
         <mat-card-content>
-          <div class="card-head"><mat-icon>beach_access</mat-icon><h3>Vacaciones</h3></div>
-          <p class="muted sub">Define cuántos días corresponden por cada año de antigüedad.</p>
+          <div class="card-head"><mat-icon>beach_access</mat-icon><h3>{{ 'layout.nav.vacations' | transloco }}</h3></div>
+          <p class="muted sub">{{ 'settings.vacation.text' | transloco }}</p>
 
           <!-- Escalera editable -->
           <div class="tier-head">
-            <span>Año de antigüedad</span><span>Días</span><span></span>
+            <span>{{ 'settings.vacation.year' | transloco }}</span><span>{{ 'settings.vacation.days' | transloco }}</span><span></span>
           </div>
           @for (t of model.tiers; track $index) {
             <div class="tier-row">
               <div class="num"><input type="number" min="1" max="100" [(ngModel)]="t.year" /></div>
               <div class="num"><input type="number" min="0" max="366" [(ngModel)]="t.days" /></div>
-              <button mat-icon-button type="button" (click)="removeTier($index)" [disabled]="model.tiers.length <= 1" aria-label="Quitar">
+              <button mat-icon-button type="button" (click)="removeTier($index)" [disabled]="model.tiers.length <= 1" [attr.aria-label]="'common.remove' | transloco">
                 <mat-icon>close</mat-icon>
               </button>
             </div>
           }
           <button mat-stroked-button type="button" class="add" (click)="addTier()">
-            <mat-icon>add</mat-icon> Agregar tramo
+            <mat-icon>add</mat-icon> {{ 'settings.vacation.addTier' | transloco }}
           </button>
 
           <!-- Regla más allá del último tramo -->
           <div class="beyond">
-            <div class="beyond-title">A partir del último año definido…</div>
+            <div class="beyond-title">{{ 'settings.vacation.beyond' | transloco }}</div>
             <mat-button-toggle-group [(ngModel)]="model.beyondMode" hideSingleSelectionIndicator>
-              <mat-button-toggle value="FLAT">Se mantiene igual</mat-button-toggle>
-              <mat-button-toggle value="INCREMENT">Sigue subiendo</mat-button-toggle>
+              <mat-button-toggle value="FLAT">{{ 'settings.vacation.flat' | transloco }}</mat-button-toggle>
+              <mat-button-toggle value="INCREMENT">{{ 'settings.vacation.increment' | transloco }}</mat-button-toggle>
             </mat-button-toggle-group>
 
             @if (model.beyondMode === 'INCREMENT') {
               <div class="inc">
-                Sumar
+                {{ 'settings.vacation.add' | transloco }}
                 <input type="number" min="0" max="366" [(ngModel)]="model.beyondIncrementDays" class="inline-num" />
-                días cada
+                {{ 'settings.vacation.daysEvery' | transloco }}
                 <input type="number" min="1" max="20" [(ngModel)]="model.beyondEveryYears" class="inline-num" />
-                {{ model.beyondEveryYears === 1 ? 'año' : 'años' }}.
+                {{ (model.beyondEveryYears === 1 ? 'settings.vacation.yearUnit' : 'settings.vacation.yearsUnit') | transloco }}.
               </div>
             }
           </div>
@@ -174,24 +169,24 @@ import { VacationPolicyService } from './vacation-policy.service';
           <div class="cfg-item">
             <div class="ci-ic"><mat-icon>verified_user</mat-icon></div>
             <div class="ci-txt">
-              <h4>Requiere aprobación de supervisor</h4>
-              <p>Si se desactiva, las solicitudes se aprueban automáticamente.</p>
+              <h4>{{ 'settings.vacation.approval' | transloco }}</h4>
+              <p>{{ 'settings.vacation.approvalText' | transloco }}</p>
             </div>
             <mat-slide-toggle [(ngModel)]="model.requireApproval" color="primary" />
           </div>
           <div class="cfg-item">
             <div class="ci-ic"><mat-icon>calendar_month</mat-icon></div>
             <div class="ci-txt">
-              <h4>Contar solo días hábiles</h4>
-              <p>Excluye sábados y domingos del conteo de días solicitados.</p>
+              <h4>{{ 'settings.vacation.businessDays' | transloco }}</h4>
+              <p>{{ 'settings.vacation.businessDaysText' | transloco }}</p>
             </div>
             <mat-slide-toggle [(ngModel)]="model.countBusinessDaysOnly" color="primary" />
           </div>
 
           <div class="actions">
-            <button mat-button type="button" [disabled]="saving()" (click)="load()">Descartar</button>
+            <button mat-button type="button" [disabled]="saving()" (click)="load()">{{ 'common.discard' | transloco }}</button>
             <button mat-flat-button color="primary" [disabled]="saving()" (click)="save()">
-              <mat-icon>save</mat-icon> Guardar cambios
+              <mat-icon>save</mat-icon> {{ 'common.saveChanges' | transloco }}
             </button>
           </div>
         </mat-card-content>
@@ -201,12 +196,12 @@ import { VacationPolicyService } from './vacation-policy.service';
         <mat-card-content>
           <div class="info-box">
             <mat-icon>info</mat-icon>
-            <div>La <b>fecha de ingreso</b> de cada colaborador (en su ficha) determina su antigüedad, y con esta escalera se calcula cuántos días de vacaciones le corresponden.</div>
+            <div [innerHTML]="'settings.vacation.info' | transloco"></div>
           </div>
           <div class="preview">
-            <div class="preview-title">Días por antigüedad (según lo configurado)</div>
+            <div class="preview-title">{{ 'settings.vacation.preview' | transloco }}</div>
             @for (y of previewYears(); track y) {
-              <div class="preview-row"><span>{{ y }} {{ y === 1 ? 'año' : 'años' }}</span><b>{{ entitlement(y) }} días</b></div>
+              <div class="preview-row"><span>{{ (y === 1 ? 'people.yearOne' : 'people.yearMany') | transloco: { n: y } }}</span><b>{{ 'settings.vacation.nDays' | transloco: { n: entitlement(y) } }}</b></div>
             }
           </div>
         </mat-card-content>
@@ -251,6 +246,7 @@ export class SettingsComponent {
   private readonly policyService = inject(CompanyPolicyService);
   private readonly auth = inject(AuthStore);
   private readonly notify = inject(NotificationService);
+  private readonly transloco = inject(TranslocoService);
 
   protected model: VacationPolicy = {
     tiers: [{ year: 1, days: 12 }],
@@ -304,7 +300,7 @@ export class SettingsComponent {
         this.loadingPolicy.set(false);
       },
       error: () => {
-        this.policyError.set('No se pudieron cargar las políticas de registro.');
+        this.policyError.set(this.transloco.translate('settings.policy.loadError'));
         this.loadingPolicy.set(false);
       },
     });
@@ -317,11 +313,11 @@ export class SettingsComponent {
         this.policy = { ...p };
         this.savedSitelessEnabled.set(p.sitelessAttendanceEnabled);
         this.savingPolicy.set(false);
-        this.notify.success('Políticas de registro guardadas.');
+        this.notify.success(this.transloco.translate('settings.policy.saved'));
       },
       error: () => {
         this.savingPolicy.set(false);
-        this.notify.error('No se pudieron guardar las políticas. Revisa la precisión GPS (entre 5 y 500 m).');
+        this.notify.error(this.transloco.translate('settings.policy.saveError'));
       },
     });
   }
@@ -376,7 +372,7 @@ export class SettingsComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No se pudo cargar la configuración de vacaciones.');
+        this.error.set(this.transloco.translate('settings.vacation.loadError'));
         this.loading.set(false);
       },
     });
@@ -391,11 +387,11 @@ export class SettingsComponent {
       next: (policy) => {
         this.model = { ...policy, tiers: [...(policy.tiers ?? [])].sort((a, b) => a.year - b.year) };
         this.saving.set(false);
-        this.notify.success('Configuración guardada.');
+        this.notify.success(this.transloco.translate('settings.vacation.saved'));
       },
       error: () => {
         this.saving.set(false);
-        this.notify.error('No se pudieron guardar los cambios. Revisa que no haya años repetidos.');
+        this.notify.error(this.transloco.translate('settings.vacation.saveError'));
       },
     });
   }

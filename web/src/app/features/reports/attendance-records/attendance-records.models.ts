@@ -29,13 +29,6 @@ export interface RecordSortState {
   direction: 'asc' | 'desc';
 }
 
-/** Etiquetas por defecto del estado; el color se resuelve aparte. */
-export const STATUS_LABELS: Record<AttendanceRecordStatus, string> = {
-  ACCEPTED: 'Aceptado',
-  REJECTED: 'Rechazado',
-  PENDING_REVIEW: 'En revisión',
-};
-
 /** Tono visual (clase .status-chip) por estado. */
 export const STATUS_TONES: Record<AttendanceRecordStatus, string> = {
   ACCEPTED: 'success',
@@ -43,29 +36,15 @@ export const STATUS_TONES: Record<AttendanceRecordStatus, string> = {
   PENDING_REVIEW: 'warning',
 };
 
-/** Etiquetas de respaldo del tipo de evento cuando no hay configuración de empresa. */
+/**
+ * Nombres por defecto del tipo de evento tal como los siembra el backend. Sirven para distinguir
+ * una etiqueta personalizada por la empresa (que se muestra tal cual, en cualquier idioma) de la
+ * predeterminada (que se traduce con `records.event.<CODE>`).
+ */
 export const DEFAULT_EVENT_TYPE_LABELS: Record<AttendanceEventType, string> = {
   ENTRADA: 'Entrada',
   SALIDA: 'Salida',
   INICIO_DESCANSO: 'Inicio de descanso',
   FIN_DESCANSO: 'Fin de descanso',
   CAMBIO_SITIO: 'Cambio de sitio',
-};
-
-/** Motivos de rechazo legibles (para el tooltip del estado). */
-export const REJECTION_LABELS: Record<string, string> = {
-  INVALID_QR: 'QR inválido',
-  OUT_OF_GEOFENCE: 'Fuera de la geocerca',
-  LOW_GPS_ACCURACY: 'Precisión de GPS baja',
-  GPS_UNAVAILABLE: 'GPS no disponible',
-  OUT_OF_SCHEDULE: 'Fuera de horario',
-  FRAUD_MOCK_LOCATION: 'Ubicación simulada',
-  FRAUD_ROOTED_DEVICE: 'Dispositivo comprometido',
-  FRAUD_GPS_SPOOF_APP: 'App de suplantación de GPS',
-  REPLAY_DETECTED: 'Registro duplicado',
-  INVALID_SEQUENCE: 'Secuencia inválida',
-  UNTRUSTED_DEVICE: 'Dispositivo no confiable',
-  PHOTO_REQUIRED: 'Falta evidencia fotográfica',
-  BIOMETRIC_REQUIRED: 'Falta verificación biométrica',
-  EVENT_TYPE_DISABLED: 'Tipo de evento deshabilitado',
 };

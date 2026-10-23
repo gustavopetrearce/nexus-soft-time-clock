@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
@@ -54,9 +55,10 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
     PageHeaderComponent,
     EmptyStateComponent,
     ReportTableComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header title="Reporte de asistencia" subtitle="Resumen por colaborador con filtros y exportación" />
+    <app-page-header [title]="'reports.title' | transloco" [subtitle]="'reports.subtitle' | transloco" />
 
     <div class="split-layout">
       <div class="split-main">
@@ -66,17 +68,17 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
             <div class="toolbar" [formGroup]="form">
               <mat-form-field appearance="outline" class="search">
                 <mat-icon matPrefix>search</mat-icon>
-                <mat-label>Buscar (nombre, número o centro)</mat-label>
+                <mat-label>{{ 'reports.search' | transloco }}</mat-label>
                 <input matInput formControlName="search" autocomplete="off" />
               </mat-form-field>
 
               <div class="dates">
                 <mat-form-field appearance="outline" class="date">
-                  <mat-label>Desde</mat-label>
+                  <mat-label>{{ 'scheduling.from' | transloco }}</mat-label>
                   <input matInput type="date" formControlName="from" />
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="date">
-                  <mat-label>Hasta</mat-label>
+                  <mat-label>{{ 'period.to' | transloco }}</mat-label>
                   <input matInput type="date" formControlName="to" />
                 </mat-form-field>
               </div>
@@ -85,7 +87,7 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
 
               <div class="toolbar-actions">
                 <button mat-stroked-button type="button" (click)="clearFilters()" [disabled]="activeFilters() === 0">
-                  <mat-icon>filter_alt_off</mat-icon> Limpiar filtros
+                  <mat-icon>filter_alt_off</mat-icon> {{ 'common.clearFilters' | transloco }}
                   @if (activeFilters() > 0) { <span class="filter-badge">{{ activeFilters() }}</span> }
                 </button>
                 <button mat-stroked-button type="button" (click)="export('excel')" [disabled]="filtered().length === 0">
@@ -101,18 +103,18 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
             <div class="indicators">
               <span class="count">
                 <strong>{{ filtered().length }}</strong>
-                @if (filtered().length !== total()) { <span class="muted">de {{ total() }}</span> }
-                registro{{ filtered().length === 1 ? '' : 's' }}
+                @if (filtered().length !== total()) { <span class="muted">{{ 'reports.ofTotal' | transloco: { total: total() } }}</span> }
+                {{ (filtered().length === 1 ? 'reports.recordOne' : 'reports.recordMany') | transloco }}
               </span>
               @if (activeFilters() > 0) {
                 <span class="hint-inline">
                   <mat-icon>filter_alt</mat-icon>
-                  Filtra en la fila que está bajo cada encabezado
+                  {{ 'reports.filterHint' | transloco }}
                 </span>
               }
               @if (demo()) {
-                <span class="demo-badge" title="Sin conexión al backend: se muestran datos de demostración.">
-                  <mat-icon>science</mat-icon> Datos de demostración
+                <span class="demo-badge" [title]="'reports.demoTooltip' | transloco">
+                  <mat-icon>science</mat-icon> {{ 'reports.demo' | transloco }}
                 </span>
               }
             </div>
@@ -131,13 +133,13 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
                 <mat-icon>cloud_off</mat-icon>
                 <p>{{ error() }}</p>
                 <button mat-flat-button color="primary" (click)="reload()">
-                  <mat-icon>refresh</mat-icon> Reintentar
+                  <mat-icon>refresh</mat-icon> {{ 'common.retry' | transloco }}
                 </button>
               </div>
             } @else if (filtered().length === 0) {
               <app-empty-state
                 icon="search_off"
-                [message]="total() === 0 ? 'No hay datos para el periodo seleccionado.' : 'Ningún colaborador coincide con los filtros aplicados.'"
+                [message]="(total() === 0 ? 'reports.emptyPeriod' : 'reports.emptyFilters') | transloco"
               />
             } @else {
               <app-report-table [rows]="paged()" [sort]="sort()" [filters]="filtersForm" (sortChange)="onSort($event)" />
@@ -247,6 +249,7 @@ export class ReportsComponent {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(ReportService);
   private readonly notify = inject(NotificationService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly skeletonRows = Array.from({ length: 8 }, (_, i) => i);
 
@@ -326,7 +329,7 @@ export class ReportsComponent {
         this.rawRows.set(generateMockReport());
         this.demo.set(true);
         this.loading.set(false);
-        this.notify.error('No se pudo cargar el reporte; se muestran datos de demostración.');
+        this.notify.error(this.transloco.translate('reports.loadErrorDemo'));
       },
     });
   }

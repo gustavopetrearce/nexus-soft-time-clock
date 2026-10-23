@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +10,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AppDatePipe } from '../../core/i18n/app-date.pipe';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
@@ -41,18 +41,18 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
     MatInputModule,
     MatSelectModule,
     MatProgressBarModule,
-    DatePipe,
     AppDatePipe,
     PageHeaderComponent,
     StatusChipComponent,
     EmptyStateComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header title="Vacaciones" subtitle="Revisa las solicitudes de tu equipo y apruébalas o recházalas">
+    <app-page-header [title]="'layout.nav.vacations' | transloco" [subtitle]="'vacations.subtitle' | transloco">
       @if (pendingCount() > 0) {
-        <span class="count-pill"><mat-icon>schedule</mat-icon> {{ pendingCount() }} pendientes</span>
+        <span class="count-pill"><mat-icon>schedule</mat-icon> {{ 'vacations.pendingCount' | transloco: { n: pendingCount() } }}</span>
       }
-      <button mat-flat-button color="primary" (click)="openCreate()"><mat-icon>add</mat-icon> Nueva solicitud</button>
+      <button mat-flat-button color="primary" (click)="openCreate()"><mat-icon>add</mat-icon> {{ 'vacations.newRequest' | transloco }}</button>
     </app-page-header>
 
     <div class="split-layout">
@@ -62,16 +62,16 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
             <div class="filter-bar">
               <mat-form-field appearance="outline" class="search">
                 <mat-icon matPrefix>search</mat-icon>
-                <mat-label>Buscar por colaborador o motivo</mat-label>
+                <mat-label>{{ 'vacations.search' | transloco }}</mat-label>
                 <input matInput [formControl]="searchControl" autocomplete="off" />
               </mat-form-field>
               <mat-form-field appearance="outline" style="width:200px">
-                <mat-label>Estado</mat-label>
+                <mat-label>{{ 'common.status' | transloco }}</mat-label>
                 <mat-select [formControl]="statusFilter" (selectionChange)="applyServerFilter()">
-                  <mat-option value="PENDING">Pendientes</mat-option>
-                  <mat-option value="APPROVED">Aprobadas</mat-option>
-                  <mat-option value="REJECTED">Rechazadas</mat-option>
-                  <mat-option value="">Todas</mat-option>
+                  <mat-option value="PENDING">{{ 'vacations.filter.pending' | transloco }}</mat-option>
+                  <mat-option value="APPROVED">{{ 'vacations.filter.approved' | transloco }}</mat-option>
+                  <mat-option value="REJECTED">{{ 'vacations.filter.rejected' | transloco }}</mat-option>
+                  <mat-option value="">{{ 'vacations.filter.all' | transloco }}</mat-option>
                 </mat-select>
               </mat-form-field>
             </div>
@@ -82,7 +82,7 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
             <div class="table-wrap">
               <table mat-table [dataSource]="filtered()" style="width:100%">
                 <ng-container matColumnDef="user">
-                  <th mat-header-cell *matHeaderCellDef>Colaborador</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'users.employee' | transloco }}</th>
                   <td mat-cell *matCellDef="let v">
                     <div class="who">
                       <span class="nm">{{ v.userName || v.userId }}</span>
@@ -91,24 +91,24 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="period">
-                  <th mat-header-cell *matHeaderCellDef>Periodo</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'vacations.period' | transloco }}</th>
                   <td mat-cell *matCellDef="let v" style="white-space:nowrap">
                     {{ v.startDate | appDate: 'dd MMM' }} – {{ v.endDate | appDate: 'dd MMM yyyy' }}
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="days">
-                  <th mat-header-cell *matHeaderCellDef style="text-align:right">Días</th>
+                  <th mat-header-cell *matHeaderCellDef style="text-align:right">{{ 'settings.vacation.days' | transloco }}</th>
                   <td mat-cell *matCellDef="let v" style="text-align:right">{{ v.days }}</td>
                 </ng-container>
                 <ng-container matColumnDef="status">
-                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | transloco }}</th>
                   <td mat-cell *matCellDef="let v"><app-status-chip [status]="v.status" /></td>
                 </ng-container>
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef></th>
                   <td mat-cell *matCellDef="let v" style="text-align:right">
                     <button mat-stroked-button (click)="select(v)">
-                      {{ v.status === 'PENDING' ? 'Revisar' : 'Ver' }}
+                      {{ (v.status === 'PENDING' ? 'vacations.review' : 'vacations.view') | transloco }}
                     </button>
                   </td>
                 </ng-container>
@@ -119,7 +119,7 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
             </div>
 
             @if (!loading() && filtered().length === 0) {
-              <app-empty-state icon="beach_access" message="No hay solicitudes para mostrar." />
+              <app-empty-state icon="beach_access" [message]="'vacations.empty' | transloco" />
             }
 
             <mat-paginator
@@ -137,36 +137,36 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
         <aside class="split-drawer">
           <div class="drawer-header">
             <div class="titles">
-              <h3>Solicitud de vacaciones</h3>
+              <h3>{{ 'vacations.request' | transloco }}</h3>
               <p class="sub">{{ v.userName || v.userId }}{{ v.employeeCode ? ' · ' + v.employeeCode : '' }}</p>
             </div>
-            <button mat-icon-button (click)="closeDrawer()" aria-label="Cerrar"><mat-icon>close</mat-icon></button>
+            <button mat-icon-button (click)="closeDrawer()" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
           </div>
           <div class="drawer-body">
-            <div class="detail-section-title">Detalle</div>
+            <div class="detail-section-title">{{ 'vacations.detail' | transloco }}</div>
             <div class="detail-grid">
-              <div class="detail-row"><span class="k">Periodo</span><span class="v">{{ v.startDate | appDate: 'dd MMM yyyy' }} – {{ v.endDate | appDate: 'dd MMM yyyy' }}</span></div>
-              <div class="detail-row"><span class="k">Días solicitados</span><span class="v">{{ v.days }}</span></div>
+              <div class="detail-row"><span class="k">{{ 'vacations.period' | transloco }}</span><span class="v">{{ v.startDate | appDate: 'dd MMM yyyy' }} – {{ v.endDate | appDate: 'dd MMM yyyy' }}</span></div>
+              <div class="detail-row"><span class="k">{{ 'vacations.requestedDays' | transloco }}</span><span class="v">{{ v.days }}</span></div>
               @if (v.reason) {
-                <div class="detail-row"><span class="k">Motivo</span><span class="v">{{ v.reason }}</span></div>
+                <div class="detail-row"><span class="k">{{ 'vacations.reason' | transloco }}</span><span class="v">{{ v.reason }}</span></div>
               }
-              <div class="detail-row"><span class="k">Solicitado el</span><span class="v">{{ v.createdAt | date: 'yyyy-MM-dd' }}</span></div>
-              <div class="detail-row"><span class="k">Estado actual</span><span class="v"><app-status-chip [status]="v.status" /></span></div>
+              <div class="detail-row"><span class="k">{{ 'vacations.requestedOn' | transloco }}</span><span class="v">{{ v.createdAt | appDate: 'mediumDate' }}</span></div>
+              <div class="detail-row"><span class="k">{{ 'vacations.currentStatus' | transloco }}</span><span class="v"><app-status-chip [status]="v.status" /></span></div>
               @if (v.resolvedBy) {
-                <div class="detail-row"><span class="k">Resuelto por</span><span class="v">{{ v.resolvedBy }}</span></div>
+                <div class="detail-row"><span class="k">{{ 'vacations.resolvedBy' | transloco }}</span><span class="v">{{ v.resolvedBy }}</span></div>
               }
               @if (v.resolutionNote) {
-                <div class="detail-row"><span class="k">Nota</span><span class="v">{{ v.resolutionNote }}</span></div>
+                <div class="detail-row"><span class="k">{{ 'vacations.note' | transloco }}</span><span class="v">{{ v.resolutionNote }}</span></div>
               }
             </div>
 
             @if (v.status === 'PENDING') {
-              <div class="detail-section-title">Resolución</div>
+              <div class="detail-section-title">{{ 'vacations.resolution' | transloco }}</div>
               <form [formGroup]="resolveForm">
                 <mat-form-field appearance="outline" class="drawer-field">
-                  <mat-label>Nota para el colaborador</mat-label>
+                  <mat-label>{{ 'vacations.noteForEmployee' | transloco }}</mat-label>
                   <textarea matInput formControlName="note" rows="3"
-                    placeholder="Opcional — se muestra al colaborador al notificar la decisión."></textarea>
+                    [placeholder]="'vacations.notePlaceholder' | transloco"></textarea>
                 </mat-form-field>
               </form>
             }
@@ -174,10 +174,10 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
           @if (v.status === 'PENDING') {
             <div class="drawer-actions">
               <button mat-stroked-button color="warn" [disabled]="saving()" (click)="resolve(v, 'REJECTED')">
-                <mat-icon>close</mat-icon> Rechazar
+                <mat-icon>close</mat-icon> {{ 'vacations.reject' | transloco }}
               </button>
               <button mat-flat-button color="primary" [disabled]="saving()" (click)="resolve(v, 'APPROVED')">
-                <mat-icon>check</mat-icon> Aprobar
+                <mat-icon>check</mat-icon> {{ 'users.edit.approve' | transloco }}
               </button>
             </div>
           }
@@ -200,6 +200,7 @@ export class VacationsComponent {
   private readonly service = inject(VacationService);
   private readonly notify = inject(NotificationService);
   private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly columns = ['user', 'period', 'days', 'status', 'actions'];
   protected readonly requests = signal<VacationRequest[]>([]);
@@ -251,7 +252,7 @@ export class VacationsComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No se pudo cargar la bandeja (¿permiso vacation:approve?).');
+        this.error.set(this.transloco.translate('vacations.loadError'));
         this.loading.set(false);
       },
     });
@@ -284,13 +285,13 @@ export class VacationsComponent {
     this.service.resolve(v.id, body).subscribe({
       next: () => {
         this.saving.set(false);
-        this.notify.success(resolution === 'APPROVED' ? 'Solicitud aprobada.' : 'Solicitud rechazada.');
+        this.notify.success(this.transloco.translate(resolution === 'APPROVED' ? 'vacations.approved' : 'vacations.rejected'));
         this.closeDrawer();
         this.reload();
       },
       error: () => {
         this.saving.set(false);
-        this.notify.error('No se pudo resolver la solicitud.');
+        this.notify.error(this.transloco.translate('vacations.resolveError'));
       },
     });
   }

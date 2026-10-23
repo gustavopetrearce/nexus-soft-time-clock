@@ -7,13 +7,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import * as XLSX from 'xlsx';
 
 import { LanguageService } from '../../core/i18n/language.service';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
 import { AttendanceDetailDialogComponent } from './attendance-detail-dialog.component';
-import { AttendanceEvent, EVENT_LABELS, EVENT_OPTIONS, REJECTION_LABELS, STATUS_LABELS } from './attendance-events.models';
+import { AttendanceEvent, EVENT_CODES, eventLabel, recordStatusLabel, rejectionLabel } from './attendance-events.models';
 import { AttendanceEventsService } from './attendance-events.service';
 
 type Period = 'week' | 'fortnight' | 'month' | 'range';
@@ -29,10 +30,11 @@ type Period = 'week' | 'fortnight' | 'month' | 'range';
   imports: [
     MatCardModule, MatTableModule, MatButtonModule, MatButtonToggleModule, MatDialogModule,
     MatIconModule, MatProgressBarModule, MatTooltipModule, PageHeaderComponent, EmptyStateComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header title="Entradas y salidas" subtitle="Registros individuales de asistencia: a qué hora ficha cada persona">
-      <button mat-flat-button color="primary" (click)="exportExcel()"><mat-icon>download</mat-icon> Exportar Excel</button>
+    <app-page-header [title]="'layout.nav.attendanceEvents' | transloco" [subtitle]="'attendanceEvents.subtitle' | transloco">
+      <button mat-flat-button color="primary" (click)="exportExcel()"><mat-icon>download</mat-icon> {{ 'people.exportExcel' | transloco }}</button>
     </app-page-header>
 
     <mat-card>
@@ -40,21 +42,21 @@ type Period = 'week' | 'fortnight' | 'month' | 'range';
         <!-- Presets de periodo -->
         <div class="period-bar">
           <mat-button-toggle-group [value]="period()" (change)="setPeriod($event.value)" hideSingleSelectionIndicator>
-            <mat-button-toggle value="week">Semana</mat-button-toggle>
-            <mat-button-toggle value="fortnight">Quincena</mat-button-toggle>
-            <mat-button-toggle value="month">Mes</mat-button-toggle>
-            <mat-button-toggle value="range">Rango</mat-button-toggle>
+            <mat-button-toggle value="week">{{ 'period.week' | transloco }}</mat-button-toggle>
+            <mat-button-toggle value="fortnight">{{ 'period.fortnight' | transloco }}</mat-button-toggle>
+            <mat-button-toggle value="month">{{ 'period.month' | transloco }}</mat-button-toggle>
+            <mat-button-toggle value="range">{{ 'period.range' | transloco }}</mat-button-toggle>
           </mat-button-toggle-group>
 
           <div class="dates">
-            <label>Desde <input type="date" [value]="from()" (change)="onDate('from', $event)" /></label>
-            <label>Hasta <input type="date" [value]="to()" (change)="onDate('to', $event)" /></label>
+            <label>{{ 'scheduling.from' | transloco }} <input type="date" [value]="from()" (change)="onDate('from', $event)" /></label>
+            <label>{{ 'period.to' | transloco }} <input type="date" [value]="to()" (change)="onDate('to', $event)" /></label>
           </div>
           <span class="spacer"></span>
           @if (hasColumnFilters()) {
-            <button mat-button (click)="clearFilters()"><mat-icon>filter_alt_off</mat-icon> Limpiar</button>
+            <button mat-button (click)="clearFilters()"><mat-icon>filter_alt_off</mat-icon> {{ 'common.clear' | transloco }}</button>
           }
-          <span class="muted">{{ filtered().length }} registros</span>
+          <span class="muted">{{ 'attendanceEvents.count' | transloco: { n: filtered().length } }}</span>
         </div>
 
         @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
@@ -63,60 +65,60 @@ type Period = 'week' | 'fortnight' | 'month' | 'range';
         <div class="table-wrap">
           <table mat-table [dataSource]="filtered()" style="width:100%">
             <ng-container matColumnDef="date">
-              <th mat-header-cell *matHeaderCellDef>Fecha y hora</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'attendanceEvents.col.date' | transloco }}</th>
               <td mat-cell *matCellDef="let e"><span class="mono">{{ fmt(e.serverTime) }}</span></td>
             </ng-container>
             <ng-container matColumnDef="user">
-              <th mat-header-cell *matHeaderCellDef>Colaborador</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'users.employee' | transloco }}</th>
               <td mat-cell *matCellDef="let e">
                 <div class="nm">{{ e.employeeName || e.userId }}</div>
                 <div class="sub">{{ e.employeeCode || '—' }}</div>
               </td>
             </ng-container>
             <ng-container matColumnDef="event">
-              <th mat-header-cell *matHeaderCellDef>Evento</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'attendanceEvents.col.event' | transloco }}</th>
               <td mat-cell *matCellDef="let e"><span class="chip" [class.in]="e.eventType === 'ENTRADA' || e.eventType === 'FIN_DESCANSO'" [class.out]="e.eventType === 'SALIDA' || e.eventType === 'INICIO_DESCANSO'">{{ eventLabel(e.eventType) }}</span></td>
             </ng-container>
             <ng-container matColumnDef="site">
-              <th mat-header-cell *matHeaderCellDef>Centro de trabajo</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'attendanceEvents.col.site' | transloco }}</th>
               <td mat-cell *matCellDef="let e">
                 @if (e.siteless) {
-                  <span class="siteless" title="Registro sin centro: no se validó geocerca">Sin centro</span>
+                  <span class="siteless" [title]="'attendanceEvents.sitelessTooltip' | transloco">{{ 'attendanceEvents.siteless' | transloco }}</span>
                 } @else {
                   {{ e.workSite || '—' }}
                 }
               </td>
             </ng-container>
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | transloco }}</th>
               <td mat-cell *matCellDef="let e"><span class="chip" [class.ok]="e.status === 'ACCEPTED'" [class.bad]="e.status === 'REJECTED'" [matTooltip]="rejectionTooltip(e)" [matTooltipDisabled]="!rejectionTooltip(e)">{{ statusLabel(e.status) }}</span></td>
             </ng-container>
 
             <!-- Fila de filtros (Excel) -->
             <ng-container matColumnDef="date-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell"><input class="cf" placeholder="Filtrar…" (input)="setF('date', $event)" /></th>
+              <th mat-header-cell *matHeaderCellDef class="fcell"><input class="cf" [placeholder]="'common.filter' | transloco" (input)="setF('date', $event)" /></th>
             </ng-container>
             <ng-container matColumnDef="user-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell"><input class="cf" placeholder="Nombre o código" (input)="setF('user', $event)" /></th>
+              <th mat-header-cell *matHeaderCellDef class="fcell"><input class="cf" [placeholder]="'attendanceEvents.nameOrCode' | transloco" (input)="setF('user', $event)" /></th>
             </ng-container>
             <ng-container matColumnDef="event-f">
               <th mat-header-cell *matHeaderCellDef class="fcell">
-                <select class="cf" (change)="setF('event', $event)"><option value="">Todos</option>@for (o of eventOptions; track o.code) { <option [value]="o.code">{{ o.label }}</option> }</select>
+                <select class="cf" (change)="setF('event', $event)"><option value="">{{ 'common.all' | transloco }}</option>@for (o of eventCodes; track o) { <option [value]="o">{{ eventLabel(o) }}</option> }</select>
               </th>
             </ng-container>
             <ng-container matColumnDef="site-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell"><input class="cf" placeholder="Filtrar…" (input)="setF('site', $event)" /></th>
+              <th mat-header-cell *matHeaderCellDef class="fcell"><input class="cf" [placeholder]="'common.filter' | transloco" (input)="setF('site', $event)" /></th>
             </ng-container>
             <ng-container matColumnDef="status-f">
               <th mat-header-cell *matHeaderCellDef class="fcell">
-                <select class="cf" (change)="setF('status', $event)"><option value="">Todos</option><option value="ACCEPTED">Aceptado</option><option value="REJECTED">Rechazado</option><option value="PENDING_REVIEW">En revisión</option></select>
+                <select class="cf" (change)="setF('status', $event)"><option value="">{{ 'common.all' | transloco }}</option>@for (s of statusCodes; track s) { <option [value]="s">{{ statusLabel(s) }}</option> }</select>
               </th>
             </ng-container>
             <ng-container matColumnDef="evidence">
-              <th mat-header-cell *matHeaderCellDef class="ecell">Foto</th>
+              <th mat-header-cell *matHeaderCellDef class="ecell">{{ 'attendanceEvents.col.photo' | transloco }}</th>
               <td mat-cell *matCellDef="let e" class="ecell">
                 @if (e.hasEvidence) {
-                  <mat-icon class="has-photo" matTooltip="Ver evidencia fotográfica">photo_camera</mat-icon>
+                  <mat-icon class="has-photo" [matTooltip]="'attendanceEvents.viewPhoto' | transloco">photo_camera</mat-icon>
                 } @else {
                   <span class="muted">—</span>
                 }
@@ -133,7 +135,7 @@ type Period = 'week' | 'fortnight' | 'month' | 'range';
         </div>
 
         @if (!loading() && filtered().length === 0) {
-          <app-empty-state icon="fact_check" message="No hay registros de asistencia en este periodo." />
+          <app-empty-state icon="fact_check" [message]="'attendanceEvents.empty' | transloco" />
         }
       </mat-card-content>
     </mat-card>
@@ -170,10 +172,12 @@ export class AttendanceEventsComponent {
   private readonly service = inject(AttendanceEventsService);
   private readonly dialog = inject(MatDialog);
   private readonly language = inject(LanguageService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly columns = ['date', 'user', 'event', 'site', 'status', 'evidence'];
   protected readonly filterColumns = ['date-f', 'user-f', 'event-f', 'site-f', 'status-f', 'evidence-f'];
-  protected readonly eventOptions = EVENT_OPTIONS;
+  protected readonly eventCodes = EVENT_CODES;
+  protected readonly statusCodes = ['ACCEPTED', 'REJECTED', 'PENDING_REVIEW'];
 
   protected readonly events = signal<AttendanceEvent[]>([]);
   protected readonly loading = signal(false);
@@ -191,7 +195,7 @@ export class AttendanceEventsComponent {
       if (f['date'] && !this.fmt(e.serverTime).toLowerCase().includes(f['date'].toLowerCase())) return false;
       if (f['user'] && !`${e.employeeName ?? ''} ${e.employeeCode ?? ''}`.toLowerCase().includes(f['user'].toLowerCase())) return false;
       if (f['event'] && e.eventType !== f['event']) return false;
-      if (f['site'] && !(e.siteless ? 'sin centro' : (e.workSite ?? '').toLowerCase()).includes(f['site'].toLowerCase())) return false;
+      if (f['site'] && !(e.siteless ? this.transloco.translate('attendanceEvents.siteless') : (e.workSite ?? '')).toLowerCase().includes(f['site'].toLowerCase())) return false;
       if (f['status'] && e.status !== f['status']) return false;
       return true;
     });
@@ -233,7 +237,7 @@ export class AttendanceEventsComponent {
     this.error.set(null);
     this.service.list(this.from(), this.to()).subscribe({
       next: (rows) => { this.events.set(rows); this.loading.set(false); },
-      error: () => { this.error.set('No se pudo cargar el reporte (¿permiso report:export?).'); this.loading.set(false); },
+      error: () => { this.error.set(this.transloco.translate('attendanceEvents.loadError')); this.loading.set(false); },
     });
   }
 
@@ -245,26 +249,29 @@ export class AttendanceEventsComponent {
   // La evidencia no se incluye en la exportación: su URL caduca a los pocos minutos y dentro de
   // un Excel sería un enlace roto que aparenta ser la foto.
   protected exportExcel(): void {
-    const header = ['Fecha y hora', 'Colaborador', 'Código', 'Evento', 'Centro de trabajo', 'Estado', 'Motivo de rechazo'];
+    const header = [
+      'attendanceEvents.col.date', 'users.employee', 'common.code', 'attendanceEvents.col.event',
+      'attendanceEvents.col.site', 'common.status', 'attendanceEvents.col.rejection',
+    ].map((k) => this.transloco.translate(k));
     const rows = this.filtered().map((e) => [
       this.fmt(e.serverTime), e.employeeName ?? e.userId, e.employeeCode ?? '',
-      this.eventLabel(e.eventType), e.siteless ? 'Sin centro' : (e.workSite ?? ''),
+      this.eventLabel(e.eventType), e.siteless ? this.transloco.translate('attendanceEvents.siteless') : (e.workSite ?? ''),
       this.statusLabel(e.status), this.rejectionTooltip(e),
     ]);
     const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const book = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(book, sheet, 'Entradas y salidas');
+    XLSX.utils.book_append_sheet(book, sheet, this.transloco.translate('layout.nav.attendanceEvents'));
     XLSX.writeFile(book, `entradas-salidas-${this.from()}_a_${this.to()}.xlsx`);
   }
 
   // ---- helpers ----
-  protected eventLabel(code: string): string { return EVENT_LABELS[code] ?? code; }
-  protected statusLabel(code: string): string { return STATUS_LABELS[code] ?? code; }
+  protected eventLabel(code: string): string { return eventLabel(code); }
+  protected statusLabel(code: string): string { return recordStatusLabel(code); }
 
   /** Motivo de rechazo legible para el tooltip del estado (vacío si no aplica). */
   protected rejectionTooltip(e: AttendanceEvent): string {
     if (!e.rejectionReason) return '';
-    return REJECTION_LABELS[e.rejectionReason] ?? e.rejectionReason;
+    return rejectionLabel(e.rejectionReason);
   }
 
   protected fmt(iso: string): string {

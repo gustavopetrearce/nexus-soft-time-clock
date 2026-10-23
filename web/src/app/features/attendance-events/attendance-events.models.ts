@@ -1,3 +1,5 @@
+import { translateOr } from '../../core/i18n/translate-or';
+
 /** Un registro individual de asistencia (espejo de AttendanceEventDto). */
 export interface AttendanceEvent {
   recordId: string;
@@ -22,38 +24,20 @@ export interface AttendanceEvent {
   siteless: boolean;
 }
 
-/** Etiquetas en español de los tipos de evento. */
-export const EVENT_LABELS: Record<string, string> = {
-  ENTRADA: 'Hora entrada',
-  SALIDA: 'Hora salida',
-  INICIO_DESCANSO: 'Salida a comida',
-  FIN_DESCANSO: 'Regreso de comida',
-  CAMBIO_SITIO: 'Cambio de sitio',
-};
+/** Tipos de evento en el orden en que se ofrecen en los filtros. */
+export const EVENT_CODES = ['ENTRADA', 'SALIDA', 'INICIO_DESCANSO', 'FIN_DESCANSO', 'CAMBIO_SITIO'] as const;
 
-export const EVENT_OPTIONS = Object.entries(EVENT_LABELS).map(([code, label]) => ({ code, label }));
+/** Etiqueta del tipo de evento en el idioma activo (`attendance.event.<CODE>`); si no existe, el código. */
+export function eventLabel(code: string): string {
+  return translateOr(`attendance.event.${code}`, code);
+}
 
-export const STATUS_LABELS: Record<string, string> = {
-  ACCEPTED: 'Aceptado',
-  REJECTED: 'Rechazado',
-  PENDING_REVIEW: 'En revisión',
-};
+/** Estado del registro en el idioma activo (`attendance.status.<CODE>`). */
+export function recordStatusLabel(code: string): string {
+  return translateOr(`attendance.status.${code}`, code);
+}
 
-/** Motivos de rechazo legibles (para el tooltip del estado). */
-export const REJECTION_LABELS: Record<string, string> = {
-  INVALID_QR: 'QR inválido',
-  OUT_OF_GEOFENCE: 'Fuera de la geocerca',
-  LOW_GPS_ACCURACY: 'Precisión de GPS baja',
-  GPS_UNAVAILABLE: 'GPS no disponible',
-  OUT_OF_SCHEDULE: 'Fuera de horario',
-  FRAUD_MOCK_LOCATION: 'Ubicación simulada',
-  FRAUD_ROOTED_DEVICE: 'Dispositivo comprometido',
-  FRAUD_GPS_SPOOF_APP: 'App de suplantación de GPS',
-  REPLAY_DETECTED: 'Registro duplicado',
-  INVALID_SEQUENCE: 'Secuencia inválida',
-  UNTRUSTED_DEVICE: 'Dispositivo no confiable',
-  PHOTO_REQUIRED: 'Falta evidencia fotográfica',
-  BIOMETRIC_REQUIRED: 'Falta verificación biométrica',
-  EVENT_TYPE_DISABLED: 'Tipo de evento deshabilitado',
-  SITELESS_NOT_ALLOWED: 'La empresa no permite registrar sin centro de trabajo',
-};
+/** Motivo de rechazo legible (`attendance.rejection.<CODE>`), p. ej. para el tooltip del estado. */
+export function rejectionLabel(code: string): string {
+  return translateOr(`attendance.rejection.${code}`, code);
+}

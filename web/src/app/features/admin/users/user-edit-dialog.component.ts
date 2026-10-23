@@ -9,16 +9,17 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { forkJoin, of } from 'rxjs';
 
 import { AppDatePipe } from '../../../core/i18n/app-date.pipe';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
 import { NotificationService } from '../../../core/ui/notification.service';
-import { problemMessage } from '../../../core/ui/problem-detail';
+import { localizedProblem } from '../../../core/ui/problem-detail';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
-import { Role } from '../roles/role.models';
-import { Device, DEVICE_STATUS_LABELS } from './device.models';
+import { Role, roleLabel } from '../roles/role.models';
+import { Device } from './device.models';
 import { DeviceService } from './device.service';
 import { EmployeeProfile, GENDERS } from './employee-profile.models';
 import { EmployeeProfileService } from './employee-profile.service';
@@ -51,15 +52,16 @@ export interface UserEditData {
     MatProgressBarModule,
     StatusChipComponent,
     AppDatePipe,
+    TranslocoPipe,
   ],
   template: `
     <div class="m-head">
       <div class="badge-ic">{{ initials }}</div>
       <div class="t">
         <h2>{{ data.user.firstName }} {{ data.user.lastName }}</h2>
-        <p>{{ data.user.email }}<span class="sep">·</span>{{ data.user.employeeCode || 'sin código' }}</p>
+        <p>{{ data.user.email }}<span class="sep">·</span>{{ data.user.employeeCode || ('users.edit.noCode' | transloco) }}</p>
       </div>
-      <button mat-icon-button (click)="close(false)" aria-label="Cerrar"><mat-icon>close</mat-icon></button>
+      <button mat-icon-button (click)="close(false)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
     </div>
 
     @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
@@ -67,43 +69,43 @@ export interface UserEditData {
     <form [formGroup]="form" class="m-body">
       <!-- Datos personales (perfil) -->
       <section class="fs">
-        <div class="fs-head"><mat-icon>person</mat-icon><h4>Datos personales</h4><span class="opt">Opcional</span></div>
+        <div class="fs-head"><mat-icon>person</mat-icon><h4>{{ 'profile.personal' | transloco }}</h4><span class="opt">{{ 'users.form.optional' | transloco }}</span></div>
         <div class="grid2">
           <mat-form-field appearance="outline">
-            <mat-label>Género</mat-label>
+            <mat-label>{{ 'profile.gender' | transloco }}</mat-label>
             <mat-select formControlName="gender">
-              <mat-option [value]="''">Sin especificar</mat-option>
-              @for (g of genders; track g.value) { <mat-option [value]="g.value">{{ g.label }}</mat-option> }
+              <mat-option [value]="''">{{ 'profile.unspecified' | transloco }}</mat-option>
+              @for (g of genders; track g) { <mat-option [value]="g">{{ 'gender.' + g | transloco }}</mat-option> }
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Teléfono</mat-label>
+            <mat-label>{{ 'profile.phone' | transloco }}</mat-label>
             <mat-icon matPrefix>call</mat-icon>
             <input matInput type="tel" formControlName="phone" placeholder="+52 55 1234 5678" />
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Fecha de nacimiento</mat-label>
+            <mat-label>{{ 'profile.birthDate' | transloco }}</mat-label>
             <input matInput type="date" formControlName="birthDate" />
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Fecha de ingreso</mat-label>
+            <mat-label>{{ 'profile.hireDate' | transloco }}</mat-label>
             <input matInput type="date" formControlName="hireDate" />
-            <mat-hint>Determina la antigüedad y los días de vacaciones.</mat-hint>
+            <mat-hint>{{ 'profile.hireDateHint' | transloco }}</mat-hint>
           </mat-form-field>
         </div>
 
         <mat-accordion class="opt-acc">
           <mat-expansion-panel [expanded]="hasEmergency()">
             <mat-expansion-panel-header>
-              <mat-panel-title><mat-icon>call</mat-icon> Contacto de emergencia</mat-panel-title>
+              <mat-panel-title><mat-icon>call</mat-icon> {{ 'profile.emergency' | transloco }}</mat-panel-title>
             </mat-expansion-panel-header>
             <div class="grid2">
               <mat-form-field appearance="outline">
-                <mat-label>Nombre del contacto</mat-label>
+                <mat-label>{{ 'profile.contactName' | transloco }}</mat-label>
                 <input matInput formControlName="emergencyContactName" />
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Teléfono del contacto</mat-label>
+                <mat-label>{{ 'profile.contactPhone' | transloco }}</mat-label>
                 <mat-icon matPrefix>call</mat-icon>
                 <input matInput type="tel" formControlName="emergencyContactPhone" />
               </mat-form-field>
@@ -111,11 +113,11 @@ export interface UserEditData {
           </mat-expansion-panel>
           <mat-expansion-panel [expanded]="!!form.controls.address.value">
             <mat-expansion-panel-header>
-              <mat-panel-title><mat-icon>place</mat-icon> Dirección</mat-panel-title>
+              <mat-panel-title><mat-icon>place</mat-icon> {{ 'profile.address' | transloco }}</mat-panel-title>
             </mat-expansion-panel-header>
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Dirección</mat-label>
-              <textarea matInput rows="2" formControlName="address" placeholder="Calle, número, colonia, ciudad, C.P."></textarea>
+              <mat-label>{{ 'profile.address' | transloco }}</mat-label>
+              <textarea matInput rows="2" formControlName="address" [placeholder]="'profile.addressPlaceholder' | transloco"></textarea>
             </mat-form-field>
           </mat-expansion-panel>
         </mat-accordion>
@@ -123,12 +125,12 @@ export interface UserEditData {
 
       <!-- Estado -->
       <section class="fs">
-        <div class="fs-head"><mat-icon>badge</mat-icon><h4>Cuenta</h4></div>
+        <div class="fs-head"><mat-icon>badge</mat-icon><h4>{{ 'users.edit.account' | transloco }}</h4></div>
         <div class="grid2">
           <mat-form-field appearance="outline">
-            <mat-label>Estado</mat-label>
+            <mat-label>{{ 'common.status' | transloco }}</mat-label>
             <mat-select formControlName="status">
-              @for (s of statuses; track s) { <mat-option [value]="s">{{ s }}</mat-option> }
+              @for (s of statuses; track s) { <mat-option [value]="s">{{ 'status.' + s | transloco }}</mat-option> }
             </mat-select>
           </mat-form-field>
           <div class="chip-cell"><app-status-chip [status]="form.controls.status.value" /></div>
@@ -136,24 +138,24 @@ export interface UserEditData {
 
         @if (!showReset()) {
           <button mat-stroked-button type="button" (click)="showReset.set(true)">
-            <mat-icon>lock_reset</mat-icon> Restablecer contraseña
+            <mat-icon>lock_reset</mat-icon> {{ 'users.edit.resetPassword' | transloco }}
           </button>
         } @else {
           <div class="reset-block">
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Nueva contraseña</mat-label>
+              <mat-label>{{ 'password.new' | transloco }}</mat-label>
               <mat-icon matPrefix>lock</mat-icon>
               <input matInput [type]="showResetPw() ? 'text' : 'password'" [formControl]="resetControl" autocomplete="new-password" />
-              <button mat-icon-button matSuffix type="button" (click)="showResetPw.set(!showResetPw())" [attr.aria-label]="showResetPw() ? 'Ocultar' : 'Mostrar'">
+              <button mat-icon-button matSuffix type="button" (click)="showResetPw.set(!showResetPw())" [attr.aria-label]="(showResetPw() ? 'common.hide' : 'common.show') | transloco">
                 <mat-icon>{{ showResetPw() ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
-              <mat-hint><a class="link" (click)="generateResetPassword()">Generar contraseña segura</a> · mínimo 8 caracteres</mat-hint>
+              <mat-hint><a class="link" (click)="generateResetPassword()">{{ 'password.generate' | transloco }}</a> · {{ 'password.minLength' | transloco }}</mat-hint>
             </mat-form-field>
             <div class="reset-actions">
               <button mat-flat-button color="primary" type="button" [disabled]="resetControl.invalid || resetting()" (click)="resetPassword()">
-                <mat-icon>check</mat-icon> Aplicar
+                <mat-icon>check</mat-icon> {{ 'users.edit.apply' | transloco }}
               </button>
-              <button mat-button type="button" (click)="cancelReset()">Cancelar</button>
+              <button mat-button type="button" (click)="cancelReset()">{{ 'common.cancel' | transloco }}</button>
             </div>
           </div>
         }
@@ -161,14 +163,14 @@ export interface UserEditData {
 
       <!-- Roles -->
       <section class="fs">
-        <div class="fs-head"><mat-icon>shield</mat-icon><h4>Roles</h4></div>
+        <div class="fs-head"><mat-icon>shield</mat-icon><h4>{{ 'users.roles' | transloco }}</h4></div>
         @if (data.assignableRoles.length === 0) {
-          <p class="muted">No tienes roles asignables (no puedes otorgar roles de mayor privilegio que el propio).</p>
+          <p class="muted">{{ 'users.edit.noAssignableRoles' | transloco }}</p>
         }
         <div class="roles-list">
           @for (role of data.assignableRoles; track role.code) {
             <mat-checkbox [checked]="isRole(role.code)" (change)="toggleRole(role.code, $event.checked)">
-              {{ role.name }} <span class="muted">({{ role.code }})</span>
+              {{ roleLabel(role.code) }} <span class="muted">({{ role.code }})</span>
             </mat-checkbox>
           }
         </div>
@@ -177,11 +179,11 @@ export interface UserEditData {
       <!-- Dispositivos vinculados (RF-28, RN-27) -->
       @if (canManageDevices) {
         <section class="fs">
-          <div class="fs-head"><mat-icon>smartphone</mat-icon><h4>Dispositivos</h4></div>
+          <div class="fs-head"><mat-icon>smartphone</mat-icon><h4>{{ 'users.edit.devices' | transloco }}</h4></div>
           @if (devicesLoading()) {
-            <p class="muted">Cargando dispositivos…</p>
+            <p class="muted">{{ 'users.edit.loadingDevices' | transloco }}</p>
           } @else if (devices().length === 0) {
-            <p class="muted">Este colaborador aún no tiene dispositivos registrados.</p>
+            <p class="muted">{{ 'users.edit.noDevices' | transloco }}</p>
           } @else {
             <div class="dev-list">
               @for (d of devices(); track d.id) {
@@ -191,7 +193,7 @@ export interface UserEditData {
                     <span class="dev-model">{{ d.model || d.deviceIdentifier }}</span>
                     <span class="muted dev-meta">
                       {{ d.osVersion || d.platform }}
-                      @if (d.lastSeenAt) { <span class="sep">·</span> visto {{ d.lastSeenAt | appDate: 'short' }} }
+                      @if (d.lastSeenAt) { <span class="sep">·</span> {{ 'users.edit.lastSeen' | transloco: { date: (d.lastSeenAt | appDate: 'short') } }} }
                     </span>
                   </div>
                   <span class="dev-status" [class.trusted]="d.status === 'TRUSTED'" [class.pending]="d.status === 'PENDING'" [class.blocked]="d.status === 'BLOCKED'">
@@ -200,12 +202,12 @@ export interface UserEditData {
                   <div class="dev-actions">
                     @if (d.status !== 'TRUSTED') {
                       <button mat-stroked-button color="primary" type="button" [disabled]="devicesBusy()" (click)="approveDevice(d)">
-                        <mat-icon>verified_user</mat-icon> Aprobar
+                        <mat-icon>verified_user</mat-icon> {{ 'users.edit.approve' | transloco }}
                       </button>
                     }
                     @if (d.status !== 'BLOCKED') {
                       <button mat-stroked-button color="warn" type="button" [disabled]="devicesBusy()" (click)="revokeDevice(d)">
-                        <mat-icon>block</mat-icon> Revocar
+                        <mat-icon>block</mat-icon> {{ 'users.edit.revoke' | transloco }}
                       </button>
                     }
                   </div>
@@ -219,9 +221,9 @@ export interface UserEditData {
 
     <div class="m-foot">
       <span class="fill"></span>
-      <button mat-button (click)="close(false)">Cancelar</button>
+      <button mat-button (click)="close(false)">{{ 'common.cancel' | transloco }}</button>
       <button mat-flat-button color="primary" [disabled]="saving()" (click)="submit()">
-        <mat-icon>save</mat-icon> Guardar cambios
+        <mat-icon>save</mat-icon> {{ 'common.saveChanges' | transloco }}
       </button>
     </div>
   `,
@@ -277,10 +279,12 @@ export class UserEditDialogComponent {
   private readonly auth = inject(AuthStore);
   private readonly notify = inject(NotificationService);
   private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
   private readonly dialogRef = inject(MatDialogRef<UserEditDialogComponent, boolean>);
   protected readonly data = inject<UserEditData>(MAT_DIALOG_DATA);
 
   protected readonly genders = GENDERS;
+  protected readonly roleLabel = roleLabel;
   protected readonly statuses = USER_STATUSES;
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -348,7 +352,7 @@ export class UserEditDialogComponent {
   }
 
   protected statusLabel(status: Device['status']): string {
-    return DEVICE_STATUS_LABELS[status];
+    return this.transloco.translate(`users.edit.deviceStatus.${status}`);
   }
 
   protected approveDevice(device: Device): void {
@@ -357,11 +361,11 @@ export class UserEditDialogComponent {
       next: (updated) => {
         this.devices.update((list) => list.map((d) => (d.id === updated.id ? updated : d)));
         this.devicesBusy.set(false);
-        this.notify.success('Dispositivo aprobado.');
+        this.notify.success(this.transloco.translate('users.edit.deviceApproved'));
       },
       error: () => {
         this.devicesBusy.set(false);
-        this.notify.error('No se pudo aprobar el dispositivo.');
+        this.notify.error(this.transloco.translate('users.edit.deviceApproveError'));
       },
     });
   }
@@ -370,8 +374,8 @@ export class UserEditDialogComponent {
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
-          title: 'Revocar dispositivo',
-          message: 'El colaborador no podrá registrar asistencia desde este dispositivo hasta que se apruebe de nuevo. ¿Continuar?',
+          title: this.transloco.translate('users.edit.revokeTitle'),
+          message: this.transloco.translate('users.edit.revokeMessage'),
           color: 'warn',
         },
       })
@@ -383,11 +387,11 @@ export class UserEditDialogComponent {
           next: (updated) => {
             this.devices.update((list) => list.map((d) => (d.id === updated.id ? updated : d)));
             this.devicesBusy.set(false);
-            this.notify.success('Dispositivo revocado.');
+            this.notify.success(this.transloco.translate('users.edit.deviceRevoked'));
           },
           error: () => {
             this.devicesBusy.set(false);
-            this.notify.error('No se pudo revocar el dispositivo.');
+            this.notify.error(this.transloco.translate('users.edit.deviceRevokeError'));
           },
         });
       });
@@ -432,8 +436,8 @@ export class UserEditDialogComponent {
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
-          title: 'Restablecer contraseña',
-          message: `¿Confirmás establecer una nueva contraseña para "${name}"? Deberás comunicársela para que pueda ingresar.`,
+          title: this.transloco.translate('users.edit.resetPassword'),
+          message: this.transloco.translate('users.edit.resetMessage', { name }),
           color: 'warn',
         },
       })
@@ -444,12 +448,12 @@ export class UserEditDialogComponent {
         this.userService.resetPassword(this.data.user.id, this.resetControl.value).subscribe({
           next: () => {
             this.resetting.set(false);
-            this.notify.success('Contraseña restablecida.');
+            this.notify.success(this.transloco.translate('users.edit.passwordReset'));
             this.cancelReset();
           },
           error: () => {
             this.resetting.set(false);
-            this.notify.error('No se pudo restablecer la contraseña.');
+            this.notify.error(this.transloco.translate('users.edit.passwordResetError'));
           },
         });
       });
@@ -479,14 +483,14 @@ export class UserEditDialogComponent {
     forkJoin(ops.length ? ops : [of(null)]).subscribe({
       next: () => {
         this.saving.set(false);
-        this.notify.success('Usuario actualizado.');
+        this.notify.success(this.transloco.translate('users.edit.updated'));
         this.close(true);
       },
       error: (err) => {
         this.saving.set(false);
         // Reactivar o dar el rol que registra asistencia puede chocar con el cupo (RN-34):
         // el detalle del backend trae límite, usados y disponibles.
-        this.notify.error(problemMessage(err, 'No se pudieron guardar todos los cambios.'));
+        this.notify.error(localizedProblem(this.transloco, err, 'users.edit.saveError'));
       },
     });
   }

@@ -3,9 +3,10 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { LanguageService } from '../../core/i18n/language.service';
-import { AttendanceEvent, EVENT_LABELS, REJECTION_LABELS, STATUS_LABELS } from './attendance-events.models';
+import { AttendanceEvent, eventLabel, recordStatusLabel, rejectionLabel } from './attendance-events.models';
 import { AttendanceEventsService } from './attendance-events.service';
 
 /**
@@ -17,62 +18,62 @@ import { AttendanceEventsService } from './attendance-events.service';
 @Component({
   selector: 'app-attendance-detail-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslocoPipe],
   template: `
     <h2 mat-dialog-title>{{ eventLabel(data.eventType) }}</h2>
     <mat-dialog-content>
       <div class="meta">
-        <div class="row"><span class="k">Colaborador</span><span class="v">{{ data.employeeName || '—' }}</span></div>
-        <div class="row"><span class="k">N.º de empleado</span><span class="v">{{ data.employeeCode || '—' }}</span></div>
+        <div class="row"><span class="k">{{ 'users.employee' | transloco }}</span><span class="v">{{ data.employeeName || '—' }}</span></div>
+        <div class="row"><span class="k">{{ 'attendanceEvents.detail.employeeNo' | transloco }}</span><span class="v">{{ data.employeeCode || '—' }}</span></div>
         <div class="row">
-          <span class="k">Centro</span>
+          <span class="k">{{ 'scheduling.site' | transloco }}</span>
           <span class="v">
             @if (data.siteless) {
-              Sin centro <em>· registro sin validación de geocerca</em>
+              {{ 'attendanceEvents.siteless' | transloco }} <em>· {{ 'attendanceEvents.detail.noGeofence' | transloco }}</em>
             } @else {
               {{ data.workSite || '—' }}
             }
           </span>
         </div>
-        <div class="row"><span class="k">Fecha y hora</span><span class="v mono">{{ fmt(data.serverTime) }}</span></div>
+        <div class="row"><span class="k">{{ 'attendanceEvents.col.date' | transloco }}</span><span class="v mono">{{ fmt(data.serverTime) }}</span></div>
         <div class="row">
-          <span class="k">Estado</span>
+          <span class="k">{{ 'common.status' | transloco }}</span>
           <span class="v">
             {{ statusLabel(data.status) }}
             @if (data.rejectionReason) { <em>· {{ rejectionLabel(data.rejectionReason) }}</em> }
           </span>
         </div>
         @if (data.gpsAccuracyM != null) {
-          <div class="row"><span class="k">Precisión GPS</span><span class="v">±{{ data.gpsAccuracyM }} m</span></div>
+          <div class="row"><span class="k">{{ 'workSites.form.gpsAccuracy' | transloco }}</span><span class="v">±{{ data.gpsAccuracyM }} m</span></div>
         }
         @if (data.distanceToSiteM != null) {
-          <div class="row"><span class="k">Distancia al centro</span><span class="v">{{ data.distanceToSiteM }} m</span></div>
+          <div class="row"><span class="k">{{ 'attendanceEvents.detail.distance' | transloco }}</span><span class="v">{{ data.distanceToSiteM }} m</span></div>
         }
         <div class="row">
-          <span class="k">Biometría</span>
-          <span class="v">{{ data.biometricVerified ? 'Verificada' : 'No verificada' }}</span>
+          <span class="k">{{ 'workSites.form.biometrics' | transloco }}</span>
+          <span class="v">{{ (data.biometricVerified ? 'attendanceEvents.detail.verified' : 'attendanceEvents.detail.notVerified') | transloco }}</span>
         </div>
         @if (data.source) {
           <div class="row">
-            <span class="k">Origen</span>
-            <span class="v">{{ data.source === 'OFFLINE_SYNC' ? 'Sincronizado sin conexión' : 'En línea' }}</span>
+            <span class="k">{{ 'attendanceEvents.detail.source' | transloco }}</span>
+            <span class="v">{{ (data.source === 'OFFLINE_SYNC' ? 'attendanceEvents.detail.offline' : 'attendanceEvents.detail.online') | transloco }}</span>
           </div>
         }
       </div>
 
-      <h3 class="ph-title">Evidencia fotográfica</h3>
+      <h3 class="ph-title">{{ 'attendanceEvents.detail.evidence' | transloco }}</h3>
       @if (!data.hasEvidence) {
-        <p class="ph-empty"><mat-icon>no_photography</mat-icon> Este registro no tiene foto asociada.</p>
+        <p class="ph-empty"><mat-icon>no_photography</mat-icon> {{ 'attendanceEvents.detail.noPhoto' | transloco }}</p>
       } @else if (loading()) {
         <mat-progress-bar mode="indeterminate" />
       } @else if (error()) {
         <p class="ph-empty error-text"><mat-icon>error_outline</mat-icon> {{ error() }}</p>
       } @else if (url()) {
-        <img class="evidence" [src]="url()" alt="Evidencia fotográfica del registro" />
+        <img class="evidence" [src]="url()" [alt]="'attendanceEvents.detail.evidenceAlt' | transloco" />
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cerrar</button>
+      <button mat-button mat-dialog-close>{{ 'common.close' | transloco }}</button>
     </mat-dialog-actions>
   `,
   styles: [
@@ -92,6 +93,7 @@ export class AttendanceDetailDialogComponent {
   protected readonly data = inject<AttendanceEvent>(MAT_DIALOG_DATA);
   private readonly service = inject(AttendanceEventsService);
   private readonly language = inject(LanguageService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly url = signal<string | null>(null);
   protected readonly loading = signal(false);
@@ -111,22 +113,22 @@ export class AttendanceDetailDialogComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No se pudo cargar la evidencia.');
+        this.error.set(this.transloco.translate('attendanceEvents.detail.evidenceError'));
         this.loading.set(false);
       },
     });
   }
 
   protected eventLabel(code: string): string {
-    return EVENT_LABELS[code] ?? code;
+    return eventLabel(code);
   }
 
   protected statusLabel(code: string): string {
-    return STATUS_LABELS[code] ?? code;
+    return recordStatusLabel(code);
   }
 
   protected rejectionLabel(code: string): string {
-    return REJECTION_LABELS[code] ?? code;
+    return rejectionLabel(code);
   }
 
   protected fmt(iso: string): string {

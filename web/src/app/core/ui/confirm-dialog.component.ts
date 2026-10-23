@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 export interface ConfirmData {
   title: string;
@@ -13,14 +14,14 @@ export interface ConfirmData {
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule],
+  imports: [MatDialogModule, MatButtonModule, TranslocoPipe],
   template: `
     <h2 mat-dialog-title>{{ data.title }}</h2>
     <mat-dialog-content>{{ data.message }}</mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button [mat-dialog-close]="false">Cancelar</button>
+      <button mat-button [mat-dialog-close]="false">{{ 'common.cancel' | transloco }}</button>
       <button mat-flat-button [color]="data.color ?? 'primary'" [mat-dialog-close]="true">
-        {{ data.confirmText ?? 'Confirmar' }}
+        {{ data.confirmText ?? ('common.confirm' | transloco) }}
       </button>
     </mat-dialog-actions>
   `,

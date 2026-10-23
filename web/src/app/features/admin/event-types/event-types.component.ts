@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { NotificationService } from '../../../core/ui/notification.service';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
@@ -29,30 +30,28 @@ import { EventTypesService } from './event-types.service';
     MatInputModule,
     MatSlideToggleModule,
     PageHeaderComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header
-      title="Tipos de evento"
-      subtitle="Define qué eventos intermedios puede registrar el personal de tu empresa"
-    />
+    <app-page-header [title]="'layout.nav.eventTypes' | transloco" [subtitle]="'eventTypes.subtitle' | transloco" />
     @if (error()) { <p class="error-text">{{ error() }}</p> }
 
     <mat-card style="max-width:640px">
       <mat-card-content>
         @if (loading()) {
-          <p>Cargando…</p>
+          <p>{{ 'common.loading' | transloco }}</p>
         } @else {
           @for (item of settings(); track item.eventType) {
             <div class="row">
               <div class="info">
                 <span class="code">{{ item.eventType }}</span>
                 @if (isCore(item.eventType)) {
-                  <span class="core-tag">núcleo</span>
+                  <span class="core-tag">{{ 'eventTypes.core' | transloco }}</span>
                 }
               </div>
 
               <mat-form-field appearance="outline" class="label-field">
-                <mat-label>Etiqueta</mat-label>
+                <mat-label>{{ 'eventTypes.label' | transloco }}</mat-label>
                 <input matInput [(ngModel)]="item.label" [disabled]="isCore(item.eventType)" />
               </mat-form-field>
 
@@ -61,16 +60,16 @@ import { EventTypesService } from './event-types.service';
                 [disabled]="isCore(item.eventType)"
                 color="primary"
               >
-                {{ item.enabled ? 'Habilitado' : 'Deshabilitado' }}
+                {{ (item.enabled ? 'eventTypes.enabled' : 'eventTypes.disabled') | transloco }}
               </mat-slide-toggle>
             </div>
           }
 
           <div class="actions">
             <button mat-flat-button color="primary" [disabled]="saving()" (click)="save()">
-              <mat-icon>save</mat-icon> Guardar
+              <mat-icon>save</mat-icon> {{ 'common.save' | transloco }}
             </button>
-            <button mat-button type="button" [disabled]="saving()" (click)="load()">Descartar</button>
+            <button mat-button type="button" [disabled]="saving()" (click)="load()">{{ 'common.discard' | transloco }}</button>
           </div>
         }
       </mat-card-content>
@@ -117,6 +116,7 @@ import { EventTypesService } from './event-types.service';
 export class EventTypesComponent {
   private readonly service = inject(EventTypesService);
   private readonly notify = inject(NotificationService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly settings = signal<EventTypeSetting[]>([]);
   protected readonly loading = signal(true);
@@ -138,7 +138,7 @@ export class EventTypesComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No se pudo cargar el catálogo de tipos de evento.');
+        this.error.set(this.transloco.translate('eventTypes.loadError'));
         this.loading.set(false);
       },
     });
@@ -150,11 +150,11 @@ export class EventTypesComponent {
       next: (items) => {
         this.settings.set(items.map((i) => ({ ...i })));
         this.saving.set(false);
-        this.notify.success('Tipos de evento actualizados.');
+        this.notify.success(this.transloco.translate('eventTypes.updated'));
       },
       error: () => {
         this.saving.set(false);
-        this.notify.error('No se pudieron guardar los cambios.');
+        this.notify.error(this.transloco.translate('common.saveError'));
       },
     });
   }

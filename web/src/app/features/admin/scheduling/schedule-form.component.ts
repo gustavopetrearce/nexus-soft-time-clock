@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { BreadcrumbComponent } from '../../../core/ui/breadcrumb.component';
 import { NotificationService } from '../../../core/ui/notification.service';
@@ -33,81 +34,80 @@ import { SchedulingService } from './scheduling.service';
     BreadcrumbComponent,
     PageHeaderComponent,
     StatusChipComponent,
+    TranslocoPipe,
   ],
   template: `
     <app-breadcrumb
       [items]="[
-        { label: 'Planificación', route: '/scheduling' },
-        { label: 'Horarios y turnos', route: '/scheduling' },
-        { label: isEdit() ? (schedule()?.name ?? '') : 'Nuevo horario' },
+        { label: ('layout.group.planning' | transloco), route: '/scheduling' },
+        { label: ('layout.nav.scheduling' | transloco), route: '/scheduling' },
+        { label: isEdit() ? (schedule()?.name ?? '') : ('scheduling.new' | transloco) },
       ]"
     />
-    <app-page-header [title]="isEdit() ? 'Editar horario' : 'Nuevo horario'" />
+    <app-page-header [title]="(isEdit() ? 'scheduling.edit' : 'scheduling.new') | transloco" />
 
     @if (loading()) { <mat-progress-bar mode="indeterminate" style="margin-bottom:16px" /> }
     @if (error()) { <p class="error-text">{{ error() }}</p> }
 
     <div class="form-page-layout">
       <div class="form-page-main">
-        <h3 class="form-section-title">Información del horario</h3>
+        <h3 class="form-section-title">{{ 'scheduling.form.info' | transloco }}</h3>
         <form [formGroup]="form">
           <div class="form-grid-2">
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Código</mat-label>
+              <mat-label>{{ 'common.code' | transloco }}</mat-label>
               <input matInput formControlName="code" />
-              <mat-hint>Código único que identifica al horario.</mat-hint>
+              <mat-hint>{{ 'scheduling.form.codeHint' | transloco }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Nombre</mat-label>
+              <mat-label>{{ 'common.name' | transloco }}</mat-label>
               <input matInput formControlName="name" />
-              <mat-hint>Nombre con el que se identifica el horario.</mat-hint>
+              <mat-hint>{{ 'scheduling.form.nameHint' | transloco }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Zona horaria</mat-label>
+              <mat-label>{{ 'companies.form.timezone' | transloco }}</mat-label>
               <mat-select formControlName="timezone">
                 @for (tz of tzOptions(); track tz.value) {
                   <mat-option [value]="tz.value">{{ tz.label }}</mat-option>
                 }
               </mat-select>
-              <mat-hint>
-                Zona IANA en la que se interpretan las horas de los turnos de este horario.
-              </mat-hint>
+              <mat-hint>{{ 'scheduling.form.timezoneHint' | transloco }}</mat-hint>
             </mat-form-field>
             @if (isEdit()) {
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Estado</mat-label>
+                <mat-label>{{ 'common.status' | transloco }}</mat-label>
                 <mat-select formControlName="status">
-                  @for (s of statuses; track s) { <mat-option [value]="s">{{ s }}</mat-option> }
+                  @for (s of statuses; track s) { <mat-option [value]="s">{{ 'status.' + s | transloco }}</mat-option> }
                 </mat-select>
-                <mat-hint>Solo los horarios activos pueden asignarse.</mat-hint>
+                <mat-hint>{{ 'scheduling.form.statusHint' | transloco }}</mat-hint>
               </mat-form-field>
             }
           </div>
         </form>
 
         <div class="form-actions">
-          <button mat-button type="button" (click)="cancel()">Cancelar</button>
+          <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
           <button mat-flat-button color="primary" [disabled]="!formValid() || saving()" (click)="save()">
-            <mat-icon>save</mat-icon> {{ isEdit() ? 'Guardar cambios' : 'Guardar horario' }}
+            <mat-icon>save</mat-icon> {{ (isEdit() ? 'common.saveChanges' : 'scheduling.form.save') | transloco }}
           </button>
         </div>
       </div>
 
       <div class="form-page-side">
         <div class="info-card tip">
-          <h3 class="info-card-title">Información importante</h3>
+          <h3 class="info-card-title">{{ 'companies.form.importantInfo' | transloco }}</h3>
           <div class="icon-row">
             <mat-icon>schedule</mat-icon>
             <div>
-              <p class="row-title">¿Qué es un horario?</p>
-              <p class="row-desc">Agrupa los turnos que luego se asignan a los colaboradores.</p>
+              <p class="row-title">{{ 'scheduling.form.whatIs' | transloco }}</p>
+              <p class="row-desc">{{ 'scheduling.form.whatIsText' | transloco }}</p>
             </div>
           </div>
           <div class="icon-row">
             <mat-icon>badge</mat-icon>
             <div>
-              <p class="row-title">Código único</p>
-              <p class="row-desc">El código de horario no puede modificarse después de crearlo.</p>
+              <p class="row-title">{{ 'companies.form.uniqueCode' | transloco }}</p>
+              <p class="row-desc">{{ 'scheduling.form.uniqueCodeText' | transloco }}</p>
             </div>
           </div>
         </div>
@@ -121,13 +121,13 @@ import { SchedulingService } from './scheduling.service';
                 <app-status-chip [status]="s.status" />
               </div>
             </div>
-            <div class="info-row"><span class="k">Código</span><span class="v">{{ s.code }}</span></div>
+            <div class="info-row"><span class="k">{{ 'common.code' | transloco }}</span><span class="v">{{ s.code }}</span></div>
           </div>
           <div class="info-card">
-            <h3 class="info-card-title">Turnos y asignaciones</h3>
-            <p class="muted" style="margin:0 0 var(--sp-3)">Los turnos y asignaciones de este horario se gestionan desde el listado.</p>
+            <h3 class="info-card-title">{{ 'scheduling.form.shiftsTitle' | transloco }}</h3>
+            <p class="muted" style="margin:0 0 var(--sp-3)">{{ 'scheduling.form.shiftsText' | transloco }}</p>
             <a mat-stroked-button [routerLink]="['/scheduling']">
-              <mat-icon>schedule</mat-icon> Ir al listado
+              <mat-icon>schedule</mat-icon> {{ 'scheduling.form.goToList' | transloco }}
             </a>
           </div>
         }
@@ -141,6 +141,7 @@ export class ScheduleFormComponent {
   private readonly router = inject(Router);
   private readonly service = inject(SchedulingService);
   private readonly notify = inject(NotificationService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly statuses = SCHEDULE_STATUSES;
   protected readonly scheduleId = this.route.snapshot.paramMap.get('id');
@@ -184,7 +185,7 @@ export class ScheduleFormComponent {
           this.loading.set(false);
         },
         error: () => {
-          this.error.set('No se pudo cargar el horario.');
+          this.error.set(this.transloco.translate('scheduling.form.loadError'));
           this.loading.set(false);
         },
       });
@@ -210,12 +211,12 @@ export class ScheduleFormComponent {
       : this.service.createSchedule({ code: raw.code, name: raw.name, timezone: raw.timezone || undefined });
     request$.subscribe({
       next: () => {
-        this.notify.success(this.scheduleId ? 'Horario actualizado.' : 'Horario creado.');
+        this.notify.success(this.transloco.translate(this.scheduleId ? 'scheduling.form.updated' : 'scheduling.form.created'));
         void this.router.navigate(['/scheduling']);
       },
       error: () => {
         this.saving.set(false);
-        this.notify.error('No se pudo guardar el horario.');
+        this.notify.error(this.transloco.translate('scheduling.form.saveError'));
       },
     });
   }

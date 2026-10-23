@@ -1,12 +1,8 @@
 /** Género del colaborador (espejo del enum Gender del backend). */
 export type Gender = 'FEMALE' | 'MALE' | 'OTHER' | 'UNDISCLOSED';
 
-export const GENDERS: { value: Gender; label: string }[] = [
-  { value: 'FEMALE', label: 'Femenino' },
-  { value: 'MALE', label: 'Masculino' },
-  { value: 'OTHER', label: 'Otro' },
-  { value: 'UNDISCLOSED', label: 'Prefiere no decir' },
-];
+/** Opciones de género en orden de presentación; la etiqueta sale de `gender.<VALOR>`. */
+export const GENDERS: readonly Gender[] = ['FEMALE', 'MALE', 'OTHER', 'UNDISCLOSED'];
 
 /**
  * Perfil de empleado: datos personales OPCIONALES (1‑a‑1 con el usuario).

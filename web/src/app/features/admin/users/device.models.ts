@@ -14,9 +14,3 @@ export interface Device {
   lastSeenAt?: string;
   createdAt?: string;
 }
-
-export const DEVICE_STATUS_LABELS: Record<DeviceStatus, string> = {
-  TRUSTED: 'Confiado',
-  PENDING: 'Pendiente de aprobación',
-  BLOCKED: 'Bloqueado',
-};
