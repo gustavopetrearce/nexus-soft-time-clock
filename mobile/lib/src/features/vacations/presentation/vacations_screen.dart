@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../../core/i18n/l10n.dart';
 
 import '../data/vacation_repository.dart';
 import '../domain/vacation_models.dart';
@@ -13,12 +16,13 @@ class VacationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(vacationSummaryProvider);
     final requests = ref.watch(myVacationsProvider);
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Mis vacaciones')),
+      appBar: AppBar(title: Text(l10n.homeVacationsTitle)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openRequest(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('Solicitar'),
+        label: Text(l10n.vacationsRequestAction),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -30,15 +34,15 @@ class VacationsScreen extends ConsumerWidget {
           children: [
             summary.when(
               loading: () => const Card(child: SizedBox(height: 150, child: Center(child: CircularProgressIndicator()))),
-              error: (e, _) => const Card(child: Padding(padding: EdgeInsets.all(20), child: Text('No se pudo cargar tu saldo de vacaciones.'))),
+              error: (e, _) => Card(child: Padding(padding: const EdgeInsets.all(20), child: Text(l10n.vacationsSummaryError))),
               data: (s) => _SummaryCard(summary: s),
             ),
             const SizedBox(height: 24),
-            Text('Mis solicitudes', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.vacationsMyRequests, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             requests.when(
               loading: () => const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
-              error: (e, _) => const Text('No se pudieron cargar tus solicitudes.'),
+              error: (e, _) => Text(l10n.vacationsRequestsError),
               data: (list) => list.isEmpty
                   ? _empty(context)
                   : Column(children: [for (final r in list) _RequestTile(request: r)]),
@@ -57,7 +61,7 @@ class VacationsScreen extends ConsumerWidget {
         child: Column(children: [
           Icon(Icons.beach_access_outlined, size: 40, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(height: 10),
-          Text('Aún no has solicitado vacaciones.', style: theme.textTheme.bodyMedium),
+          Text(context.l10n.vacationsEmpty, style: theme.textTheme.bodyMedium),
         ]),
       ),
     );
@@ -84,6 +88,7 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -93,17 +98,16 @@ class _SummaryCard extends StatelessWidget {
             Row(children: [
               Icon(Icons.wb_sunny_outlined, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              Text('${summary.yearsOfService} ${summary.yearsOfService == 1 ? 'año' : 'años'} en la empresa',
-                  style: theme.textTheme.titleMedium),
+              Text(l10n.vacationsYearsOfService(summary.yearsOfService), style: theme.textTheme.titleMedium),
             ]),
             const SizedBox(height: 6),
-            Text('Te corresponden ${summary.entitledDays} días de vacaciones al año según tu antigüedad.',
+            Text(l10n.vacationsEntitled(summary.entitledDays),
                 style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             const SizedBox(height: 18),
             Row(children: [
-              _Stat(value: summary.availableDays, label: 'Disponibles', color: theme.colorScheme.primary),
-              _Stat(value: summary.takenDays, label: 'Tomados', color: theme.colorScheme.onSurfaceVariant),
-              _Stat(value: summary.pendingDays, label: 'Pendientes', color: Colors.orange.shade700),
+              _Stat(value: summary.availableDays, label: l10n.vacationsAvailable, color: theme.colorScheme.primary),
+              _Stat(value: summary.takenDays, label: l10n.vacationsTaken, color: theme.colorScheme.onSurfaceVariant),
+              _Stat(value: summary.pendingDays, label: l10n.vacationsPending, color: Colors.orange.shade700),
             ]),
           ],
         ),
@@ -136,13 +140,14 @@ class _RequestTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final s = _statusStyle(request.status, theme);
+    final l10n = context.l10n;
+    final s = _statusStyle(request.status, theme, l10n);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         leading: CircleAvatar(backgroundColor: s.$2.withValues(alpha: 0.16), child: Icon(Icons.beach_access, color: s.$2, size: 20)),
-        title: Text('${_fmt(request.startDate)} – ${_fmt(request.endDate)}', style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${request.days} ${request.days == 1 ? 'día' : 'días'}${request.reason != null ? ' · ${request.reason}' : ''}'),
+        title: Text('${shortIsoDate(context, request.startDate)} – ${shortIsoDate(context, request.endDate)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text('${l10n.vacationsDays(request.days)}${request.reason != null ? ' · ${request.reason}' : ''}'),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(color: s.$2.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(999)),
@@ -152,23 +157,17 @@ class _RequestTile extends StatelessWidget {
     );
   }
 
-  static (String, Color) _statusStyle(String status, ThemeData theme) {
+  static (String, Color) _statusStyle(String status, ThemeData theme, AppLocalizations l10n) {
     switch (status) {
       case 'APPROVED':
-        return ('Aprobada', Colors.green.shade600);
+        return (l10n.vacationStatusApproved, Colors.green.shade600);
       case 'REJECTED':
-        return ('Rechazada', theme.colorScheme.error);
+        return (l10n.vacationStatusRejected, theme.colorScheme.error);
       case 'CANCELLED':
-        return ('Cancelada', theme.colorScheme.onSurfaceVariant);
+        return (l10n.vacationStatusCancelled, theme.colorScheme.onSurfaceVariant);
       default:
-        return ('Pendiente', Colors.orange.shade700);
+        return (l10n.vacationStatusPending, Colors.orange.shade700);
     }
-  }
-
-  static String _fmt(String iso) {
-    if (iso.length < 10) return iso;
-    final p = iso.substring(0, 10).split('-');
-    return p.length == 3 ? '${p[2]}/${p[1]}' : iso;
   }
 }
 
@@ -217,11 +216,11 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
 
   Future<void> _submit() async {
     if (_start == null || _end == null) {
-      setState(() => _error = 'Elige las fechas de inicio y fin.');
+      setState(() => _error = context.l10n.vacationsPickDates);
       return;
     }
     if (_end!.isBefore(_start!)) {
-      setState(() => _error = 'La fecha fin no puede ser anterior al inicio.');
+      setState(() => _error = context.l10n.vacationsEndBeforeStart);
       return;
     }
     setState(() {
@@ -236,9 +235,10 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = 'No se pudo registrar la solicitud (revisa traslapes con otra solicitud).';
+        _error = context.l10n.vacationsRequestError;
       });
     }
   }
@@ -246,6 +246,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 4, 20, 20 + bottom),
@@ -253,20 +254,20 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Solicitar vacaciones', style: theme.textTheme.titleLarge),
+          Text(l10n.vacationsRequestTitle, style: theme.textTheme.titleLarge),
           const SizedBox(height: 4),
-          Text('Los días se calculan según la política de la empresa.',
+          Text(l10n.vacationsPolicyHint,
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           const SizedBox(height: 16),
           Row(children: [
-            Expanded(child: _DateField(label: 'Desde', value: _start, onTap: () => _pick(true))),
+            Expanded(child: _DateField(label: l10n.vacationsFrom, value: _start, onTap: () => _pick(true))),
             const SizedBox(width: 12),
-            Expanded(child: _DateField(label: 'Hasta', value: _end, onTap: () => _pick(false))),
+            Expanded(child: _DateField(label: l10n.vacationsTo, value: _end, onTap: () => _pick(false))),
           ]),
           const SizedBox(height: 12),
           TextField(
             controller: _reason,
-            decoration: const InputDecoration(labelText: 'Motivo (opcional)', prefixIcon: Icon(Icons.notes_outlined)),
+            decoration: InputDecoration(labelText: l10n.vacationsReasonOptional, prefixIcon: const Icon(Icons.notes_outlined)),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -280,7 +281,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
               icon: _saving
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.check),
-              label: const Text('Enviar solicitud'),
+              label: Text(l10n.vacationsSubmit),
             ),
           ),
         ],
@@ -297,9 +298,7 @@ class _DateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = value == null
-        ? 'Elegir'
-        : '${value!.day.toString().padLeft(2, '0')}/${value!.month.toString().padLeft(2, '0')}/${value!.year}';
+    final text = value == null ? context.l10n.vacationsChooseDate : DateFormat.yMd(context.intlLocale).format(value!);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),

@@ -59,6 +59,15 @@ extension AttendanceL10n on AppLocalizations {
         _ => null,
       };
 
+  /// Nombre a mostrar de un tipo de evento configurado por la empresa. Si la empresa le puso un
+  /// nombre propio se respeta tal cual; si conserva el nombre sembrado por defecto (en español),
+  /// se traduce por código.
+  String eventTypeLabel(String code, String serverLabel) {
+    final label = serverLabel.trim();
+    final custom = label.isNotEmpty && label != code && label != _defaultEventTypeLabels[code];
+    return custom ? label : eventTypeName(code) ?? (label.isEmpty ? prettifyCode(code) : label);
+  }
+
   String recordEventType(AttendanceRecord r) => eventTypeName(r.eventType) ?? prettifyCode(r.eventType);
 
   String recordStatus(AttendanceRecord r) => switch (r.status) {
@@ -91,3 +100,12 @@ extension AttendanceL10n on AppLocalizations {
     };
   }
 }
+
+/// Nombres con los que el backend siembra los tipos de evento de cada empresa.
+const _defaultEventTypeLabels = {
+  'ENTRADA': 'Entrada',
+  'SALIDA': 'Salida',
+  'INICIO_DESCANSO': 'Inicio de descanso',
+  'FIN_DESCANSO': 'Fin de descanso',
+  'CAMBIO_SITIO': 'Cambio de sitio',
+};

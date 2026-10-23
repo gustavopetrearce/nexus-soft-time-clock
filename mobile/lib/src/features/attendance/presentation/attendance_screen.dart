@@ -237,8 +237,7 @@ class _IntermediateEvents extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: busy ? null : () => onRegister(t.eventType),
                   icon: Icon(_iconFor(t.eventType)),
-                  // Traducido por código; un tipo propio de la empresa conserva el nombre del servidor.
-                  label: Text(context.l10n.eventTypeName(t.eventType) ?? t.label),
+                  label: Text(context.l10n.eventTypeLabel(t.eventType, t.label)),
                 ),
             ],
           ),
