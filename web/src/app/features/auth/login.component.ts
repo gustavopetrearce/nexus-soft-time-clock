@@ -7,19 +7,21 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { LanguageSwitcherComponent } from '../../core/i18n/language-switcher.component';
 
 interface Feature {
   icon: string;
-  title: string;
-  text: string;
+  /** Prefijo de claves: `login.features.<key>.title` / `.text`. */
+  key: string;
 }
 
 const FEATURES: readonly Feature[] = [
-  { icon: 'my_location', title: 'Geocercas y validación GPS', text: 'Fichaje por QR con antifraude y radio configurable por centro.' },
-  { icon: 'insights', title: 'Visibilidad en tiempo real', text: 'Mapa en vivo, incidencias y reportes exportables al instante.' },
-  { icon: 'domain', title: 'Multi-empresa por diseño', text: 'Un panel para administrar todos los centros de tu organización.' },
+  { icon: 'my_location', key: 'geofence' },
+  { icon: 'insights', key: 'realtime' },
+  { icon: 'domain', key: 'multiCompany' },
 ];
 
 /** Pantalla de inicio de sesión (RF-01): layout partido con panel de marca y formulario. */
@@ -34,6 +36,8 @@ const FEATURES: readonly Feature[] = [
     MatIconModule,
     MatProgressBarModule,
     MatTooltipModule,
+    TranslocoPipe,
+    LanguageSwitcherComponent,
   ],
   styles: [
     `
@@ -99,8 +103,10 @@ const FEATURES: readonly Feature[] = [
         justify-content: center;
         padding: var(--sp-6);
         background: var(--surface);
+        position: relative;
       }
       .card { width: 100%; max-width: 380px; }
+      .lang { position: absolute; top: var(--sp-4); right: var(--sp-4); }
       .avatar {
         width: 56px; height: 56px;
         border-radius: 50%;
@@ -146,24 +152,24 @@ const FEATURES: readonly Feature[] = [
           </div>
 
           <div class="hero-main">
-            <h1>Control de asistencia<br />sin fricción.</h1>
-            <p class="lead">Un panel para administrar la asistencia, los turnos y las incidencias de toda tu operación.</p>
+            <h1>{{ 'login.heroTitle1' | transloco }}<br />{{ 'login.heroTitle2' | transloco }}</h1>
+            <p class="lead">{{ 'login.heroLead' | transloco }}</p>
           </div>
 
           <div class="features">
-            @for (f of features; track f.title) {
+            @for (f of features; track f.key) {
               <div class="feature">
                 <div class="feature-icon"><mat-icon>{{ f.icon }}</mat-icon></div>
                 <div>
-                  <p class="feature-title">{{ f.title }}</p>
-                  <p class="feature-text">{{ f.text }}</p>
+                  <p class="feature-title">{{ 'login.features.' + f.key + '.title' | transloco }}</p>
+                  <p class="feature-text">{{ 'login.features.' + f.key + '.text' | transloco }}</p>
                 </div>
               </div>
             }
           </div>
         </div>
 
-        <div class="foot">© Nexus Soft — Plataforma de asistencia empresarial</div>
+        <div class="foot">{{ 'login.footer' | transloco }}</div>
 
         <svg class="hero-art" viewBox="0 0 400 400" aria-hidden="true">
           <circle cx="210" cy="210" r="160" stroke="#3949ab" stroke-opacity="0.12" stroke-width="1.5" fill="none" />
@@ -182,22 +188,23 @@ const FEATURES: readonly Feature[] = [
       </div>
 
       <div class="panel">
+        <app-language-switcher class="lang" />
         <div class="card">
           @if (loading()) { <mat-progress-bar mode="indeterminate" style="margin-bottom:16px" /> }
 
           <div class="avatar"><mat-icon>person</mat-icon></div>
-          <h2>Bienvenido de regreso</h2>
-          <p class="sub">Inicia sesión para continuar</p>
+          <h2>{{ 'login.welcome' | transloco }}</h2>
+          <p class="sub">{{ 'login.subtitle' | transloco }}</p>
 
           <form [formGroup]="form" (ngSubmit)="submit()">
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Correo electrónico</mat-label>
+              <mat-label>{{ 'login.email' | transloco }}</mat-label>
               <input matInput type="email" formControlName="email" autocomplete="username" />
               <mat-icon matPrefix style="margin-right:8px">mail</mat-icon>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Contraseña</mat-label>
+              <mat-label>{{ 'login.password' | transloco }}</mat-label>
               <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" />
               <mat-icon matPrefix style="margin-right:8px">lock</mat-icon>
               <button
@@ -205,28 +212,28 @@ const FEATURES: readonly Feature[] = [
                 matSuffix
                 type="button"
                 (click)="showPassword.set(!showPassword())"
-                [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                [attr.aria-label]="(showPassword() ? 'login.hidePassword' : 'login.showPassword') | transloco"
               >
                 <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Código de empresa (opcional)</mat-label>
-              <input matInput formControlName="companyCode" placeholder="Ej. ACME" />
+              <mat-label>{{ 'login.companyCode' | transloco }}</mat-label>
+              <input matInput formControlName="companyCode" [placeholder]="'login.companyCodePlaceholder' | transloco" />
               <mat-icon matPrefix style="margin-right:8px">business</mat-icon>
-              <mat-icon matSuffix matTooltip="Solo necesario si tu correo pertenece a más de una empresa">info</mat-icon>
+              <mat-icon matSuffix [matTooltip]="'login.companyCodeHint' | transloco">info</mat-icon>
             </mat-form-field>
 
             @if (error()) { <p class="error-text">{{ error() }}</p> }
 
             <button mat-flat-button color="primary" type="submit" class="full-width"
                     [disabled]="form.invalid || loading()" style="height:46px">
-              <mat-icon>login</mat-icon> Iniciar sesión
+              <mat-icon>login</mat-icon> {{ 'login.submit' | transloco }}
             </button>
           </form>
 
-          <div class="secure-note"><mat-icon>lock</mat-icon> Conexión segura</div>
+          <div class="secure-note"><mat-icon>lock</mat-icon> {{ 'login.secure' | transloco }}</div>
         </div>
       </div>
     </div>
@@ -236,6 +243,7 @@ export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly features = FEATURES;
   protected readonly loading = signal(false);
@@ -262,7 +270,7 @@ export class LoginComponent {
       },
       error: () => {
         this.loading.set(false);
-        this.error.set('Usuario o contraseña incorrectos.');
+        this.error.set(this.transloco.translate('login.invalidCredentials'));
       },
     });
   }

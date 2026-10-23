@@ -9,6 +9,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import * as XLSX from 'xlsx';
 
+import { LanguageService } from '../../core/i18n/language.service';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
 import { AttendanceDetailDialogComponent } from './attendance-detail-dialog.component';
@@ -168,6 +169,7 @@ type Period = 'week' | 'fortnight' | 'month' | 'range';
 export class AttendanceEventsComponent {
   private readonly service = inject(AttendanceEventsService);
   private readonly dialog = inject(MatDialog);
+  private readonly language = inject(LanguageService);
 
   protected readonly columns = ['date', 'user', 'event', 'site', 'status', 'evidence'];
   protected readonly filterColumns = ['date-f', 'user-f', 'event-f', 'site-f', 'status-f', 'evidence-f'];
@@ -268,7 +270,7 @@ export class AttendanceEventsComponent {
   protected fmt(iso: string): string {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return iso;
-    return d.toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleString(this.language.intlLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
   /** [from, to] en yyyy-MM-dd para el preset dado (semana lun–dom, quincena 1–15/16–fin, mes completo). */

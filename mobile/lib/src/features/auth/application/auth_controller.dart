@@ -14,16 +14,19 @@ import '../domain/auth_models.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
+/// Motivo de un login fallido; la pantalla lo traduce.
+enum AuthError { invalidCredentials }
+
 class AuthState {
   const AuthState({required this.status, this.loading = false, this.error});
 
   final AuthStatus status;
   final bool loading;
-  final String? error;
+  final AuthError? error;
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
 
-  AuthState copyWith({AuthStatus? status, bool? loading, String? error}) =>
+  AuthState copyWith({AuthStatus? status, bool? loading, AuthError? error}) =>
       AuthState(
         status: status ?? this.status,
         loading: loading ?? this.loading,
@@ -72,7 +75,7 @@ class AuthController extends Notifier<AuthState> {
     } catch (_) {
       state = const AuthState(
         status: AuthStatus.unauthenticated,
-        error: 'Usuario o contraseña incorrectos',
+        error: AuthError.invalidCredentials,
       );
     }
   }

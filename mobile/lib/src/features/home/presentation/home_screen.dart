@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/l10n.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/data/auth_repository.dart';
 
@@ -13,6 +14,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     // Roles del usuario (GET /auth/me). Degrada en silencio: si carga/falla o no es
     // admin, la sección de administración simplemente no aparece.
     final canAdminister = ref.watch(meProvider).maybeWhen(
@@ -21,11 +23,11 @@ class HomeScreen extends ConsumerWidget {
         );
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nexus Soft Time Clock'),
+        title: Text(l10n.appTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar sesión',
+            tooltip: l10n.homeLogout,
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),
           ),
         ],
@@ -51,9 +53,9 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.schedule, color: theme.colorScheme.onPrimary, size: 30),
                   const SizedBox(height: 12),
-                  Text('Hola 👋',
+                  Text(l10n.homeGreeting,
                       style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onPrimary.withValues(alpha: 0.9))),
-                  Text('¿Qué quieres hacer hoy?',
+                  Text(l10n.homeQuestion,
                       style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.onPrimary)),
                 ],
               ),
@@ -62,41 +64,41 @@ class HomeScreen extends ConsumerWidget {
 
             _ActionCard(
               icon: Icons.fingerprint,
-              title: 'Registrar asistencia',
-              subtitle: 'Entrada / salida con QR y GPS',
+              title: l10n.homeRegisterTitle,
+              subtitle: l10n.homeRegisterSubtitle,
               highlighted: true,
               onTap: () => context.push('/attendance'),
             ),
             const SizedBox(height: 12),
             _ActionCard(
               icon: Icons.history,
-              title: 'Mi historial',
-              subtitle: 'Mi historial de asistencia',
+              title: l10n.homeHistoryTitle,
+              subtitle: l10n.homeHistorySubtitle,
               onTap: () => context.push('/attendance/history'),
             ),
             const SizedBox(height: 12),
             _ActionCard(
               icon: Icons.badge_outlined,
-              title: 'Mi perfil',
-              subtitle: 'Consulta tus datos personales',
+              title: l10n.homeProfileTitle,
+              subtitle: l10n.homeProfileSubtitle,
               onTap: () => context.push('/profile'),
             ),
             const SizedBox(height: 12),
             _ActionCard(
               icon: Icons.beach_access_outlined,
-              title: 'Mis vacaciones',
-              subtitle: 'Días disponibles y solicitudes',
+              title: l10n.homeVacationsTitle,
+              subtitle: l10n.homeVacationsSubtitle,
               onTap: () => context.push('/vacations'),
             ),
 
             if (canAdminister) ...[
               const SizedBox(height: 28),
-              Text('Administración', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(l10n.homeAdminSection, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
               _ActionCard(
                 icon: Icons.fact_check_outlined,
-                title: 'Aprobar vacaciones',
-                subtitle: 'Revisa y resuelve solicitudes del equipo',
+                title: l10n.homeApproveVacationsTitle,
+                subtitle: l10n.homeApproveVacationsSubtitle,
                 onTap: () => context.push('/admin/vacations'),
               ),
             ],

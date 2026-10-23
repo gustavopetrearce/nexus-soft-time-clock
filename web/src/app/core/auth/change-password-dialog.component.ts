@@ -5,6 +5,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { NotificationService } from '../ui/notification.service';
 import { AuthService } from './auth.service';
@@ -27,52 +28,53 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
+    TranslocoPipe,
   ],
   template: `
     <div class="m-head">
       <div class="badge-ic"><mat-icon>lock_reset</mat-icon></div>
       <div class="t">
-        <h2>Cambiar contraseña</h2>
-        <p>Ingresá tu contraseña actual y definí una nueva.</p>
+        <h2>{{ 'password.title' | transloco }}</h2>
+        <p>{{ 'password.subtitle' | transloco }}</p>
       </div>
-      <button mat-icon-button (click)="close(false)" aria-label="Cerrar"><mat-icon>close</mat-icon></button>
+      <button mat-icon-button (click)="close(false)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
     </div>
 
     <form [formGroup]="form" class="m-body">
       <mat-form-field appearance="outline" class="full">
-        <mat-label>Contraseña actual</mat-label>
+        <mat-label>{{ 'password.current' | transloco }}</mat-label>
         <mat-icon matPrefix>lock</mat-icon>
         <input matInput [type]="showCurrent() ? 'text' : 'password'" formControlName="currentPassword" autocomplete="current-password" />
-        <button mat-icon-button matSuffix type="button" (click)="showCurrent.set(!showCurrent())" [attr.aria-label]="showCurrent() ? 'Ocultar' : 'Mostrar'">
+        <button mat-icon-button matSuffix type="button" (click)="showCurrent.set(!showCurrent())" [attr.aria-label]="(showCurrent() ? 'common.hide' : 'common.show') | transloco">
           <mat-icon>{{ showCurrent() ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full">
-        <mat-label>Nueva contraseña</mat-label>
+        <mat-label>{{ 'password.new' | transloco }}</mat-label>
         <mat-icon matPrefix>lock</mat-icon>
         <input matInput [type]="showNew() ? 'text' : 'password'" formControlName="newPassword" autocomplete="new-password" />
-        <button mat-icon-button matSuffix type="button" (click)="showNew.set(!showNew())" [attr.aria-label]="showNew() ? 'Ocultar' : 'Mostrar'">
+        <button mat-icon-button matSuffix type="button" (click)="showNew.set(!showNew())" [attr.aria-label]="(showNew() ? 'common.hide' : 'common.show') | transloco">
           <mat-icon>{{ showNew() ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
-        <mat-hint><a class="link" (click)="generatePassword()">Generar contraseña segura</a> · mínimo 8 caracteres</mat-hint>
+        <mat-hint><a class="link" (click)="generatePassword()">{{ 'password.generate' | transloco }}</a> · {{ 'password.minLength' | transloco }}</mat-hint>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full">
-        <mat-label>Confirmar nueva contraseña</mat-label>
+        <mat-label>{{ 'password.confirm' | transloco }}</mat-label>
         <mat-icon matPrefix>lock</mat-icon>
         <input matInput [type]="showNew() ? 'text' : 'password'" formControlName="confirmPassword" autocomplete="new-password" />
         @if (form.hasError('mismatch') && form.controls.confirmPassword.touched) {
-          <mat-error>Las contraseñas no coinciden.</mat-error>
+          <mat-error>{{ 'password.mismatch' | transloco }}</mat-error>
         }
       </mat-form-field>
     </form>
 
     <div class="m-foot">
       <span class="fill"></span>
-      <button mat-button (click)="close(false)">Cancelar</button>
+      <button mat-button (click)="close(false)">{{ 'common.cancel' | transloco }}</button>
       <button mat-flat-button color="primary" [disabled]="form.invalid || saving()" (click)="submit()">
-        <mat-icon>check</mat-icon> Cambiar contraseña
+        <mat-icon>check</mat-icon> {{ 'password.submit' | transloco }}
       </button>
     </div>
   `,
@@ -96,6 +98,7 @@ export class ChangePasswordDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly notify = inject(NotificationService);
+  private readonly transloco = inject(TranslocoService);
   private readonly dialogRef = inject(MatDialogRef<ChangePasswordDialogComponent, boolean>);
 
   protected readonly showCurrent = signal(false);
@@ -133,15 +136,13 @@ export class ChangePasswordDialogComponent {
     this.authService.changePassword(raw.currentPassword, raw.newPassword).subscribe({
       next: () => {
         this.saving.set(false);
-        this.notify.success('Contraseña actualizada. Iniciá sesión nuevamente.');
+        this.notify.success(this.transloco.translate('password.updated'));
         this.close(true);
       },
       error: (err: { status?: number }) => {
         this.saving.set(false);
         this.notify.error(
-          err?.status === 401
-            ? 'La contraseña actual no es correcta.'
-            : 'No se pudo cambiar la contraseña.',
+          this.transloco.translate(err?.status === 401 ? 'password.wrongCurrent' : 'password.failed'),
         );
       },
     });

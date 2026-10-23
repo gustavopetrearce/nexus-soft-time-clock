@@ -9,6 +9,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import * as XLSX from 'xlsx';
 
+import { LanguageService } from '../../core/i18n/language.service';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
 import { StatusChipComponent } from '../../core/ui/status-chip.component';
@@ -269,6 +270,7 @@ type Dim = 'roles' | 'status' | 'gender' | 'tenure';
 })
 export class PeopleComponent {
   private readonly service = inject(PeopleService);
+  private readonly language = inject(LanguageService);
 
   protected readonly statuses = STATUSES;
   protected readonly roleOptions = ROLE_OPTIONS;
@@ -419,12 +421,12 @@ export class PeopleComponent {
   protected fmtDate(s?: string): string {
     if (!s) return '—';
     const d = new Date(`${s}T00:00:00`);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(this.language.intlLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
   }
   protected fmtShort(s?: string): string {
     if (!s) return '—';
     const d = new Date(`${s}T00:00:00`);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(this.language.intlLocale(), { day: '2-digit', month: 'short' });
   }
   private tenureBucket(y: number | null): string {
     if (y === null) return 'Sin dato';

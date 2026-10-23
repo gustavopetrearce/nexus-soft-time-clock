@@ -1,0 +1,166 @@
+{
+  "common": {
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "ok": "OK",
+    "show": "Mostrar",
+    "hide": "Ocultar",
+    "loading": "Cargando…"
+  },
+  "language": {
+    "change": "Cambiar idioma"
+  },
+  "layout": {
+    "menu": "Menú",
+    "toggleTheme": "Cambiar tema",
+    "changePassword": "Cambiar contraseña",
+    "logout": "Cerrar sesión",
+    "user": "Usuario",
+    "scope": {
+      "platform": "Plataforma",
+      "company": "Empresa"
+    },
+    "group": {
+      "analysis": "Análisis",
+      "organization": "Organización",
+      "planning": "Planificación",
+      "account": "Cuenta"
+    },
+    "nav": {
+      "dashboard": "Panel",
+      "map": "Mapa en tiempo real",
+      "incidents": "Incidencias",
+      "reports": "Reportes",
+      "attendanceEvents": "Entradas y salidas",
+      "audit": "Auditoría",
+      "users": "Usuarios",
+      "people": "Personas",
+      "companies": "Empresas",
+      "workSites": "Centros de trabajo",
+      "projects": "Proyectos",
+      "scheduling": "Horarios y turnos",
+      "eventTypes": "Tipos de evento",
+      "vacations": "Vacaciones",
+      "notifications": "Notificaciones",
+      "settings": "Configuración"
+    }
+  },
+  "roles": {
+    "SUPER_ADMIN": "Super Administrador",
+    "COMPANY_ADMIN": "Administrador de Empresa",
+    "HR_ADMIN": "Administrador RR.HH.",
+    "SUPERVISOR": "Supervisor",
+    "AUDITOR": "Auditor",
+    "EMPLOYEE": "Colaborador"
+  },
+  "status": {
+    "ACTIVE": "Activo",
+    "INACTIVE": "Inactivo",
+    "SUSPENDED": "Suspendido",
+    "LOCKED": "Bloqueado",
+    "INVITED": "Invitado",
+    "OPEN": "Abierta",
+    "APPROVED": "Aprobada",
+    "REJECTED": "Rechazada",
+    "RESOLVED": "Resuelta",
+    "CLOSED": "Cerrada",
+    "ACCEPTED": "Aceptado",
+    "PENDING": "Pendiente",
+    "READ": "Leída",
+    "SENT": "Enviada"
+  },
+  "login": {
+    "heroTitle1": "Control de asistencia",
+    "heroTitle2": "sin fricción.",
+    "heroLead": "Un panel para administrar la asistencia, los turnos y las incidencias de toda tu operación.",
+    "features": {
+      "geofence": {
+        "title": "Geocercas y validación GPS",
+        "text": "Fichaje por QR con antifraude y radio configurable por centro."
+      },
+      "realtime": {
+        "title": "Visibilidad en tiempo real",
+        "text": "Mapa en vivo, incidencias y reportes exportables al instante."
+      },
+      "multiCompany": {
+        "title": "Multi-empresa por diseño",
+        "text": "Un panel para administrar todos los centros de tu organización."
+      }
+    },
+    "footer": "© Nexus Soft — Plataforma de asistencia empresarial",
+    "welcome": "Bienvenido de regreso",
+    "subtitle": "Inicia sesión para continuar",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "companyCode": "Código de empresa (opcional)",
+    "companyCodePlaceholder": "Ej. ACME",
+    "companyCodeHint": "Solo necesario si tu correo pertenece a más de una empresa",
+    "submit": "Iniciar sesión",
+    "secure": "Conexión segura",
+    "invalidCredentials": "Usuario o contraseña incorrectos."
+  },
+  "password": {
+    "title": "Cambiar contraseña",
+    "subtitle": "Ingresá tu contraseña actual y definí una nueva.",
+    "current": "Contraseña actual",
+    "new": "Nueva contraseña",
+    "confirm": "Confirmar nueva contraseña",
+    "generate": "Generar contraseña segura",
+    "minLength": "mínimo 8 caracteres",
+    "mismatch": "Las contraseñas no coinciden.",
+    "submit": "Cambiar contraseña",
+    "updated": "Contraseña actualizada. Iniciá sesión nuevamente.",
+    "wrongCurrent": "La contraseña actual no es correcta.",
+    "failed": "No se pudo cambiar la contraseña."
+  },
+  "dashboard": {
+    "platformTitle": "Panel de plataforma",
+    "platformSubtitle": "Administración global de empresas",
+    "companies": "Empresas",
+    "companiesText": "Gestioná las empresas (tenants) de la plataforma y aprovisioná el administrador inicial de cada una.",
+    "goToCompanies": "Ir a Empresas",
+    "title": "Panel",
+    "subtitle": "Resumen operativo de tu empresa",
+    "attendanceToday": "Asistencia de hoy",
+    "accepted": "Aceptados",
+    "rejected": "Rechazados",
+    "openIncidents": "Incidencias abiertas",
+    "needsReview": "Requieren revisión del supervisor",
+    "viewIncidents": "Ver incidencias",
+    "activeOperation": "Operación activa",
+    "activeUsers": "Usuarios activos",
+    "activeSites": "Centros activos",
+    "quickLinks": "Accesos rápidos",
+    "loading": "Cargando indicadores…",
+    "loadError": "No se pudieron cargar los indicadores (¿permiso dashboard:read?).",
+    "links": {
+      "newIncident": "Nueva incidencia",
+      "newReport": "Generar reporte",
+      "users": "Usuarios",
+      "workSites": "Centros de trabajo",
+      "map": "Ver mapa en vivo",
+      "scheduling": "Horarios y turnos"
+    }
+  },
+  "errors": {
+    "generic": "Ocurrió un error inesperado.",
+    "FORBIDDEN_ROLE_GRANT": "No podés otorgar un rol de nivel igual o superior al tuyo.",
+    "CAPACITY_BELOW_USAGE": "El cupo no puede ser menor que la cantidad de colaboradores activos.",
+    "CAPACITY_EXCEEDED": "La empresa alcanzó su cupo de colaboradores activos.",
+    "DUPLICATE_CODE": "Ya existe un registro con ese código.",
+    "DUPLICATE_EMAIL": "Ya existe un usuario con ese correo.",
+    "EVIDENCE_STORAGE_UNAVAILABLE": "El almacenamiento de evidencias no está disponible.",
+    "EVIDENCE_TOO_LARGE": "La evidencia supera el tamaño máximo permitido.",
+    "INVALID_CAPACITY": "El cupo indicado no es válido.",
+    "INVALID_DEVICE_BINDING_ACTION": "La acción sobre el dispositivo no es válida en su estado actual.",
+    "INVALID_GPS_ACCURACY": "La precisión del GPS no es suficiente.",
+    "INVALID_QR": "El código QR no es válido.",
+    "INVALID_QR_EXPIRY": "La vigencia del código QR no es válida.",
+    "OUT_OF_GEOFENCE": "La ubicación está fuera de la geocerca.",
+    "QR_EXPIRED": "El código QR expiró.",
+    "SITELESS_ATTENDANCE_DISABLED": "El registro sin centro de trabajo está deshabilitado.",
+    "UNSUPPORTED_MEDIA_TYPE": "El tipo de archivo no está admitido."
+  }
+}

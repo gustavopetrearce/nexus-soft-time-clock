@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
+import '../../../core/i18n/l10n.dart';
+import '../../../core/i18n/language_picker.dart';
+import '../../../core/i18n/locale_controller.dart';
 import '../data/profile_repository.dart';
 import '../domain/my_profile.dart';
 
@@ -9,16 +13,28 @@ import '../domain/my_profile.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  static const _genders = {
-    'FEMALE': 'Femenino', 'MALE': 'Masculino', 'OTHER': 'Otro', 'UNDISCLOSED': 'Prefiere no decir',
-  };
+  static String? _gender(AppLocalizations l10n, String? code) => switch (code) {
+        'FEMALE' => l10n.genderFemale,
+        'MALE' => l10n.genderMale,
+        'OTHER' => l10n.genderOther,
+        'UNDISCLOSED' => l10n.genderUndisclosed,
+        _ => code,
+      };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final async = ref.watch(myProfileProvider);
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final chosen = ref.watch(localeControllerProvider);
+    final languageName = switch (chosen?.languageCode) {
+      'es' => l10n.languageSpanish,
+      'en' => l10n.languageEnglish,
+      _ => l10n.languageSystem,
+    };
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi perfil')),
+      appBar: AppBar(title: Text(l10n.profileTitle)),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorView(onRetry: () => ref.invalidate(myProfileProvider)),
@@ -29,28 +45,38 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               _Header(profile: p),
               const SizedBox(height: 20),
-              _Section(title: 'Datos personales', children: [
-                _Row(icon: Icons.badge_outlined, label: 'Código de empleado', value: p.employeeCode),
-                _Row(icon: Icons.mail_outline, label: 'Correo', value: p.email),
-                _Row(icon: Icons.cake_outlined, label: 'Fecha de nacimiento', value: _fmt(p.birthDate)),
-                _Row(icon: Icons.wc_outlined, label: 'Género', value: _genders[p.gender]),
-                _Row(icon: Icons.call_outlined, label: 'Teléfono', value: p.phone),
-                _Row(icon: Icons.place_outlined, label: 'Dirección', value: p.address),
+              _Section(title: l10n.profilePersonal, children: [
+                _Row(icon: Icons.badge_outlined, label: l10n.profileEmployeeCode, value: p.employeeCode),
+                _Row(icon: Icons.mail_outline, label: l10n.profileEmail, value: p.email),
+                _Row(icon: Icons.cake_outlined, label: l10n.profileBirthDate, value: _fmt(p.birthDate, locale)),
+                _Row(icon: Icons.wc_outlined, label: l10n.profileGender, value: _gender(l10n, p.gender)),
+                _Row(icon: Icons.call_outlined, label: l10n.profilePhone, value: p.phone),
+                _Row(icon: Icons.place_outlined, label: l10n.profileAddress, value: p.address),
               ]),
               const SizedBox(height: 16),
-              _Section(title: 'Datos de empresa', children: [
-                _Row(icon: Icons.event_available_outlined, label: 'Fecha de ingreso', value: _fmt(p.hireDate)),
+              _Section(title: l10n.profileCompanyData, children: [
+                _Row(icon: Icons.event_available_outlined, label: l10n.profileHireDate, value: _fmt(p.hireDate, locale)),
               ]),
               const SizedBox(height: 16),
-              _Section(title: 'Contacto de emergencia', children: [
-                _Row(icon: Icons.person_outline, label: 'Nombre', value: p.emergencyContactName),
-                _Row(icon: Icons.phone_outlined, label: 'Teléfono', value: p.emergencyContactPhone),
+              _Section(title: l10n.profileEmergency, children: [
+                _Row(icon: Icons.person_outline, label: l10n.profileName, value: p.emergencyContactName),
+                _Row(icon: Icons.phone_outlined, label: l10n.profilePhone, value: p.emergencyContactPhone),
               ]),
+              const SizedBox(height: 16),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.translate),
+                  title: Text(l10n.languageTitle),
+                  subtitle: Text(languageName),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => showLanguagePicker(context, ref),
+                ),
+              ),
               const SizedBox(height: 20),
               OutlinedButton.icon(
                 onPressed: () => context.pushNamed('changePassword'),
                 icon: const Icon(Icons.lock_reset),
-                label: const Text('Cambiar contraseña'),
+                label: Text(l10n.passwordTitle),
               ),
               const SizedBox(height: 16),
               Row(
@@ -59,7 +85,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Información de solo lectura. Para actualizar tus datos, contacta a Recursos Humanos.',
+                      l10n.profileReadOnly,
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                   ),
@@ -72,10 +98,11 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  static String? _fmt(String? iso) {
+  /// Fecha `yyyy-MM-dd` del backend en el formato corto del idioma activo.
+  static String? _fmt(String? iso, String locale) {
     if (iso == null || iso.length < 10) return iso;
-    final p = iso.substring(0, 10).split('-');
-    return p.length == 3 ? '${p[2]}/${p[1]}/${p[0]}' : iso;
+    final date = DateTime.tryParse(iso.substring(0, 10));
+    return date == null ? iso : DateFormat.yMd(locale).format(date);
   }
 }
 
@@ -99,7 +126,7 @@ class _Header extends StatelessWidget {
               style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.onPrimaryContainer)),
         ),
         const SizedBox(height: 14),
-        Text(name.isEmpty ? 'Colaborador' : name,
+        Text(name.isEmpty ? context.l10n.profileDefaultName : name,
             style: theme.textTheme.titleLarge, textAlign: TextAlign.center),
         if (profile.email != null)
           Text(profile.email!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
@@ -160,9 +187,9 @@ class _ErrorView extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.error_outline, size: 40),
           const SizedBox(height: 12),
-          const Text('No se pudo cargar tu perfil.'),
+          Text(context.l10n.profileLoadError),
           const SizedBox(height: 12),
-          FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
+          FilledButton(onPressed: onRetry, child: Text(context.l10n.commonRetry)),
         ]),
       );
 }

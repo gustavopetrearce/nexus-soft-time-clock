@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../data/attendance_history_service.dart';
+import '../../../core/i18n/l10n.dart';
 import '../domain/attendance_record.dart';
+import 'attendance_l10n.dart';
 
 /// Historial personal de asistencia (RF-05, HU-16). Muestra los registros del colaborador
 /// (fecha y hora, tipo de evento, centro de trabajo y estado) filtrables por rango de fechas.
@@ -45,7 +47,6 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
       initialDateRange: _range,
       firstDate: DateTime(now.year - 5),
       lastDate: now,
-      locale: const Locale('es'),
     );
     if (picked != null) {
       setState(() {
@@ -153,7 +154,7 @@ class _RecordTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      title: Text(record.eventTypeLabel, style: theme.textTheme.titleMedium),
+      title: Text(context.l10n.recordEventType(record), style: theme.textTheme.titleMedium),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -161,11 +162,11 @@ class _RecordTile extends StatelessWidget {
           _IconLine(icon: Icons.schedule, text: stampFormat.format(record.serverTime)),
           const SizedBox(height: 2),
           _IconLine(icon: Icons.place_outlined, text: record.workCenter),
-          if (record.rejectionReasonLabel != null) ...[
+          if (context.l10n.recordRejectionReason(record) != null) ...[
             const SizedBox(height: 2),
             _IconLine(
               icon: Icons.info_outline,
-              text: record.rejectionReasonLabel!,
+              text: context.l10n.recordRejectionReason(record)!,
               color: theme.colorScheme.error,
             ),
           ],
@@ -224,7 +225,7 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        record.statusLabel,
+        context.l10n.recordStatus(record),
         style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
       ),
     );
