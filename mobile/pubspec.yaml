@@ -1,7 +1,7 @@
 name: nexus_time_clock
 description: "Nexus Soft Time Clock — App de empleados (offline-first)."
 publish_to: 'none'
-version: 1.0.11+12
+version: 1.0.12+13
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -29,6 +29,8 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   local_auth: ^2.3.0
   device_info_plus: ^10.1.2
+  # Preferencias no sensibles del dispositivo (idioma de la interfaz).
+  shared_preferences: ^2.5.6
 
   # Ubicación y captura
   geolocator: ^13.0.1

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/l10n.dart';
+import '../../../core/i18n/language_picker.dart';
 import '../application/auth_controller.dart';
 import '../domain/auth_models.dart';
 
@@ -49,8 +51,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final state = ref.watch(authControllerProvider);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
 
     return Scaffold(
+      // Selector de idioma accesible antes de iniciar sesión.
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        actions: const [LanguageButton()],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -71,38 +79,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text('Iniciar sesión', style: theme.textTheme.titleLarge),
+                            Text(l10n.loginTitle, style: theme.textTheme.titleLarge),
                             const SizedBox(height: 20),
                             TextFormField(
                               controller: _emailController,
-                              decoration: const InputDecoration(
-                                labelText: 'Correo',
-                                prefixIcon: Icon(Icons.alternate_email),
+                              decoration: InputDecoration(
+                                labelText: l10n.loginEmail,
+                                prefixIcon: const Icon(Icons.alternate_email),
                               ),
                               keyboardType: TextInputType.emailAddress,
-                              validator: (v) => (v == null || !v.contains('@')) ? 'Correo inválido' : null,
+                              validator: (v) => (v == null || !v.contains('@')) ? l10n.loginEmailInvalid : null,
                             ),
                             const SizedBox(height: 16),
                             TextFormField(
                               controller: _passwordController,
-                              decoration: const InputDecoration(
-                                labelText: 'Contraseña',
-                                prefixIcon: Icon(Icons.lock_outline),
+                              decoration: InputDecoration(
+                                labelText: l10n.loginPassword,
+                                prefixIcon: const Icon(Icons.lock_outline),
                               ),
                               obscureText: true,
-                              validator: (v) => (v == null || v.isEmpty) ? 'Requerida' : null,
+                              validator: (v) => (v == null || v.isEmpty) ? l10n.commonRequired : null,
                             ),
                             const SizedBox(height: 16),
                             TextFormField(
                               controller: _companyController,
-                              decoration: const InputDecoration(
-                                labelText: 'Empresa (opcional)',
-                                prefixIcon: Icon(Icons.business_outlined),
+                              decoration: InputDecoration(
+                                labelText: l10n.loginCompany,
+                                prefixIcon: const Icon(Icons.business_outlined),
                               ),
                             ),
                             if (state.error != null) ...[
                               const SizedBox(height: 16),
-                              _ErrorBanner(message: state.error!, scheme: scheme),
+                              _ErrorBanner(message: l10n.loginInvalidCredentials, scheme: scheme),
                             ],
                             const SizedBox(height: 24),
                             FilledButton(
@@ -113,7 +121,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       width: 20,
                                       child: CircularProgressIndicator(strokeWidth: 2),
                                     )
-                                  : const Text('Entrar'),
+                                  : Text(l10n.loginSubmit),
                             ),
                           ],
                         ),
@@ -159,13 +167,13 @@ class _BrandHeader extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(
-          'Nexus Soft Time Clock',
+          context.l10n.appTitle,
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall,
         ),
         const SizedBox(height: 6),
         Text(
-          'Control de asistencia',
+          context.l10n.loginTagline,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
         ),

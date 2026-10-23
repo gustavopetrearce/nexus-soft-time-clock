@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { TranslocoService } from '@jsverse/transloco';
 
 /** Cuerpo de error uniforme del backend (RFC 7807 + `code` de negocio). */
 export interface ProblemDetail {
@@ -28,4 +29,22 @@ export function problemMessage(error: unknown, fallback: string): string {
 /** Código de negocio del error (`CAPACITY_EXCEEDED`, `DUPLICATE_EMAIL`…), si el backend lo envió. */
 export function problemCode(error: unknown): string | null {
   return body(error)?.code ?? null;
+}
+
+/**
+ * `problemMessage` según el idioma activo. El `detail` del backend llega siempre en español:
+ * en español se sigue mostrando (conserva las cifras concretas); en otro idioma se traduce por
+ * `code` (`errors.<CODE>`) y, si el código no tiene traducción, se usa el texto de `fallbackKey`.
+ */
+export function localizedProblem(transloco: TranslocoService, error: unknown, fallbackKey: string): string {
+  const lang = transloco.getActiveLang();
+  const detail = body(error)?.detail?.trim();
+  if (lang === 'es' && detail) return detail;
+  const code = problemCode(error);
+  if (code) {
+    const key = `errors.${code}`;
+    const text = transloco.getTranslation(lang)?.[key];
+    if (typeof text === 'string' && text) return text;
+  }
+  return transloco.translate(fallbackKey);
 }

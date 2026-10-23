@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/i18n/l10n.dart';
 import '../../../core/services/biometric_service.dart';
 import '../application/attendance_controller.dart';
 import '../data/evidence_capture_service.dart';
 import '../data/event_type_service.dart';
 import '../data/site_policy_service.dart';
 import '../domain/qr_token.dart';
+import 'attendance_l10n.dart';
 import 'qr_scanner_screen.dart';
 
 /// Pantalla de registro de asistencia (offline-first). El empleado elige Entrada/Salida
@@ -40,7 +42,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final scope = scopeFromQrToken(raw);
     if (scope == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('QR no válido.')),
+        SnackBar(content: Text(context.l10n.attendanceInvalidQr)),
       );
       return;
     }
@@ -71,8 +73,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           SnackBar(
             content: Text(
               scope.isCompanyWide
-                  ? 'Al registrar sin centro de trabajo, la foto es obligatoria.'
-                  : 'Este centro exige una foto para registrar tu asistencia.',
+                  ? context.l10n.attendancePhotoRequiredSiteless
+                  : context.l10n.attendancePhotoRequiredSite,
             ),
           ),
         );
@@ -84,7 +86,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     //    centro la exige y no fue exitosa. Si el dispositivo no la soporta, devuelve false.
     final biometricOk = await ref
         .read(biometricServiceProvider)
-        .authenticate('Confirma tu identidad para registrar tu asistencia');
+        .authenticate(context.l10n.attendanceBiometricPrompt);
     if (!mounted) {
       return;
     }
@@ -102,9 +104,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             evidencePath: evidence?.file.path,
             evidenceSha256: evidence?.sha256,
           );
-      message = ref.read(attendanceControllerProvider).message;
+      final result = ref.read(attendanceControllerProvider).message;
+      if (mounted && result != null) message = context.l10n.attendanceMessageText(result);
     } catch (e) {
-      message = 'No se pudo completar el registro: $e';
+      if (mounted) message = context.l10n.attendanceUnexpected('$e');
     }
     if (mounted && message != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -114,17 +117,18 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(attendanceControllerProvider);
+    final l10n = context.l10n;
 
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Registrar asistencia'),
+        title: Text(l10n.attendanceTitle),
         actions: [
           IconButton(
             icon: Badge(label: Text('${state.pendingCount}'), child: const Icon(Icons.sync)),
-            tooltip: 'Sincronizar pendientes',
+            tooltip: l10n.attendanceSyncTooltip,
             onPressed: state.busy ? null : () => ref.read(attendanceControllerProvider.notifier).syncNow(),
           ),
         ],
@@ -145,7 +149,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
-                          'Toca Entrada o Salida y escanea el QR con la cámara.',
+                          l10n.attendanceInstructions,
                           style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer),
                         ),
                       ),
@@ -170,7 +174,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                     child: FilledButton.icon(
                       onPressed: state.busy ? null : () => _register('ENTRADA'),
                       icon: const Icon(Icons.login),
-                      label: const Text('Entrada'),
+                      label: Text(l10n.eventEntrada),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -178,7 +182,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                     child: FilledButton.tonalIcon(
                       onPressed: state.busy ? null : () => _register('SALIDA'),
                       icon: const Icon(Icons.logout),
-                      label: const Text('Salida'),
+                      label: Text(l10n.eventSalida),
                     ),
                   ),
                 ],
@@ -233,7 +237,8 @@ class _IntermediateEvents extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: busy ? null : () => onRegister(t.eventType),
                   icon: Icon(_iconFor(t.eventType)),
-                  label: Text(t.label),
+                  // Traducido por código; un tipo propio de la empresa conserva el nombre del servidor.
+                  label: Text(context.l10n.eventTypeName(t.eventType) ?? t.label),
                 ),
             ],
           ),
@@ -296,9 +301,7 @@ class _PendingStatus extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    hasFailures
-                        ? 'Marcaciones sin registrar'
-                        : 'Operaciones pendientes de sincronizar',
+                    hasFailures ? context.l10n.attendanceFailedOps : context.l10n.attendancePendingOps,
                     style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ),

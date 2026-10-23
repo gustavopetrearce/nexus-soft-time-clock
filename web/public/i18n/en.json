@@ -1,0 +1,166 @@
+{
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "show": "Show",
+    "hide": "Hide",
+    "loading": "Loading…"
+  },
+  "language": {
+    "change": "Change language"
+  },
+  "layout": {
+    "menu": "Menu",
+    "toggleTheme": "Toggle theme",
+    "changePassword": "Change password",
+    "logout": "Sign out",
+    "user": "User",
+    "scope": {
+      "platform": "Platform",
+      "company": "Company"
+    },
+    "group": {
+      "analysis": "Analysis",
+      "organization": "Organization",
+      "planning": "Planning",
+      "account": "Account"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "map": "Live map",
+      "incidents": "Incidents",
+      "reports": "Reports",
+      "attendanceEvents": "Clock-ins and clock-outs",
+      "audit": "Audit",
+      "users": "Users",
+      "people": "People",
+      "companies": "Companies",
+      "workSites": "Work sites",
+      "projects": "Projects",
+      "scheduling": "Schedules and shifts",
+      "eventTypes": "Event types",
+      "vacations": "Vacations",
+      "notifications": "Notifications",
+      "settings": "Settings"
+    }
+  },
+  "roles": {
+    "SUPER_ADMIN": "Super Administrator",
+    "COMPANY_ADMIN": "Company Administrator",
+    "HR_ADMIN": "HR Administrator",
+    "SUPERVISOR": "Supervisor",
+    "AUDITOR": "Auditor",
+    "EMPLOYEE": "Employee"
+  },
+  "status": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive",
+    "SUSPENDED": "Suspended",
+    "LOCKED": "Locked",
+    "INVITED": "Invited",
+    "OPEN": "Open",
+    "APPROVED": "Approved",
+    "REJECTED": "Rejected",
+    "RESOLVED": "Resolved",
+    "CLOSED": "Closed",
+    "ACCEPTED": "Accepted",
+    "PENDING": "Pending",
+    "READ": "Read",
+    "SENT": "Sent"
+  },
+  "login": {
+    "heroTitle1": "Attendance tracking",
+    "heroTitle2": "without friction.",
+    "heroLead": "One dashboard to manage attendance, shifts and incidents across your whole operation.",
+    "features": {
+      "geofence": {
+        "title": "Geofences and GPS validation",
+        "text": "QR clock-in with anti-fraud checks and a configurable radius per site."
+      },
+      "realtime": {
+        "title": "Real-time visibility",
+        "text": "Live map, incidents and instantly exportable reports."
+      },
+      "multiCompany": {
+        "title": "Multi-company by design",
+        "text": "One dashboard to manage every site in your organization."
+      }
+    },
+    "footer": "© Nexus Soft — Workforce attendance platform",
+    "welcome": "Welcome back",
+    "subtitle": "Sign in to continue",
+    "email": "Email",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "companyCode": "Company code (optional)",
+    "companyCodePlaceholder": "e.g. ACME",
+    "companyCodeHint": "Only needed if your email belongs to more than one company",
+    "submit": "Sign in",
+    "secure": "Secure connection",
+    "invalidCredentials": "Incorrect username or password."
+  },
+  "password": {
+    "title": "Change password",
+    "subtitle": "Enter your current password and choose a new one.",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "generate": "Generate a secure password",
+    "minLength": "at least 8 characters",
+    "mismatch": "Passwords do not match.",
+    "submit": "Change password",
+    "updated": "Password updated. Please sign in again.",
+    "wrongCurrent": "The current password is incorrect.",
+    "failed": "Could not change the password."
+  },
+  "dashboard": {
+    "platformTitle": "Platform dashboard",
+    "platformSubtitle": "Global company administration",
+    "companies": "Companies",
+    "companiesText": "Manage the platform's companies (tenants) and provision each one's initial administrator.",
+    "goToCompanies": "Go to Companies",
+    "title": "Dashboard",
+    "subtitle": "Operational summary of your company",
+    "attendanceToday": "Today's attendance",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "openIncidents": "Open incidents",
+    "needsReview": "Awaiting supervisor review",
+    "viewIncidents": "View incidents",
+    "activeOperation": "Active operation",
+    "activeUsers": "Active users",
+    "activeSites": "Active sites",
+    "quickLinks": "Quick links",
+    "loading": "Loading metrics…",
+    "loadError": "Could not load the metrics (missing dashboard:read permission?).",
+    "links": {
+      "newIncident": "New incident",
+      "newReport": "Generate report",
+      "users": "Users",
+      "workSites": "Work sites",
+      "map": "View live map",
+      "scheduling": "Schedules and shifts"
+    }
+  },
+  "errors": {
+    "generic": "An unexpected error occurred.",
+    "FORBIDDEN_ROLE_GRANT": "You cannot grant a role at or above your own level.",
+    "CAPACITY_BELOW_USAGE": "The capacity cannot be lower than the number of active employees.",
+    "CAPACITY_EXCEEDED": "The company has reached its active employee capacity.",
+    "DUPLICATE_CODE": "A record with that code already exists.",
+    "DUPLICATE_EMAIL": "A user with that email already exists.",
+    "EVIDENCE_STORAGE_UNAVAILABLE": "Evidence storage is unavailable.",
+    "EVIDENCE_TOO_LARGE": "The evidence exceeds the maximum allowed size.",
+    "INVALID_CAPACITY": "The capacity is not valid.",
+    "INVALID_DEVICE_BINDING_ACTION": "That action is not valid for the device in its current state.",
+    "INVALID_GPS_ACCURACY": "GPS accuracy is not sufficient.",
+    "INVALID_QR": "The QR code is not valid.",
+    "INVALID_QR_EXPIRY": "The QR code validity period is not valid.",
+    "OUT_OF_GEOFENCE": "The location is outside the geofence.",
+    "QR_EXPIRED": "The QR code has expired.",
+    "SITELESS_ATTENDANCE_DISABLED": "Clocking in without a work site is disabled.",
+    "UNSUPPORTED_MEDIA_TYPE": "The file type is not supported."
+  }
+}

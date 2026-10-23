@@ -1,4 +1,7 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
+
+import { LanguageService } from '../i18n/language.service';
+import { translateOr } from '../i18n/translate-or';
 
 type Tone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
@@ -20,6 +23,7 @@ const TONE_BY_STATUS: Record<string, Tone> = {
   INACTIVE: 'neutral',
 };
 
+/** Respaldo en español; la etiqueta visible sale de `status.<ESTADO>` en el idioma activo. */
 const LABEL_BY_STATUS: Record<string, string> = {
   ACTIVE: 'Activo',
   INACTIVE: 'Inactivo',
@@ -45,10 +49,13 @@ const LABEL_BY_STATUS: Record<string, string> = {
 })
 export class StatusChipComponent {
   readonly status = input.required<string>();
+  private readonly language = inject(LanguageService);
 
   protected readonly tone = computed<Tone>(() => TONE_BY_STATUS[this.status()?.toUpperCase()] ?? 'neutral');
   protected readonly label = computed(() => {
+    this.language.lang(); // re-etiqueta al cambiar de idioma
     const raw = this.status() ?? '';
-    return LABEL_BY_STATUS[raw.toUpperCase()] ?? raw;
+    const code = raw.toUpperCase();
+    return translateOr(`status.${code}`, LABEL_BY_STATUS[code] ?? raw);
   });
 }

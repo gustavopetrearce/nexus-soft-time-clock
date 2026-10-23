@@ -8,6 +8,7 @@ import '../../../core/services/location_service.dart';
 import '../../../core/storage/device_identity_store.dart';
 import '../data/attendance_sync_service.dart';
 import '../domain/attendance_operation.dart';
+import 'attendance_message.dart';
 
 class AttendanceUiState {
   const AttendanceUiState({
@@ -19,7 +20,9 @@ class AttendanceUiState {
   });
 
   final bool busy;
-  final String? message;
+
+  /// Resultado de la última acción, para avisar al colaborador; la UI lo traduce.
+  final AttendanceMessage? message;
   final int pendingCount;
 
   /// Marcaciones que el servidor rechazó en firme: no se reintentan y hay que actuar sobre ellas.
@@ -31,7 +34,7 @@ class AttendanceUiState {
 
   AttendanceUiState copyWith({
     bool? busy,
-    String? message,
+    AttendanceMessage? message,
     int? pendingCount,
     int? failedCount,
     String? lastIssue,
@@ -74,7 +77,7 @@ class AttendanceController extends Notifier<AttendanceUiState> {
     final gpsEnabled = await ref.read(locationServiceProvider).isGpsEnabled();
     final position = await ref.read(locationServiceProvider).current();
     if (position == null) {
-      state = state.copyWith(busy: false, message: 'No se pudo obtener la ubicación GPS.');
+      state = state.copyWith(busy: false, message: const GpsUnavailableMessage());
       return;
     }
 
@@ -122,92 +125,35 @@ class AttendanceController extends Notifier<AttendanceUiState> {
     }
   }
 
-  /// Traduce el estado final de la operación (tras sincronizar) a un mensaje para el colaborador.
+  /// Traduce el estado final de la operación (tras sincronizar) a un aviso para el colaborador.
   /// [accuracyM] es la precisión del fix enviado; se muestra en el rechazo por GPS para dar
   /// contexto accionable (saber cuán lejos quedó del umbral) y como dato de diagnóstico.
-  String _messageFor(PendingAttendanceOp? row, double accuracyM) {
+  AttendanceMessage _messageFor(PendingAttendanceOp? row, double accuracyM) {
     switch (row?.status) {
       case 'SYNCED':
         // Para SYNCED, lastError se reutiliza como nota del servidor: 'LATE:<min>' si hubo retardo.
         final note = row?.lastError;
         if (note != null && note.startsWith('LATE:')) {
-          return 'Registro aceptado (retardo de ${note.substring(5)} min).';
+          return AcceptedMessage(lateMinutes: note.substring(5));
         }
-        return 'Registro aceptado.';
+        return const AcceptedMessage();
       case 'REJECTED':
         final reason = row?.lastError;
         if (reason == 'LOW_GPS_ACCURACY') {
-          return 'Registro rechazado: precisión de GPS baja (±${accuracyM.round()} m). '
-              'Muévete a un lugar abierto (sal al exterior) y vuelve a intentarlo.';
+          return RejectedLowAccuracyMessage(accuracyM);
         }
-        return 'Registro rechazado: ${_rejectionLabel(reason)}.';
+        return RejectedMessage(reason);
       case 'ERROR':
         // El servidor contestó y rechazó la operación en firme: anunciarlo como falta de
         // conexión dejaba al colaborador esperando una sincronización que nunca iba a ocurrir.
-        return 'No se pudo registrar: ${_failureLabel(row?.lastError)}.';
+        return NotRegisteredMessage(row?.lastError);
       default:
         // PENDING o fila ausente: no se perdió, se reintentará.
         final reason = row?.lastError;
         if (reason == null || reason == AttendanceSyncService.offlineMarker) {
-          return 'Registro guardado. Se sincronizará cuando haya conexión.';
+          return const SavedOfflineMessage();
         }
-        return 'Registro guardado, pero el servidor no lo aceptó aún '
-            '(${_failureLabel(reason)}). Se reintentará.';
-    }
-  }
-
-  /// Motivo de un envío fallido (no de un rechazo de negocio) en texto para el colaborador.
-  String _failureLabel(String? reason) {
-    if (reason == null) {
-      return 'motivo desconocido';
-    }
-    if (reason.startsWith('HTTP_401') || reason.startsWith('HTTP_403')) {
-      return 'tu cuenta no tiene permiso para registrar asistencia';
-    }
-    if (reason == 'SYNC_ERROR') {
-      return 'error interno del servidor';
-    }
-    if (reason.startsWith('HTTP_') || reason.startsWith('evidencia:')) {
-      return reason;
-    }
-    return _rejectionLabel(reason);
-  }
-
-  /// Motivo de rechazo (código del backend, RejectionReason) a texto en español.
-  String _rejectionLabel(String? reason) {
-    switch (reason) {
-      case 'INVALID_QR':
-        return 'QR inválido o expirado';
-      case 'OUT_OF_GEOFENCE':
-        return 'fuera del área permitida';
-      case 'LOW_GPS_ACCURACY':
-        return 'precisión de GPS baja';
-      case 'GPS_UNAVAILABLE':
-        return 'GPS no disponible';
-      case 'OUT_OF_SCHEDULE':
-        return 'fuera del horario del turno';
-      case 'FRAUD_MOCK_LOCATION':
-        return 'ubicación simulada detectada';
-      case 'FRAUD_ROOTED_DEVICE':
-        return 'dispositivo comprometido (root/jailbreak)';
-      case 'FRAUD_GPS_SPOOF_APP':
-        return 'app de falsificación de GPS detectada';
-      case 'REPLAY_DETECTED':
-        return 'QR ya utilizado';
-      case 'INVALID_SEQUENCE':
-        return 'secuencia de marcaciones inválida';
-      case 'UNTRUSTED_DEVICE':
-        return 'dispositivo no reconocido (pendiente de aprobación del administrador)';
-      case 'PHOTO_REQUIRED':
-        return 'se requiere evidencia fotográfica';
-      case 'BIOMETRIC_REQUIRED':
-        return 'se requiere verificación biométrica';
-      case 'EVENT_TYPE_DISABLED':
-        return 'tipo de evento no habilitado';
-      case 'SITELESS_NOT_ALLOWED':
-        return 'tu empresa no permite registrar sin centro de trabajo';
-      default:
-        return reason ?? 'motivo desconocido';
+        return SavedRetryingMessage(reason);
     }
   }
 
@@ -219,11 +165,11 @@ class AttendanceController extends Notifier<AttendanceUiState> {
       await _refreshCount();
       // No se anuncia éxito a ciegas: si algo quedó sin subir, el mensaje dice qué pasó.
       final issue = state.lastIssue;
-      final message = state.pendingCount == 0 && state.failedCount == 0
-          ? 'Sincronización completada.'
+      final AttendanceMessage message = state.pendingCount == 0 && state.failedCount == 0
+          ? const SyncCompletedMessage()
           : issue == null
-              ? 'Quedan ${state.pendingCount} operaciones por sincronizar.'
-              : 'No se pudo sincronizar: ${_failureLabel(issue)}.';
+              ? SyncPendingMessage(state.pendingCount)
+              : SyncFailedMessage(issue);
       state = state.copyWith(busy: false, message: message);
     }
   }

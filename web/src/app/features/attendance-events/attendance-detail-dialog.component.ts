@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 
+import { LanguageService } from '../../core/i18n/language.service';
 import { AttendanceEvent, EVENT_LABELS, REJECTION_LABELS, STATUS_LABELS } from './attendance-events.models';
 import { AttendanceEventsService } from './attendance-events.service';
 
@@ -90,6 +91,7 @@ import { AttendanceEventsService } from './attendance-events.service';
 export class AttendanceDetailDialogComponent {
   protected readonly data = inject<AttendanceEvent>(MAT_DIALOG_DATA);
   private readonly service = inject(AttendanceEventsService);
+  private readonly language = inject(LanguageService);
 
   protected readonly url = signal<string | null>(null);
   protected readonly loading = signal(false);
@@ -128,6 +130,6 @@ export class AttendanceDetailDialogComponent {
   }
 
   protected fmt(iso: string): string {
-    return new Date(iso).toLocaleString('es-MX');
+    return new Date(iso).toLocaleString(this.language.intlLocale());
   }
 }

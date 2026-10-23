@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/l10n.dart';
 import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
 
@@ -47,7 +48,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contraseña actualizada. Iniciá sesión nuevamente.')),
+        SnackBar(content: Text(context.l10n.passwordUpdated)),
       );
       // El cambio revoca las sesiones activas (incluida esta): el redirect del router
       // lleva a /login al cerrar sesión.
@@ -56,12 +57,12 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.response?.statusCode == 401
-            ? 'La contraseña actual no es correcta.'
-            : 'No se pudo cambiar la contraseña.';
+            ? context.l10n.passwordWrongCurrent
+            : context.l10n.passwordFailed;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'No se pudo cambiar la contraseña.');
+      setState(() => _error = context.l10n.passwordFailed);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -71,9 +72,10 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cambiar contraseña')),
+      appBar: AppBar(title: Text(l10n.passwordTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -86,40 +88,40 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   controller: _currentController,
                   obscureText: _obscureCurrent,
                   decoration: InputDecoration(
-                    labelText: 'Contraseña actual',
+                    labelText: l10n.passwordCurrent,
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(_obscureCurrent ? Icons.visibility : Icons.visibility_off),
                       onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
                     ),
                   ),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Requerida' : null,
+                  validator: (v) => (v == null || v.isEmpty) ? l10n.commonRequired : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _newController,
                   obscureText: _obscureNew,
                   decoration: InputDecoration(
-                    labelText: 'Nueva contraseña',
-                    helperText: 'Mínimo 8 caracteres',
+                    labelText: l10n.passwordNew,
+                    helperText: l10n.passwordMinLength,
                     prefixIcon: const Icon(Icons.lock_reset),
                     suffixIcon: IconButton(
                       icon: Icon(_obscureNew ? Icons.visibility : Icons.visibility_off),
                       onPressed: () => setState(() => _obscureNew = !_obscureNew),
                     ),
                   ),
-                  validator: (v) => (v == null || v.length < 8) ? 'Mínimo 8 caracteres' : null,
+                  validator: (v) => (v == null || v.length < 8) ? l10n.passwordMinLength : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirmController,
                   obscureText: _obscureNew,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirmar nueva contraseña',
-                    prefixIcon: Icon(Icons.lock_reset),
+                  decoration: InputDecoration(
+                    labelText: l10n.passwordConfirm,
+                    prefixIcon: const Icon(Icons.lock_reset),
                   ),
                   validator: (v) =>
-                      v != _newController.text ? 'Las contraseñas no coinciden' : null,
+                      v != _newController.text ? l10n.passwordMismatch : null,
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 16),
@@ -149,7 +151,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Cambiar contraseña'),
+                      : Text(l10n.passwordTitle),
                 ),
               ],
             ),

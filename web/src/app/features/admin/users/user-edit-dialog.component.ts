@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,6 +11,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { forkJoin, of } from 'rxjs';
 
+import { AppDatePipe } from '../../../core/i18n/app-date.pipe';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
 import { NotificationService } from '../../../core/ui/notification.service';
@@ -50,7 +50,7 @@ export interface UserEditData {
     MatExpansionModule,
     MatProgressBarModule,
     StatusChipComponent,
-    DatePipe,
+    AppDatePipe,
   ],
   template: `
     <div class="m-head">
@@ -191,7 +191,7 @@ export interface UserEditData {
                     <span class="dev-model">{{ d.model || d.deviceIdentifier }}</span>
                     <span class="muted dev-meta">
                       {{ d.osVersion || d.platform }}
-                      @if (d.lastSeenAt) { <span class="sep">·</span> visto {{ d.lastSeenAt | date: 'short' }} }
+                      @if (d.lastSeenAt) { <span class="sep">·</span> visto {{ d.lastSeenAt | appDate: 'short' }} }
                     </span>
                   </div>
                   <span class="dev-status" [class.trusted]="d.status === 'TRUSTED'" [class.pending]="d.status === 'PENDING'" [class.blocked]="d.status === 'BLOCKED'">

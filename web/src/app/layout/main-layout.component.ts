@@ -8,15 +8,17 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AuthService } from '../core/auth/auth.service';
 import { AuthStore } from '../core/auth/auth.store';
 import { ChangePasswordDialogComponent } from '../core/auth/change-password-dialog.component';
+import { LanguageSwitcherComponent } from '../core/i18n/language-switcher.component';
 import { ThemeService } from '../core/theme/theme.service';
 import { roleLabel } from '../features/admin/roles/role.models';
 
 /**
- * Shell de la aplicación autenticada: topbar (marca + tema + usuario) y sidenav de
+ * Shell de la aplicación autenticada: topbar (marca + idioma + tema + usuario) y sidenav de
  * navegación agrupada, gateada por permiso (RBAC). Carga la identidad actual (/me) al entrar.
  */
 @Component({
@@ -33,6 +35,8 @@ import { roleLabel } from '../features/admin/roles/role.models';
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
+    TranslocoPipe,
+    LanguageSwitcherComponent,
   ],
   styles: [
     `
@@ -83,13 +87,14 @@ import { roleLabel } from '../features/admin/roles/role.models';
   template: `
     <div class="layout">
       <mat-toolbar color="primary">
-        <button mat-icon-button (click)="drawer.toggle()" aria-label="Menú">
+        <button mat-icon-button (click)="drawer.toggle()" [attr.aria-label]="'layout.menu' | transloco">
           <mat-icon>menu</mat-icon>
         </button>
         <span class="brand-word" style="margin-left:4px">Nexus Soft Time Clock</span>
         <span class="spacer"></span>
         <div class="toolbar-actions">
-          <button mat-icon-button (click)="theme.toggle()" aria-label="Cambiar tema">
+          <app-language-switcher />
+          <button mat-icon-button (click)="theme.toggle()" [attr.aria-label]="'layout.toggleTheme' | transloco">
             <mat-icon>{{ isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
           </button>
           <button mat-button [matMenuTriggerFor]="userMenu" class="user-btn">
@@ -107,11 +112,11 @@ import { roleLabel } from '../features/admin/roles/role.models';
           <mat-divider></mat-divider>
           <button mat-menu-item (click)="openChangePassword()">
             <mat-icon>lock_reset</mat-icon>
-            <span>Cambiar contraseña</span>
+            <span>{{ 'layout.changePassword' | transloco }}</span>
           </button>
           <button mat-menu-item (click)="logout()">
             <mat-icon>logout</mat-icon>
-            <span>Cerrar sesión</span>
+            <span>{{ 'layout.logout' | transloco }}</span>
           </button>
         </mat-menu>
       </mat-toolbar>
@@ -139,104 +144,104 @@ import { roleLabel } from '../features/admin/roles/role.models';
           <mat-nav-list>
             <a mat-list-item class="nav-item" routerLink="/dashboard" routerLinkActive="active">
               <mat-icon matListItemIcon>dashboard</mat-icon>
-              <span matListItemTitle>Panel</span>
+              <span matListItemTitle>{{ 'layout.nav.dashboard' | transloco }}</span>
             </a>
             @if (can('dashboard:read')) {
               <a mat-list-item class="nav-item" routerLink="/map" routerLinkActive="active">
                 <mat-icon matListItemIcon>public</mat-icon>
-                <span matListItemTitle>Mapa en tiempo real</span>
+                <span matListItemTitle>{{ 'layout.nav.map' | transloco }}</span>
               </a>
             }
 
             @if (can('incident:approve')) {
               <a mat-list-item class="nav-item" routerLink="/incidents" routerLinkActive="active">
                 <mat-icon matListItemIcon>report_problem</mat-icon>
-                <span matListItemTitle>Incidencias</span>
+                <span matListItemTitle>{{ 'layout.nav.incidents' | transloco }}</span>
               </a>
             }
 
             @if (can('report:export') || can('audit:read')) {
-              <div class="nav-group">Análisis</div>
+              <div class="nav-group">{{ 'layout.group.analysis' | transloco }}</div>
               @if (can('report:export')) {
                 <a mat-list-item class="nav-item" routerLink="/reports" routerLinkActive="active">
                   <mat-icon matListItemIcon>bar_chart</mat-icon>
-                  <span matListItemTitle>Reportes</span>
+                  <span matListItemTitle>{{ 'layout.nav.reports' | transloco }}</span>
                 </a>
                 <a mat-list-item class="nav-item" routerLink="/attendance-events" routerLinkActive="active">
                   <mat-icon matListItemIcon>login</mat-icon>
-                  <span matListItemTitle>Entradas y salidas</span>
+                  <span matListItemTitle>{{ 'layout.nav.attendanceEvents' | transloco }}</span>
                 </a>
                 
               }
               @if (can('audit:read')) {
                 <a mat-list-item class="nav-item" routerLink="/audit" routerLinkActive="active">
                   <mat-icon matListItemIcon>fact_check</mat-icon>
-                  <span matListItemTitle>Auditoría</span>
+                  <span matListItemTitle>{{ 'layout.nav.audit' | transloco }}</span>
                 </a>
               }
             }
 
             @if (can('user:manage') || can('company:manage') || can('worksite:manage') || can('project:manage')) {
-              <div class="nav-group">Organización</div>
+              <div class="nav-group">{{ 'layout.group.organization' | transloco }}</div>
               @if (can('user:manage')) {
                 <a mat-list-item class="nav-item" routerLink="/users" routerLinkActive="active">
                   <mat-icon matListItemIcon>group</mat-icon>
-                  <span matListItemTitle>Usuarios</span>
+                  <span matListItemTitle>{{ 'layout.nav.users' | transloco }}</span>
                 </a>
                 <a mat-list-item class="nav-item" routerLink="/people" routerLinkActive="active">
                   <mat-icon matListItemIcon>groups</mat-icon>
-                  <span matListItemTitle>Personas</span>
+                  <span matListItemTitle>{{ 'layout.nav.people' | transloco }}</span>
                 </a>
               }
               @if (can('company:manage')) {
                 <a mat-list-item class="nav-item" routerLink="/companies" routerLinkActive="active">
                   <mat-icon matListItemIcon>business</mat-icon>
-                  <span matListItemTitle>Empresas</span>
+                  <span matListItemTitle>{{ 'layout.nav.companies' | transloco }}</span>
                 </a>
               }
               @if (can('worksite:manage')) {
                 <a mat-list-item class="nav-item" routerLink="/work-sites" routerLinkActive="active">
                   <mat-icon matListItemIcon>place</mat-icon>
-                  <span matListItemTitle>Centros de trabajo</span>
+                  <span matListItemTitle>{{ 'layout.nav.workSites' | transloco }}</span>
                 </a>
               }
               @if (can('project:manage')) {
                 <a mat-list-item class="nav-item" routerLink="/projects" routerLinkActive="active">
                   <mat-icon matListItemIcon>work</mat-icon>
-                  <span matListItemTitle>Proyectos</span>
+                  <span matListItemTitle>{{ 'layout.nav.projects' | transloco }}</span>
                 </a>
               }
             }
 
             @if (can('schedule:manage') || can('vacation:approve')) {
-              <div class="nav-group">Planificación</div>
+              <div class="nav-group">{{ 'layout.group.planning' | transloco }}</div>
               @if (can('schedule:manage')) {
                 <a mat-list-item class="nav-item" routerLink="/scheduling" routerLinkActive="active">
                   <mat-icon matListItemIcon>event</mat-icon>
-                  <span matListItemTitle>Horarios y turnos</span>
+                  <span matListItemTitle>{{ 'layout.nav.scheduling' | transloco }}</span>
                 </a>
                 <a mat-list-item class="nav-item" routerLink="/event-types" routerLinkActive="active">
                   <mat-icon matListItemIcon>tune</mat-icon>
-                  <span matListItemTitle>Tipos de evento</span>
+                  <span matListItemTitle>{{ 'layout.nav.eventTypes' | transloco }}</span>
                 </a>
               }
               @if (can('vacation:approve')) {
                 <a mat-list-item class="nav-item" routerLink="/vacations" routerLinkActive="active">
                   <mat-icon matListItemIcon>beach_access</mat-icon>
-                  <span matListItemTitle>Vacaciones</span>
+                  <span matListItemTitle>{{ 'layout.nav.vacations' | transloco }}</span>
                 </a>
               }
             }
 
-            <div class="nav-group">Cuenta</div>
+            <div class="nav-group">{{ 'layout.group.account' | transloco }}</div>
             <a mat-list-item class="nav-item" routerLink="/notifications" routerLinkActive="active">
               <mat-icon matListItemIcon>notifications</mat-icon>
-              <span matListItemTitle>Notificaciones</span>
+              <span matListItemTitle>{{ 'layout.nav.notifications' | transloco }}</span>
             </a>
             @if (can('vacation:manage')) {
               <a mat-list-item class="nav-item" routerLink="/settings" routerLinkActive="active">
                 <mat-icon matListItemIcon>settings</mat-icon>
-                <span matListItemTitle>Configuración</span>
+                <span matListItemTitle>{{ 'layout.nav.settings' | transloco }}</span>
               </a>
             }
           </mat-nav-list>
@@ -256,6 +261,7 @@ export class MainLayoutComponent {
   private readonly store = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
   protected readonly theme = inject(ThemeService);
 
   protected readonly user = this.store.user;
@@ -273,17 +279,19 @@ export class MainLayoutComponent {
 
   protected userLabel(): string {
     const roles = this.store.user()?.roles ?? [];
-    return roles.length > 0 ? roleLabel(roles[0]) : 'Usuario';
+    return roles.length > 0 ? roleLabel(roles[0]) : this.transloco.translate('layout.user');
   }
 
-  /** Roles del usuario en español, separados por coma (p. ej. «Super Administrador»). */
+  /** Roles del usuario en el idioma activo, separados por coma (p. ej. «Super Administrador»). */
   protected rolesLabel(): string {
     return (this.store.user()?.roles ?? []).map(roleLabel).join(', ');
   }
 
   /** Ámbito legible del usuario, sin ids (Plataforma para admins de plataforma). */
   protected tenantLabel(): string {
-    return this.store.user()?.platformAdmin ? 'Plataforma' : 'Empresa';
+    return this.store.user()?.platformAdmin
+      ? this.transloco.translate('layout.scope.platform')
+      : this.transloco.translate('layout.scope.company');
   }
 
   /** Iniciales para el avatar, derivadas del rol principal (p. ej. SUPER_ADMIN → SA). */

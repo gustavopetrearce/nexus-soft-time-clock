@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 import { AuthStore } from '../../../core/auth/auth.store';
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
@@ -12,17 +13,18 @@ import { DashboardService } from './dashboard.service';
 interface QuickLink {
   route: string;
   icon: string;
+  /** Clave de traducción del texto del acceso. */
   label: string;
   permission?: string;
 }
 
 const QUICK_LINKS: readonly QuickLink[] = [
-  { route: '/incidents', icon: 'report_problem', label: 'Nueva incidencia', permission: 'incident:approve' },
-  { route: '/reports', icon: 'bar_chart', label: 'Generar reporte', permission: 'report:export' },
-  { route: '/users', icon: 'group', label: 'Usuarios', permission: 'user:manage' },
-  { route: '/work-sites', icon: 'place', label: 'Centros de trabajo', permission: 'worksite:manage' },
-  { route: '/map', icon: 'public', label: 'Ver mapa en vivo', permission: 'dashboard:read' },
-  { route: '/scheduling', icon: 'event', label: 'Horarios y turnos', permission: 'schedule:manage' },
+  { route: '/incidents', icon: 'report_problem', label: 'dashboard.links.newIncident', permission: 'incident:approve' },
+  { route: '/reports', icon: 'bar_chart', label: 'dashboard.links.newReport', permission: 'report:export' },
+  { route: '/users', icon: 'group', label: 'dashboard.links.users', permission: 'user:manage' },
+  { route: '/work-sites', icon: 'place', label: 'dashboard.links.workSites', permission: 'worksite:manage' },
+  { route: '/map', icon: 'public', label: 'dashboard.links.map', permission: 'dashboard:read' },
+  { route: '/scheduling', icon: 'event', label: 'dashboard.links.scheduling', permission: 'schedule:manage' },
 ];
 
 /**
@@ -33,42 +35,42 @@ const QUICK_LINKS: readonly QuickLink[] = [
 @Component({
   selector: 'app-metrics-dashboard',
   standalone: true,
-  imports: [RouterLink, MatIconModule, MatButtonModule, PageHeaderComponent, EmptyStateComponent],
+  imports: [RouterLink, MatIconModule, MatButtonModule, PageHeaderComponent, EmptyStateComponent, TranslocoPipe],
   template: `
     @if (isPlatformAdmin()) {
-      <app-page-header title="Panel de plataforma" subtitle="Administración global de empresas" />
+      <app-page-header [title]="'dashboard.platformTitle' | transloco" [subtitle]="'dashboard.platformSubtitle' | transloco" />
       <div class="card-row">
         <div class="metric-card">
           <div class="metric-head">
             <span class="metric-icon info"><mat-icon>business</mat-icon></span>
-            <h3>Empresas</h3>
+            <h3>{{ 'dashboard.companies' | transloco }}</h3>
           </div>
           <p class="metric-sub">
-            Gestioná las empresas (tenants) de la plataforma y aprovisioná el administrador inicial de cada una.
+            {{ 'dashboard.companiesText' | transloco }}
           </p>
           <a mat-flat-button color="primary" routerLink="/companies" class="full-width">
-            <mat-icon>arrow_forward</mat-icon> Ir a Empresas
+            <mat-icon>arrow_forward</mat-icon> {{ 'dashboard.goToCompanies' | transloco }}
           </a>
         </div>
       </div>
     } @else {
-    <app-page-header title="Panel" subtitle="Resumen operativo de tu empresa" />
+    <app-page-header [title]="'dashboard.title' | transloco" [subtitle]="'dashboard.subtitle' | transloco" />
 
     @if (summary(); as s) {
       <div class="card-row">
         <div class="metric-card">
           <div class="metric-head">
             <span class="metric-icon info"><mat-icon>group</mat-icon></span>
-            <h3>Asistencia de hoy</h3>
+            <h3>{{ 'dashboard.attendanceToday' | transloco }}</h3>
           </div>
           <div class="metric-split">
             <div class="metric-item">
               <div class="metric-value">{{ s.attendanceTodayAccepted }}</div>
-              <span class="status-chip success">Aceptados</span>
+              <span class="status-chip success">{{ 'dashboard.accepted' | transloco }}</span>
             </div>
             <div class="metric-item">
               <div class="metric-value">{{ s.attendanceTodayRejected }}</div>
-              <span class="status-chip danger">Rechazados</span>
+              <span class="status-chip danger">{{ 'dashboard.rejected' | transloco }}</span>
             </div>
           </div>
         </div>
@@ -76,13 +78,13 @@ const QUICK_LINKS: readonly QuickLink[] = [
         <div class="metric-card highlight-danger">
           <div class="metric-head">
             <span class="metric-icon danger"><mat-icon>report_problem</mat-icon></span>
-            <h3>Incidencias abiertas</h3>
+            <h3>{{ 'dashboard.openIncidents' | transloco }}</h3>
           </div>
           <div class="metric-value big">{{ s.openIncidents }}</div>
-          <p class="metric-sub">Requieren revisión del supervisor</p>
+          <p class="metric-sub">{{ 'dashboard.needsReview' | transloco }}</p>
           @if (can('incident:approve')) {
             <a mat-flat-button routerLink="/incidents" class="full-width danger-button">
-              <mat-icon>list</mat-icon> Ver incidencias
+              <mat-icon>list</mat-icon> {{ 'dashboard.viewIncidents' | transloco }}
             </a>
           }
         </div>
@@ -90,36 +92,36 @@ const QUICK_LINKS: readonly QuickLink[] = [
         <div class="metric-card">
           <div class="metric-head">
             <span class="metric-icon info"><mat-icon>verified</mat-icon></span>
-            <h3>Operación activa</h3>
+            <h3>{{ 'dashboard.activeOperation' | transloco }}</h3>
           </div>
           <div class="metric-split">
             <div class="metric-item">
               <div class="metric-value">{{ s.activeUsers }}</div>
-              <span class="metric-label">Usuarios activos</span>
+              <span class="metric-label">{{ 'dashboard.activeUsers' | transloco }}</span>
             </div>
             <div class="metric-item">
               <div class="metric-value">{{ s.activeWorkSites }}</div>
-              <span class="metric-label">Centros activos</span>
+              <span class="metric-label">{{ 'dashboard.activeSites' | transloco }}</span>
             </div>
           </div>
         </div>
       </div>
 
       @if (visibleLinks().length > 0) {
-        <h3 class="section-title">Accesos rápidos</h3>
+        <h3 class="section-title">{{ 'dashboard.quickLinks' | transloco }}</h3>
         <div class="quick-grid">
           @for (link of visibleLinks(); track link.route) {
             <a class="quick-link" [routerLink]="link.route">
               <span class="quick-icon"><mat-icon>{{ link.icon }}</mat-icon></span>
-              <span class="quick-label">{{ link.label }}</span>
+              <span class="quick-label">{{ link.label | transloco }}</span>
             </a>
           }
         </div>
       }
     } @else if (error()) {
-      <app-empty-state icon="error_outline" [message]="error()!" />
+      <app-empty-state icon="error_outline" [message]="error()! | transloco" />
     } @else {
-      <p class="muted">Cargando indicadores…</p>
+      <p class="muted">{{ 'dashboard.loading' | transloco }}</p>
     }
     }
   `,
@@ -198,6 +200,7 @@ export class MetricsDashboardComponent {
   private readonly store = inject(AuthStore);
 
   protected readonly summary = signal<DashboardSummary | null>(null);
+  /** Clave de traducción del error de carga, si lo hubo. */
   protected readonly error = signal<string | null>(null);
 
   /** El admin de plataforma (SUPER_ADMIN, sin tenant) no tiene métricas de empresa: ve un panel global. */
@@ -223,7 +226,7 @@ export class MetricsDashboardComponent {
       }
       this.service.summary().subscribe({
         next: (s) => this.summary.set(s),
-        error: () => this.error.set('No se pudieron cargar los indicadores (¿permiso dashboard:read?).'),
+        error: () => this.error.set('dashboard.loadError'),
       });
     });
   }

@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
+import { AppDatePipe } from '../../core/i18n/app-date.pipe';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
 import { NotificationService } from '../../core/ui/notification.service';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
@@ -41,6 +42,7 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
     MatSelectModule,
     MatProgressBarModule,
     DatePipe,
+    AppDatePipe,
     PageHeaderComponent,
     StatusChipComponent,
     EmptyStateComponent,
@@ -91,7 +93,7 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
                 <ng-container matColumnDef="period">
                   <th mat-header-cell *matHeaderCellDef>Periodo</th>
                   <td mat-cell *matCellDef="let v" style="white-space:nowrap">
-                    {{ v.startDate | date: 'dd MMM' }} – {{ v.endDate | date: 'dd MMM yyyy' }}
+                    {{ v.startDate | appDate: 'dd MMM' }} – {{ v.endDate | appDate: 'dd MMM yyyy' }}
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="days">
@@ -143,7 +145,7 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
           <div class="drawer-body">
             <div class="detail-section-title">Detalle</div>
             <div class="detail-grid">
-              <div class="detail-row"><span class="k">Periodo</span><span class="v">{{ v.startDate | date: 'dd MMM yyyy' }} – {{ v.endDate | date: 'dd MMM yyyy' }}</span></div>
+              <div class="detail-row"><span class="k">Periodo</span><span class="v">{{ v.startDate | appDate: 'dd MMM yyyy' }} – {{ v.endDate | appDate: 'dd MMM yyyy' }}</span></div>
               <div class="detail-row"><span class="k">Días solicitados</span><span class="v">{{ v.days }}</span></div>
               @if (v.reason) {
                 <div class="detail-row"><span class="k">Motivo</span><span class="v">{{ v.reason }}</span></div>

@@ -1,3 +1,5 @@
+import { translateOr } from '../../../core/i18n/translate-or';
+
 /** Plantilla de rol del sistema (espejo de RoleController.RoleResponse). */
 export interface Role {
   code: string;
@@ -22,7 +24,10 @@ export function rankOf(code: string): number {
   return ROLE_RANK[code] ?? Number.POSITIVE_INFINITY;
 }
 
-/** Nombre en español de cada rol (espejo de los nombres sembrados en V10). */
+/**
+ * Nombre en español de cada rol (espejo de los nombres sembrados en V10). Es el respaldo de
+ * `roleLabel`, que traduce con las claves `roles.<CODE>` del idioma activo.
+ */
 export const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super Administrador',
   COMPANY_ADMIN: 'Administrador de Empresa',
@@ -34,7 +39,7 @@ export const ROLE_LABELS: Record<string, string> = {
 
 /** Etiqueta legible de un rol; si el código es desconocido, se muestra tal cual. */
 export function roleLabel(code: string): string {
-  return ROLE_LABELS[code] ?? code;
+  return translateOr(`roles.${code}`, ROLE_LABELS[code] ?? code);
 }
 
 /** Lista de roles para filtros (código + etiqueta en español). */

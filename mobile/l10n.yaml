@@ -3,3 +3,7 @@ arb-dir: lib/l10n
 template-arb-file: app_es.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
+# `AppLocalizations.of(context)` no nulo: el delegate siempre está registrado en MaterialApp.
+nullable-getter: false
+# Lista las claves de app_es.arb que faltan en otros idiomas (debe quedar vacía).
+untranslated-messages-file: build/untranslated-l10n.json
