@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { BreadcrumbComponent } from '../../../core/ui/breadcrumb.component';
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
@@ -36,95 +37,96 @@ import { CompanyService } from './company.service';
     BreadcrumbComponent,
     PageHeaderComponent,
     StatusChipComponent,
+    TranslocoPipe,
   ],
   template: `
     <app-breadcrumb
       [items]="[
-        { label: 'Organización', route: '/companies' },
-        { label: 'Empresas', route: '/companies' },
-        { label: isEdit() ? (company()?.name ?? '') : 'Nueva empresa' },
+        { label: ('layout.group.organization' | transloco), route: '/companies' },
+        { label: ('companies.title' | transloco), route: '/companies' },
+        { label: isEdit() ? (company()?.name ?? '') : ('companies.new' | transloco) },
       ]"
     />
-    <app-page-header [title]="isEdit() ? 'Editar empresa' : 'Nueva empresa'" />
+    <app-page-header [title]="(isEdit() ? 'companies.edit' : 'companies.new') | transloco" />
 
     @if (loading()) { <mat-progress-bar mode="indeterminate" style="margin-bottom:16px" /> }
     @if (error()) { <p class="error-text">{{ error() }}</p> }
 
     <div class="form-page-layout">
       <div class="form-page-main">
-        <h3 class="form-section-title">Información de la empresa</h3>
+        <h3 class="form-section-title">{{ 'companies.form.info' | transloco }}</h3>
         <form [formGroup]="form">
           <div class="form-grid-2">
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Código</mat-label>
+              <mat-label>{{ 'common.code' | transloco }}</mat-label>
               <input matInput formControlName="code" />
-              <mat-hint>Código único que identifica a la empresa en el sistema.</mat-hint>
+              <mat-hint>{{ 'companies.form.codeHint' | transloco }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Nombre comercial</mat-label>
+              <mat-label>{{ 'companies.form.tradeName' | transloco }}</mat-label>
               <input matInput formControlName="name" />
-              <mat-hint>Nombre con el que se identifica la empresa.</mat-hint>
+              <mat-hint>{{ 'companies.form.tradeNameHint' | transloco }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Razón social</mat-label>
+              <mat-label>{{ 'companies.form.legalName' | transloco }}</mat-label>
               <input matInput formControlName="legalName" />
-              <mat-hint>Nombre legal de la empresa (opcional).</mat-hint>
+              <mat-hint>{{ 'companies.form.legalNameHint' | transloco }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Dominio de correo</mat-label>
+              <mat-label>{{ 'companies.form.emailDomain' | transloco }}</mat-label>
               <input matInput formControlName="emailDomain" placeholder="empresa.com" />
-              <mat-hint>Dominio utilizado para accesos y validaciones (opcional).</mat-hint>
+              <mat-hint>{{ 'companies.form.emailDomainHint' | transloco }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Zona horaria</mat-label>
+              <mat-label>{{ 'companies.form.timezone' | transloco }}</mat-label>
               <mat-select formControlName="timezone">
                 @for (tz of tzOptions(); track tz.value) {
                   <mat-option [value]="tz.value">{{ tz.label }}</mat-option>
                 }
               </mat-select>
-              <mat-hint>Zona horaria principal de la empresa.</mat-hint>
+              <mat-hint>{{ 'companies.form.timezoneHint' | transloco }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Idioma</mat-label>
+              <mat-label>{{ 'companies.form.locale' | transloco }}</mat-label>
               <mat-select formControlName="locale">
                 @for (loc of localeOpts(); track loc.value) {
                   <mat-option [value]="loc.value">{{ loc.label }}</mat-option>
                 }
               </mat-select>
-              <mat-hint>Idioma predeterminado de la empresa.</mat-hint>
+              <mat-hint>{{ 'companies.form.localeHint' | transloco }}</mat-hint>
             </mat-form-field>
           </div>
         </form>
 
         @if (!isEdit()) {
-          <h3 class="form-section-title" style="margin-top: var(--sp-6)">Administrador inicial</h3>
+          <h3 class="form-section-title" style="margin-top: var(--sp-6)">{{ 'companies.form.initialAdmin' | transloco }}</h3>
           <p class="muted" style="margin: 0 0 var(--sp-4)">
-            Se creará el primer usuario COMPANY_ADMIN de la empresa. Podrá iniciar sesión con estos datos y administrar su tenant.
+            {{ 'companies.form.initialAdminText' | transloco }}
           </p>
           <form [formGroup]="adminForm">
             <div class="form-grid-2">
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Email</mat-label>
+                <mat-label>{{ 'common.email' | transloco }}</mat-label>
                 <input matInput type="email" formControlName="email" placeholder="admin@empresa.com" />
-                <mat-hint>Correo de acceso del administrador.</mat-hint>
+                <mat-hint>{{ 'companies.form.adminEmailHint' | transloco }}</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Contraseña temporal</mat-label>
+                <mat-label>{{ 'common.tempPassword' | transloco }}</mat-label>
                 <input matInput type="password" formControlName="password" />
-                <mat-hint>Mínimo 8 caracteres. Podrá cambiarla luego.</mat-hint>
+                <mat-hint>{{ 'companies.form.tempPasswordHint' | transloco }}</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Nombre</mat-label>
+                <mat-label>{{ 'common.firstName' | transloco }}</mat-label>
                 <input matInput formControlName="firstName" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Apellido</mat-label>
+                <mat-label>{{ 'common.lastName' | transloco }}</mat-label>
                 <input matInput formControlName="lastName" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Código de empleado</mat-label>
+                <mat-label>{{ 'common.employeeCode' | transloco }}</mat-label>
                 <input matInput formControlName="employeeCode" />
-                <mat-hint>Opcional.</mat-hint>
+                <mat-hint>{{ 'common.optional' | transloco }}</mat-hint>
               </mat-form-field>
             </div>
           </form>
@@ -133,41 +135,41 @@ import { CompanyService } from './company.service';
         <div class="form-callout">
           <mat-icon>info</mat-icon>
           <div>
-            <p class="row-title">Importante</p>
-            <p class="row-desc">Una vez creada la empresa, podrás administrar sus centros de trabajo, proyectos y horarios.</p>
+            <p class="row-title">{{ 'companies.form.important' | transloco }}</p>
+            <p class="row-desc">{{ 'companies.form.importantText' | transloco }}</p>
           </div>
         </div>
 
         <div class="form-actions">
-          <button mat-button type="button" (click)="cancel()">Cancelar</button>
+          <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
           <button mat-flat-button color="primary" [disabled]="!canSave() || saving()" (click)="save()">
-            <mat-icon>save</mat-icon> {{ isEdit() ? 'Guardar cambios' : 'Guardar empresa' }}
+            <mat-icon>save</mat-icon> {{ (isEdit() ? 'common.saveChanges' : 'companies.form.save') | transloco }}
           </button>
         </div>
       </div>
 
       <div class="form-page-side">
         <div class="info-card tip">
-          <h3 class="info-card-title">Información importante</h3>
+          <h3 class="info-card-title">{{ 'companies.form.importantInfo' | transloco }}</h3>
           <div class="icon-row">
             <mat-icon>shield</mat-icon>
             <div>
-              <p class="row-title">Código único</p>
-              <p class="row-desc">El código de empresa no puede modificarse después de crearla.</p>
+              <p class="row-title">{{ 'companies.form.uniqueCode' | transloco }}</p>
+              <p class="row-desc">{{ 'companies.form.uniqueCodeText' | transloco }}</p>
             </div>
           </div>
           <div class="icon-row">
             <mat-icon>public</mat-icon>
             <div>
-              <p class="row-title">Zona horaria y locale</p>
-              <p class="row-desc">Afectan los cálculos de asistencia y reportes.</p>
+              <p class="row-title">{{ 'companies.form.tzLocale' | transloco }}</p>
+              <p class="row-desc">{{ 'companies.form.tzLocaleText' | transloco }}</p>
             </div>
           </div>
           <div class="icon-row">
             <mat-icon>check_circle</mat-icon>
             <div>
-              <p class="row-title">Solo empresas activas</p>
-              <p class="row-desc">Solo las empresas activas pueden tener usuarios y centros de trabajo.</p>
+              <p class="row-title">{{ 'companies.form.activeOnly' | transloco }}</p>
+              <p class="row-desc">{{ 'companies.form.activeOnlyText' | transloco }}</p>
             </div>
           </div>
         </div>
@@ -181,53 +183,52 @@ import { CompanyService } from './company.service';
                 <app-status-chip [status]="c.status" />
               </div>
             </div>
-            <div class="info-row"><span class="k">Código</span><span class="v">{{ c.code }}</span></div>
+            <div class="info-row"><span class="k">{{ 'common.code' | transloco }}</span><span class="v">{{ c.code }}</span></div>
           </div>
           <div class="info-card">
-            <h3 class="info-card-title">Estado de la empresa</h3>
+            <h3 class="info-card-title">{{ 'companies.form.statusTitle' | transloco }}</h3>
             <p class="muted" style="margin:0 0 var(--sp-3)">
-              @if (c.status === 'ACTIVE') { Solo las empresas activas pueden usar el sistema. }
-              @else { Esta empresa no puede operar mientras no esté activa. }
+              {{ (c.status === 'ACTIVE' ? 'companies.form.statusActiveText' : 'companies.form.statusInactiveText') | transloco }}
             </p>
             <button mat-stroked-button (click)="toggleStatus(c)">
-              {{ c.status === 'ACTIVE' ? 'Suspender empresa' : 'Activar empresa' }}
+              {{ (c.status === 'ACTIVE' ? 'companies.suspend' : 'companies.activate') | transloco }}
             </button>
           </div>
 
           <div class="info-card">
-            <h3 class="info-card-title">Administrador</h3>
+            <h3 class="info-card-title">{{ 'companies.form.admin' | transloco }}</h3>
             @if (!showAdminForm()) {
               <p class="muted" style="margin:0 0 var(--sp-3)">
-                Aprovisioná un usuario COMPANY_ADMIN para esta empresa (el primer acceso del tenant).
+                {{ 'companies.form.adminText' | transloco }}
               </p>
               <button mat-stroked-button (click)="showAdminForm.set(true)">
-                <mat-icon>person_add</mat-icon> Agregar administrador
+                <mat-icon>person_add</mat-icon> {{ 'companies.form.addAdmin' | transloco }}
               </button>
             } @else {
               <form [formGroup]="adminForm">
                 <mat-form-field appearance="outline" class="drawer-field" style="width:100%">
-                  <mat-label>Email</mat-label>
+                  <mat-label>{{ 'common.email' | transloco }}</mat-label>
                   <input matInput type="email" formControlName="email" />
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="drawer-field" style="width:100%">
-                  <mat-label>Nombre</mat-label>
+                  <mat-label>{{ 'common.firstName' | transloco }}</mat-label>
                   <input matInput formControlName="firstName" />
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="drawer-field" style="width:100%">
-                  <mat-label>Apellido</mat-label>
+                  <mat-label>{{ 'common.lastName' | transloco }}</mat-label>
                   <input matInput formControlName="lastName" />
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="drawer-field" style="width:100%">
-                  <mat-label>Contraseña temporal</mat-label>
+                  <mat-label>{{ 'common.tempPassword' | transloco }}</mat-label>
                   <input matInput type="password" formControlName="password" />
-                  <mat-hint>Mínimo 8 caracteres.</mat-hint>
+                  <mat-hint>{{ 'common.minPassword' | transloco }}</mat-hint>
                 </mat-form-field>
               </form>
               <div style="display:flex; gap: var(--sp-2); margin-top: var(--sp-2)">
                 <button mat-flat-button color="primary" [disabled]="!adminValid() || provisioningAdmin()" (click)="provisionAdmin()">
-                  <mat-icon>save</mat-icon> Guardar administrador
+                  <mat-icon>save</mat-icon> {{ 'companies.form.saveAdmin' | transloco }}
                 </button>
-                <button mat-button (click)="showAdminForm.set(false)">Cancelar</button>
+                <button mat-button (click)="showAdminForm.set(false)">{{ 'common.cancel' | transloco }}</button>
               </div>
             }
           </div>
@@ -243,6 +244,7 @@ export class CompanyFormComponent {
   private readonly service = inject(CompanyService);
   private readonly notify = inject(NotificationService);
   private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly companyId = this.route.snapshot.paramMap.get('id');
   protected readonly isEdit = computed(() => !!this.companyId);
@@ -306,7 +308,7 @@ export class CompanyFormComponent {
           this.loading.set(false);
         },
         error: () => {
-          this.error.set('No se pudo cargar la empresa.');
+          this.error.set(this.transloco.translate('companies.form.loadError'));
           this.loading.set(false);
         },
       });
@@ -339,12 +341,12 @@ export class CompanyFormComponent {
       this.saving.set(true);
       this.service.update(this.companyId, payload).subscribe({
         next: () => {
-          this.notify.success('Empresa actualizada.');
+          this.notify.success(this.transloco.translate('companies.form.updated'));
           void this.router.navigate(['/companies']);
         },
         error: () => {
           this.saving.set(false);
-          this.notify.error('No se pudo guardar la empresa.');
+          this.notify.error(this.transloco.translate('companies.form.saveError'));
         },
       });
       return;
@@ -359,7 +361,7 @@ export class CompanyFormComponent {
       next: (company) => this.provisionInitialAdmin(company.id),
       error: () => {
         this.saving.set(false);
-        this.notify.error('No se pudo crear la empresa.');
+        this.notify.error(this.transloco.translate('companies.form.createError'));
       },
     });
   }
@@ -368,14 +370,12 @@ export class CompanyFormComponent {
   private provisionInitialAdmin(companyId: string): void {
     this.service.provisionAdmin(companyId, this.adminPayload()).subscribe({
       next: () => {
-        this.notify.success('Empresa creada y administrador aprovisionado.');
+        this.notify.success(this.transloco.translate('companies.form.created'));
         void this.router.navigate(['/companies']);
       },
       error: () => {
         this.saving.set(false);
-        this.notify.error(
-          'La empresa se creó, pero no se pudo aprovisionar el administrador. Reintentá desde la ficha de la empresa.',
-        );
+        this.notify.error(this.transloco.translate('companies.form.createdNoAdmin'));
         void this.router.navigate(['/companies', companyId, 'edit']);
       },
     });
@@ -389,14 +389,14 @@ export class CompanyFormComponent {
     this.provisioningAdmin.set(true);
     this.service.provisionAdmin(this.companyId, this.adminPayload()).subscribe({
       next: () => {
-        this.notify.success('Administrador aprovisionado.');
+        this.notify.success(this.transloco.translate('companies.form.adminProvisioned'));
         this.adminForm.reset();
         this.showAdminForm.set(false);
         this.provisioningAdmin.set(false);
       },
       error: () => {
         this.provisioningAdmin.set(false);
-        this.notify.error('No se pudo aprovisionar el administrador.');
+        this.notify.error(this.transloco.translate('companies.form.adminError'));
       },
     });
   }
@@ -417,8 +417,11 @@ export class CompanyFormComponent {
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
-          title: next === 'SUSPENDED' ? 'Suspender empresa' : 'Activar empresa',
-          message: `¿Confirmás cambiar el estado de "${company.name}" a ${next}?`,
+          title: this.transloco.translate(next === 'SUSPENDED' ? 'companies.suspend' : 'companies.activate'),
+          message: this.transloco.translate('companies.confirmStatus', {
+            name: company.name,
+            status: this.transloco.translate(`status.${next}`),
+          }),
           color: next === 'SUSPENDED' ? 'warn' : 'primary',
         },
       })
@@ -430,9 +433,9 @@ export class CompanyFormComponent {
         this.service.setStatus(company.id, next).subscribe({
           next: (updated) => {
             this.company.set(updated);
-            this.notify.success('Estado actualizado.');
+            this.notify.success(this.transloco.translate('common.statusUpdated'));
           },
-          error: () => this.notify.error('No se pudo cambiar el estado.'),
+          error: () => this.notify.error(this.transloco.translate('common.statusError')),
         });
       });
   }

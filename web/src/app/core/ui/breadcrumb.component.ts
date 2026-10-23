@@ -1,6 +1,7 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 export interface BreadcrumbItem {
   label: string;
@@ -11,9 +12,9 @@ export interface BreadcrumbItem {
 @Component({
   selector: 'app-breadcrumb',
   standalone: true,
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, TranslocoPipe],
   template: `
-    <nav class="breadcrumb" aria-label="Ruta de navegación">
+    <nav class="breadcrumb" [attr.aria-label]="'common.breadcrumb' | transloco">
       @for (item of items(); track item.label; let last = $last) {
         @if (item.route && !last) {
           <a [routerLink]="item.route">{{ item.label }}</a>

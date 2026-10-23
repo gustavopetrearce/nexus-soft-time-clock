@@ -12,6 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
 import { NotificationService } from '../../../core/ui/notification.service';
@@ -42,17 +43,18 @@ import { SchedulingService } from './scheduling.service';
     PageHeaderComponent,
     StatusChipComponent,
     EmptyStateComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header title="Horarios y turnos" subtitle="Define y administra los horarios y turnos utilizados por los colaboradores">
+    <app-page-header [title]="'layout.nav.scheduling' | transloco" [subtitle]="'scheduling.subtitle' | transloco">
       <button mat-flat-button color="primary" (click)="router.navigate(['/scheduling/new'])">
-        <mat-icon>add</mat-icon> Nuevo horario
+        <mat-icon>add</mat-icon> {{ 'scheduling.new' | transloco }}
       </button>
     </app-page-header>
     @if (error()) { <p class="error-text">{{ error() }}</p> }
 
     <mat-tab-group>
-      <mat-tab label="Horarios y turnos">
+      <mat-tab [label]="'layout.nav.scheduling' | transloco">
         <div class="split-layout" style="margin-top:16px">
           <div class="split-main">
             <mat-card>
@@ -60,21 +62,21 @@ import { SchedulingService } from './scheduling.service';
                 <div class="table-wrap">
                   <table mat-table [dataSource]="schedules()" style="width:100%">
                     <ng-container matColumnDef="code">
-                      <th mat-header-cell *matHeaderCellDef>Código</th>
+                      <th mat-header-cell *matHeaderCellDef>{{ 'common.code' | transloco }}</th>
                       <td mat-cell *matCellDef="let s">{{ s.code }}</td>
                     </ng-container>
                     <ng-container matColumnDef="name">
-                      <th mat-header-cell *matHeaderCellDef>Nombre</th>
+                      <th mat-header-cell *matHeaderCellDef>{{ 'common.name' | transloco }}</th>
                       <td mat-cell *matCellDef="let s">{{ s.name }}</td>
                     </ng-container>
                     <ng-container matColumnDef="status">
-                      <th mat-header-cell *matHeaderCellDef>Estado</th>
+                      <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | transloco }}</th>
                       <td mat-cell *matCellDef="let s"><app-status-chip [status]="s.status" /></td>
                     </ng-container>
                     <ng-container matColumnDef="actions">
                       <th mat-header-cell *matHeaderCellDef></th>
                       <td mat-cell *matCellDef="let s" style="text-align:right;white-space:nowrap">
-                        <button mat-icon-button (click)="editSchedule(s); $event.stopPropagation()" aria-label="Editar"><mat-icon>chevron_right</mat-icon></button>
+                        <button mat-icon-button (click)="editSchedule(s); $event.stopPropagation()" [attr.aria-label]="'common.edit' | transloco"><mat-icon>chevron_right</mat-icon></button>
                       </td>
                     </ng-container>
                     <tr mat-header-row *matHeaderRowDef="scheduleColumns"></tr>
@@ -85,74 +87,74 @@ import { SchedulingService } from './scheduling.service';
                   </table>
                 </div>
                 @if (schedules().length === 0) {
-                  <app-empty-state icon="event" message="No hay horarios para mostrar." />
+                  <app-empty-state icon="event" [message]="'scheduling.empty' | transloco" />
                 }
               </mat-card-content>
             </mat-card>
 
             @if (selectedSchedule(); as sc) {
               <mat-card style="margin-top:16px">
-                <mat-card-header><mat-card-title>Turnos de {{ sc.name }}</mat-card-title></mat-card-header>
+                <mat-card-header><mat-card-title>{{ 'scheduling.shiftsOf' | transloco: { name: sc.name } }}</mat-card-title></mat-card-header>
                 <mat-card-content>
                   <form [formGroup]="shiftForm" (ngSubmit)="saveShift()" class="filter-bar" style="align-items:baseline">
                     <mat-form-field appearance="outline" style="width:160px">
-                      <mat-label>Nombre</mat-label>
+                      <mat-label>{{ 'common.name' | transloco }}</mat-label>
                       <input matInput formControlName="name" />
                     </mat-form-field>
                     <mat-form-field appearance="outline" style="width:120px">
-                      <mat-label>Entrada</mat-label>
+                      <mat-label>{{ 'scheduling.start' | transloco }}</mat-label>
                       <input matInput type="time" formControlName="startTime" />
                     </mat-form-field>
                     <mat-form-field appearance="outline" style="width:120px">
-                      <mat-label>Salida</mat-label>
+                      <mat-label>{{ 'scheduling.end' | transloco }}</mat-label>
                       <input matInput type="time" formControlName="endTime" />
                     </mat-form-field>
                     <mat-form-field appearance="outline" style="width:150px">
-                      <mat-label>Tolerancia (min)</mat-label>
+                      <mat-label>{{ 'scheduling.tolerance' | transloco }}</mat-label>
                       <input matInput type="number" formControlName="lateToleranceMin" />
-                      <mat-hint>Margen tras la entrada antes de contar retardo.</mat-hint>
+                      <mat-hint>{{ 'scheduling.toleranceHint' | transloco }}</mat-hint>
                     </mat-form-field>
                     <mat-form-field appearance="outline" style="width:150px">
-                      <mat-label>Ventana antes (min)</mat-label>
+                      <mat-label>{{ 'scheduling.windowBefore' | transloco }}</mat-label>
                       <input matInput type="number" formControlName="windowBeforeMin" />
-                      <mat-hint>Cuánto antes de la entrada se admite marcar.</mat-hint>
+                      <mat-hint>{{ 'scheduling.windowBeforeHint' | transloco }}</mat-hint>
                     </mat-form-field>
                     <mat-form-field appearance="outline" style="width:150px">
-                      <mat-label>Ventana después (min)</mat-label>
+                      <mat-label>{{ 'scheduling.windowAfter' | transloco }}</mat-label>
                       <input matInput type="number" formControlName="windowAfterMin" />
-                      <mat-hint>Cuánto después de la salida se admite marcar.</mat-hint>
+                      <mat-hint>{{ 'scheduling.windowAfterHint' | transloco }}</mat-hint>
                     </mat-form-field>
-                    <mat-checkbox formControlName="crossesMidnight">Cruza medianoche</mat-checkbox>
+                    <mat-checkbox formControlName="crossesMidnight">{{ 'scheduling.crossesMidnight' | transloco }}</mat-checkbox>
                     <button mat-flat-button color="primary" type="submit" [disabled]="shiftForm.invalid">
-                      {{ editingShiftId() ? 'Guardar' : 'Agregar' }}
+                      {{ (editingShiftId() ? 'common.save' : 'common.add') | transloco }}
                     </button>
                     @if (editingShiftId()) {
-                      <button mat-button type="button" (click)="resetShiftForm()">Cancelar</button>
+                      <button mat-button type="button" (click)="resetShiftForm()">{{ 'common.cancel' | transloco }}</button>
                     }
                   </form>
 
                   <div class="table-wrap">
                     <table mat-table [dataSource]="shifts()" style="width:100%">
                       <ng-container matColumnDef="name">
-                        <th mat-header-cell *matHeaderCellDef>Turno</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ 'scheduling.shift' | transloco }}</th>
                         <td mat-cell *matCellDef="let s">{{ s.name }}</td>
                       </ng-container>
                       <ng-container matColumnDef="time">
-                        <th mat-header-cell *matHeaderCellDef>Horario</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ 'scheduling.schedule' | transloco }}</th>
                         <td mat-cell *matCellDef="let s">{{ s.startTime }}–{{ s.endTime }}</td>
                       </ng-container>
                       <ng-container matColumnDef="tolerance">
-                        <th mat-header-cell *matHeaderCellDef>Tol.</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ 'scheduling.toleranceShort' | transloco }}</th>
                         <td mat-cell *matCellDef="let s">{{ s.lateToleranceMin }}m</td>
                       </ng-container>
                       <ng-container matColumnDef="window">
-                        <th mat-header-cell *matHeaderCellDef>Ventana</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ 'scheduling.window' | transloco }}</th>
                         <td mat-cell *matCellDef="let s">−{{ s.windowBeforeMin }}m / +{{ s.windowAfterMin }}m</td>
                       </ng-container>
                       <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef></th>
                         <td mat-cell *matCellDef="let s" style="text-align:right">
-                          <button mat-icon-button (click)="editShift(s)" aria-label="Editar"><mat-icon>edit</mat-icon></button>
+                          <button mat-icon-button (click)="editShift(s)" [attr.aria-label]="'common.edit' | transloco"><mat-icon>edit</mat-icon></button>
                         </td>
                       </ng-container>
                       <tr mat-header-row *matHeaderRowDef="shiftColumns"></tr>
@@ -160,7 +162,7 @@ import { SchedulingService } from './scheduling.service';
                     </table>
                   </div>
                   @if (shifts().length === 0) {
-                    <app-empty-state icon="schedule" message="Este horario aún no tiene turnos." />
+                    <app-empty-state icon="schedule" [message]="'scheduling.noShifts' | transloco" />
                   }
                 </mat-card-content>
               </mat-card>
@@ -170,12 +172,12 @@ import { SchedulingService } from './scheduling.service';
       </mat-tab>
 
       <!-- Asignaciones -->
-      <mat-tab label="Asignaciones">
+      <mat-tab [label]="'scheduling.assignments' | transloco">
         <mat-card style="margin-top:16px">
           <mat-card-content>
             <form [formGroup]="assignForm" (ngSubmit)="assign()" class="filter-bar" style="align-items:baseline">
               <mat-form-field appearance="outline" style="width:240px">
-                <mat-label>Usuario</mat-label>
+                <mat-label>{{ 'scheduling.user' | transloco }}</mat-label>
                 <mat-select formControlName="userId">
                   @for (u of users(); track u.id) {
                     <mat-option [value]="u.id">
@@ -185,7 +187,7 @@ import { SchedulingService } from './scheduling.service';
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline" style="width:200px">
-                <mat-label>Horario</mat-label>
+                <mat-label>{{ 'scheduling.schedule' | transloco }}</mat-label>
                 <mat-select formControlName="scheduleId"
                             (selectionChange)="onAssignScheduleChange($event.value)">
                   @for (s of schedules(); track s.id) {
@@ -194,7 +196,7 @@ import { SchedulingService } from './scheduling.service';
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline" style="width:220px">
-                <mat-label>Turno</mat-label>
+                <mat-label>{{ 'scheduling.shift' | transloco }}</mat-label>
                 <mat-select formControlName="shiftId">
                   @for (s of assignShifts(); track s.id) {
                     <mat-option [value]="s.id">{{ s.name }} ({{ s.startTime }}–{{ s.endTime }})</mat-option>
@@ -202,7 +204,7 @@ import { SchedulingService } from './scheduling.service';
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline" style="width:220px">
-                <mat-label>Centro (opcional)</mat-label>
+                <mat-label>{{ 'scheduling.siteOptional' | transloco }}</mat-label>
                 <mat-select formControlName="workSiteId">
                   <mat-option [value]="''">—</mat-option>
                   @for (w of workSites(); track w.id) {
@@ -211,19 +213,19 @@ import { SchedulingService } from './scheduling.service';
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline" style="width:160px">
-                <mat-label>Desde</mat-label>
+                <mat-label>{{ 'scheduling.from' | transloco }}</mat-label>
                 <input matInput type="date" formControlName="validFrom" />
               </mat-form-field>
               <mat-form-field appearance="outline" style="width:160px">
-                <mat-label>Hasta (opcional)</mat-label>
+                <mat-label>{{ 'scheduling.toOptional' | transloco }}</mat-label>
                 <input matInput type="date" formControlName="validTo" />
               </mat-form-field>
-              <button mat-flat-button color="primary" type="submit" [disabled]="assignForm.invalid">Asignar</button>
+              <button mat-flat-button color="primary" type="submit" [disabled]="assignForm.invalid">{{ 'scheduling.assign' | transloco }}</button>
             </form>
 
             <div class="filter-bar">
               <mat-form-field appearance="outline" style="width:280px">
-                <mat-label>Listar asignaciones por usuario</mat-label>
+                <mat-label>{{ 'scheduling.listByUser' | transloco }}</mat-label>
                 <mat-select [formControl]="lookupUserId">
                   @for (u of users(); track u.id) {
                     <mat-option [value]="u.id">
@@ -232,21 +234,21 @@ import { SchedulingService } from './scheduling.service';
                   }
                 </mat-select>
               </mat-form-field>
-              <button mat-stroked-button type="button" (click)="loadAssignments()">Buscar</button>
+              <button mat-stroked-button type="button" (click)="loadAssignments()">{{ 'common.search' | transloco }}</button>
             </div>
 
             <div class="table-wrap">
               <table mat-table [dataSource]="assignments()" style="width:100%">
                 <ng-container matColumnDef="shiftId">
-                  <th mat-header-cell *matHeaderCellDef>Turno</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'scheduling.shift' | transloco }}</th>
                   <td mat-cell *matCellDef="let a">{{ shiftLabel(a.shiftId) }}</td>
                 </ng-container>
                 <ng-container matColumnDef="workSiteId">
-                  <th mat-header-cell *matHeaderCellDef>Centro</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'scheduling.site' | transloco }}</th>
                   <td mat-cell *matCellDef="let a">{{ workSiteLabel(a.workSiteId) }}</td>
                 </ng-container>
                 <ng-container matColumnDef="range">
-                  <th mat-header-cell *matHeaderCellDef>Vigencia</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'projects.validity' | transloco }}</th>
                   <td mat-cell *matCellDef="let a">{{ a.validFrom }} → {{ a.validTo || '—' }}</td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="assignmentColumns"></tr>
@@ -254,7 +256,7 @@ import { SchedulingService } from './scheduling.service';
               </table>
             </div>
             @if (assignments().length === 0) {
-              <app-empty-state icon="assignment_ind" message="Buscá un usuario para ver sus asignaciones." />
+              <app-empty-state icon="assignment_ind" [message]="'scheduling.pickUser' | transloco" />
             }
           </mat-card-content>
         </mat-card>
@@ -269,6 +271,7 @@ export class SchedulingComponent {
   private readonly workSiteService = inject(WorkSiteService);
   private readonly notify = inject(NotificationService);
   protected readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly scheduleColumns = ['code', 'name', 'status', 'actions'];
   protected readonly shiftColumns = ['name', 'time', 'tolerance', 'window', 'actions'];
@@ -318,11 +321,11 @@ export class SchedulingComponent {
   private reloadLookups(): void {
     this.userService.list(0, 200).subscribe({
       next: (result) => this.users.set(result.content),
-      error: () => this.error.set('No se pudo cargar la lista de usuarios.'),
+      error: () => this.error.set(this.transloco.translate('scheduling.usersError')),
     });
     this.workSiteService.list(0, 200).subscribe({
       next: (result) => this.workSites.set(result.content),
-      error: () => this.error.set('No se pudo cargar la lista de centros de trabajo.'),
+      error: () => this.error.set(this.transloco.translate('scheduling.sitesError')),
     });
   }
 
@@ -337,7 +340,7 @@ export class SchedulingComponent {
     this.assignForm.controls.shiftId.enable();
     this.service.listShifts(scheduleId).subscribe({
       next: (shifts) => this.assignShifts.set(shifts),
-      error: () => this.notify.error('No se pudieron cargar los turnos del horario.'),
+      error: () => this.notify.error(this.transloco.translate('scheduling.scheduleShiftsError')),
     });
   }
 
@@ -347,7 +350,7 @@ export class SchedulingComponent {
         this.schedules.set(result.content);
         this.reloadShiftIndex(result.content);
       },
-      error: () => this.error.set('No se pudo cargar horarios (¿permiso schedule:manage?).'),
+      error: () => this.error.set(this.transloco.translate('scheduling.loadError')),
     });
   }
 
@@ -394,7 +397,7 @@ export class SchedulingComponent {
     this.resetShiftForm();
     this.service.listShifts(schedule.id).subscribe({
       next: (shifts) => this.shifts.set(shifts),
-      error: () => this.notify.error('No se pudieron cargar los turnos.'),
+      error: () => this.notify.error(this.transloco.translate('scheduling.shiftsError')),
     });
   }
 
@@ -419,11 +422,11 @@ export class SchedulingComponent {
       : this.service.createShift(schedule.id, payload);
     request$.subscribe({
       next: () => {
-        this.notify.success(editId ? 'Turno actualizado.' : 'Turno agregado.');
+        this.notify.success(this.transloco.translate(editId ? 'scheduling.shiftUpdated' : 'scheduling.shiftAdded'));
         this.resetShiftForm();
         this.selectSchedule(schedule);
       },
-      error: () => this.notify.error('No se pudo guardar el turno.'),
+      error: () => this.notify.error(this.transloco.translate('scheduling.shiftSaveError')),
     });
   }
 
@@ -467,12 +470,12 @@ export class SchedulingComponent {
       })
       .subscribe({
         next: () => {
-          this.notify.success('Asignación creada.');
+          this.notify.success(this.transloco.translate('scheduling.assignmentCreated'));
           this.assignForm.reset();
           this.assignShifts.set([]);
           this.assignForm.controls.shiftId.disable();
         },
-        error: () => this.notify.error('No se pudo crear la asignación.'),
+        error: () => this.notify.error(this.transloco.translate('scheduling.assignmentError')),
       });
   }
 
@@ -483,7 +486,7 @@ export class SchedulingComponent {
     }
     this.service.listAssignments(userId).subscribe({
       next: (list) => this.assignments.set(list),
-      error: () => this.notify.error('No se pudieron cargar las asignaciones.'),
+      error: () => this.notify.error(this.transloco.translate('scheduling.assignmentsError')),
     });
   }
 }

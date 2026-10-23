@@ -1,8 +1,9 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AttendanceReport, LATE_THRESHOLD, SortColumn, SortState } from './report.models';
 
@@ -22,19 +23,19 @@ interface ColumnDef {
 }
 
 const COLUMNS: readonly ColumnDef[] = [
-  { key: 'employeeNumber', label: 'N.º empleado', hint: 'Código de empleado', numeric: false, filter: 'text', ctrl: 'employeeNumber' },
-  { key: 'employeeName', label: 'Nombre', numeric: false, filter: 'text', ctrl: 'employeeName' },
-  { key: 'workCenter', label: 'Centro de trabajo', numeric: false, filter: 'text', ctrl: 'workCenter' },
-  { key: 'expectedDays', label: 'Días esp.', hint: 'Días laborables esperados', numeric: true, filter: 'number', ctrl: 'expectedDays' },
-  { key: 'attendedDays', label: 'Días asist.', hint: 'Días con asistencia registrada', numeric: true, filter: 'number', ctrl: 'attendedDays' },
-  { key: 'justifiedAbsences', label: 'Faltas just.', hint: 'Faltas justificadas', numeric: true, filter: 'number', ctrl: 'justifiedAbsences' },
-  { key: 'unjustifiedAbsences', label: 'Faltas inj.', hint: 'Faltas injustificadas', numeric: true, filter: 'number', ctrl: 'unjustifiedAbsences' },
-  { key: 'lateArrivals', label: 'Retardos', numeric: true, filter: 'number', ctrl: 'lateArrivals' },
-  { key: 'workedHours', label: 'H. trabajadas', hint: 'Horas normales laboradas', numeric: true, filter: 'number', ctrl: 'workedHours' },
-  { key: 'overtimeHours', label: 'H. extra', hint: 'Horas extra laboradas', numeric: true, filter: 'number', ctrl: 'overtimeHours' },
-  { key: 'totalHours', label: 'H. totales', hint: 'Trabajadas + extra', numeric: true, filter: 'number', ctrl: 'totalHours' },
-  { key: 'active', label: 'Estado', numeric: false, filter: 'status' },
-  { key: 'compliancePercentage', label: '% Cumpl.', hint: 'Cumplimiento vs. días esperados', numeric: true, filter: 'number', ctrl: 'compliancePercentage' },
+  { key: 'employeeNumber', label: 'reports.col.employeeNumber', hint: 'reports.hint.employeeNumber', numeric: false, filter: 'text', ctrl: 'employeeNumber' },
+  { key: 'employeeName', label: 'reports.col.employeeName', numeric: false, filter: 'text', ctrl: 'employeeName' },
+  { key: 'workCenter', label: 'reports.col.workCenter', numeric: false, filter: 'text', ctrl: 'workCenter' },
+  { key: 'expectedDays', label: 'reports.col.expectedDays', hint: 'reports.hint.expectedDays', numeric: true, filter: 'number', ctrl: 'expectedDays' },
+  { key: 'attendedDays', label: 'reports.col.attendedDays', hint: 'reports.hint.attendedDays', numeric: true, filter: 'number', ctrl: 'attendedDays' },
+  { key: 'justifiedAbsences', label: 'reports.col.justifiedAbsences', hint: 'reports.hint.justifiedAbsences', numeric: true, filter: 'number', ctrl: 'justifiedAbsences' },
+  { key: 'unjustifiedAbsences', label: 'reports.col.unjustifiedAbsences', hint: 'reports.hint.unjustifiedAbsences', numeric: true, filter: 'number', ctrl: 'unjustifiedAbsences' },
+  { key: 'lateArrivals', label: 'reports.col.lateArrivals', numeric: true, filter: 'number', ctrl: 'lateArrivals' },
+  { key: 'workedHours', label: 'reports.col.workedHours', hint: 'reports.hint.workedHours', numeric: true, filter: 'number', ctrl: 'workedHours' },
+  { key: 'overtimeHours', label: 'reports.col.overtimeHours', hint: 'reports.hint.overtimeHours', numeric: true, filter: 'number', ctrl: 'overtimeHours' },
+  { key: 'totalHours', label: 'reports.col.totalHours', hint: 'reports.hint.totalHours', numeric: true, filter: 'number', ctrl: 'totalHours' },
+  { key: 'active', label: 'reports.col.active', numeric: false, filter: 'status' },
+  { key: 'compliancePercentage', label: 'reports.col.compliancePercentage', hint: 'reports.hint.compliancePercentage', numeric: true, filter: 'number', ctrl: 'compliancePercentage' },
 ];
 
 /**
@@ -47,7 +48,7 @@ const COLUMNS: readonly ColumnDef[] = [
   selector: 'app-report-table',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, ReactiveFormsModule, MatIconModule, MatTooltipModule],
+  imports: [DecimalPipe, ReactiveFormsModule, MatIconModule, MatTooltipModule, TranslocoPipe],
   template: `
     <div class="table-wrap">
       <table class="report-table">
@@ -58,11 +59,11 @@ const COLUMNS: readonly ColumnDef[] = [
                 [class.numeric]="col.numeric"
                 [class.sorted]="sort().column === col.key"
                 (click)="requestSort(col.key)"
-                [matTooltip]="col.hint ?? ''"
+                [matTooltip]="col.hint ? (col.hint | transloco) : ''"
                 [matTooltipDisabled]="!col.hint"
               >
                 <span class="th-content">
-                  {{ col.label }}
+                  {{ col.label | transloco }}
                   <mat-icon class="sort-icon">{{ sortIcon(col.key) }}</mat-icon>
                 </span>
               </th>
@@ -76,22 +77,22 @@ const COLUMNS: readonly ColumnDef[] = [
                     <input
                       class="f-input"
                       type="text"
-                      placeholder="Filtrar…"
+                      [placeholder]="'common.filter' | transloco"
                       autocomplete="off"
                       [formControl]="textCtrl(col.ctrl!)"
                     />
                   }
                   @case ('number') {
                     <div class="f-range">
-                      <input class="f-input sm" type="number" placeholder="Mín" [formControl]="rangeCtrl(col.ctrl!, 'min')" />
-                      <input class="f-input sm" type="number" placeholder="Máx" [formControl]="rangeCtrl(col.ctrl!, 'max')" />
+                      <input class="f-input sm" type="number" [placeholder]="'reports.min' | transloco" [formControl]="rangeCtrl(col.ctrl!, 'min')" />
+                      <input class="f-input sm" type="number" [placeholder]="'reports.max' | transloco" [formControl]="rangeCtrl(col.ctrl!, 'max')" />
                     </div>
                   }
                   @case ('status') {
                     <select class="f-select" [formControl]="statusCtrl()">
-                      <option value="ALL">Todos</option>
-                      <option value="ACTIVE">Activo</option>
-                      <option value="INACTIVE">Inactivo</option>
+                      <option value="ALL">{{ 'common.all' | transloco }}</option>
+                      <option value="ACTIVE">{{ 'status.ACTIVE' | transloco }}</option>
+                      <option value="INACTIVE">{{ 'status.INACTIVE' | transloco }}</option>
                     </select>
                   }
                 }
@@ -109,13 +110,13 @@ const COLUMNS: readonly ColumnDef[] = [
               <td class="numeric">{{ row.attendedDays }}</td>
               <td class="numeric">
                 <span class="badge" [class]="absenceTone(row.justifiedAbsences)"
-                  [matTooltip]="row.justifiedAbsences === 0 ? 'Sin faltas justificadas' : row.justifiedAbsences + ' falta(s) justificada(s)'">
+                  [matTooltip]="(row.justifiedAbsences === 0 ? 'reports.tip.noJustified' : 'reports.tip.justified') | transloco: { n: row.justifiedAbsences }">
                   {{ row.justifiedAbsences }}
                 </span>
               </td>
               <td class="numeric">
                 <span class="badge" [class]="absenceTone(row.unjustifiedAbsences)"
-                  [matTooltip]="row.unjustifiedAbsences === 0 ? 'Sin faltas injustificadas' : row.unjustifiedAbsences + ' falta(s) injustificada(s)'">
+                  [matTooltip]="(row.unjustifiedAbsences === 0 ? 'reports.tip.noUnjustified' : 'reports.tip.unjustified') | transloco: { n: row.unjustifiedAbsences }">
                   {{ row.unjustifiedAbsences }}
                 </span>
               </td>
@@ -130,12 +131,12 @@ const COLUMNS: readonly ColumnDef[] = [
               <td class="numeric strong">{{ row.totalHours | number: '1.0-1' }}</td>
               <td>
                 <span class="status-chip" [class]="row.active ? 'success' : 'neutral'">
-                  {{ row.active ? 'Activo' : 'Inactivo' }}
+                  {{ (row.active ? 'status.ACTIVE' : 'status.INACTIVE') | transloco }}
                 </span>
               </td>
               <td class="numeric">
                 <span class="badge" [class]="complianceTone(row.compliancePercentage)"
-                  [matTooltip]="row.compliancePercentage + '% de cumplimiento'">
+                  [matTooltip]="'reports.tip.compliance' | transloco: { n: row.compliancePercentage }">
                   {{ row.compliancePercentage | number: '1.0-1' }}%
                 </span>
               </td>
@@ -258,6 +259,7 @@ const COLUMNS: readonly ColumnDef[] = [
   ],
 })
 export class ReportTableComponent {
+  private readonly transloco = inject(TranslocoService);
   readonly rows = input.required<AttendanceReport[]>();
   readonly sort = input.required<SortState>();
   /** FormGroup de filtros del componente padre (mismo estado que alimenta el filtrado). */
@@ -305,9 +307,12 @@ export class ReportTableComponent {
 
   protected lateTooltip(value: number): string {
     if (value === 0) {
-      return 'Sin retardos';
+      return this.transloco.translate('reports.tip.noLate');
     }
-    return value >= LATE_THRESHOLD ? `${value} retardos (supera el umbral de ${LATE_THRESHOLD})` : `${value} retardo(s)`;
+    return this.transloco.translate(value >= LATE_THRESHOLD ? 'reports.tip.lateOver' : 'reports.tip.late', {
+      n: value,
+      threshold: LATE_THRESHOLD,
+    });
   }
 
   protected complianceTone(value: number): string {

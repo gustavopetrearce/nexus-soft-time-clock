@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
@@ -27,11 +28,12 @@ import { ProjectService } from './project.service';
     PageHeaderComponent,
     StatusChipComponent,
     EmptyStateComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header title="Proyectos" subtitle="Administra los proyectos de la organización">
+    <app-page-header [title]="'projects.title' | transloco" [subtitle]="'projects.subtitle' | transloco">
       <button mat-flat-button color="primary" (click)="router.navigate(['/projects/new'])">
-        <mat-icon>add</mat-icon> Nuevo proyecto
+        <mat-icon>add</mat-icon> {{ 'projects.new' | transloco }}
       </button>
     </app-page-header>
 
@@ -43,25 +45,25 @@ import { ProjectService } from './project.service';
         <div class="table-wrap">
           <table mat-table [dataSource]="projects()" style="width:100%">
             <ng-container matColumnDef="code">
-              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.code' | transloco }}</th>
               <td mat-cell *matCellDef="let p">{{ p.code }}</td>
             </ng-container>
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.name' | transloco }}</th>
               <td mat-cell *matCellDef="let p">{{ p.name }}</td>
             </ng-container>
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | transloco }}</th>
               <td mat-cell *matCellDef="let p"><app-status-chip [status]="p.status" /></td>
             </ng-container>
             <ng-container matColumnDef="dates">
-              <th mat-header-cell *matHeaderCellDef>Vigencia</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'projects.validity' | transloco }}</th>
               <td mat-cell *matCellDef="let p">{{ p.startsOn || '—' }} → {{ p.endsOn || '—' }}</td>
             </ng-container>
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let p" style="text-align:right">
-                <button mat-icon-button aria-label="Editar"><mat-icon>chevron_right</mat-icon></button>
+                <button mat-icon-button [attr.aria-label]="'common.edit' | transloco"><mat-icon>chevron_right</mat-icon></button>
               </td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -70,7 +72,7 @@ import { ProjectService } from './project.service';
         </div>
 
         @if (!loading() && projects().length === 0) {
-          <app-empty-state icon="work" message="No hay proyectos para mostrar." />
+          <app-empty-state icon="work" [message]="'projects.empty' | transloco" />
         }
 
         <mat-paginator
@@ -87,6 +89,7 @@ import { ProjectService } from './project.service';
 export class ProjectsComponent {
   private readonly service = inject(ProjectService);
   protected readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly columns = ['code', 'name', 'status', 'dates', 'actions'];
   protected readonly projects = signal<Project[]>([]);
@@ -111,7 +114,7 @@ export class ProjectsComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No se pudo cargar el listado (¿permiso project:manage?).');
+        this.error.set(this.transloco.translate('projects.loadError'));
         this.loading.set(false);
       },
     });

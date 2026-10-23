@@ -38,8 +38,7 @@ export function problemCode(error: unknown): string | null {
  */
 export function localizedProblem(transloco: TranslocoService, error: unknown, fallbackKey: string): string {
   const lang = transloco.getActiveLang();
-  const detail = body(error)?.detail?.trim();
-  if (lang === 'es' && detail) return detail;
+  if (lang === 'es') return problemMessage(error, transloco.translate(fallbackKey));
   const code = problemCode(error);
   if (code) {
     const key = `errors.${code}`;

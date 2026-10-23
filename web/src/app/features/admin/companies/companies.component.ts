@@ -11,6 +11,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AuthStore } from '../../../core/auth/auth.store';
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
@@ -41,11 +42,12 @@ import { CompanyService } from './company.service';
     PageHeaderComponent,
     StatusChipComponent,
     EmptyStateComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header title="Empresas" subtitle="Administra las empresas registradas en el sistema">
+    <app-page-header [title]="'companies.title' | transloco" [subtitle]="'companies.subtitle' | transloco">
       <button mat-flat-button color="primary" (click)="router.navigate(['/companies/new'])">
-        <mat-icon>add</mat-icon> Nueva empresa
+        <mat-icon>add</mat-icon> {{ 'companies.new' | transloco }}
       </button>
     </app-page-header>
 
@@ -54,10 +56,10 @@ import { CompanyService } from './company.service';
         <div class="filter-bar">
           <mat-form-field appearance="outline" class="search">
             <mat-icon matPrefix>search</mat-icon>
-            <mat-label>Buscar por código o nombre</mat-label>
+            <mat-label>{{ 'companies.search' | transloco }}</mat-label>
             <input matInput [formControl]="searchControl" (keyup.enter)="applySearch()" />
           </mat-form-field>
-          <button mat-stroked-button type="button" (click)="applySearch()">Buscar</button>
+          <button mat-stroked-button type="button" (click)="applySearch()">{{ 'common.search' | transloco }}</button>
         </div>
 
         @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
@@ -66,23 +68,23 @@ import { CompanyService } from './company.service';
         <div class="table-wrap">
           <table mat-table [dataSource]="companies()" style="width:100%">
             <ng-container matColumnDef="code">
-              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.code' | transloco }}</th>
               <td mat-cell *matCellDef="let c">{{ c.code }}</td>
             </ng-container>
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Nombre</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.name' | transloco }}</th>
               <td mat-cell *matCellDef="let c">{{ c.name }}</td>
             </ng-container>
             <ng-container matColumnDef="emailDomain">
-              <th mat-header-cell *matHeaderCellDef>Dominio</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'companies.domain' | transloco }}</th>
               <td mat-cell *matCellDef="let c">{{ c.emailDomain || '—' }}</td>
             </ng-container>
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | transloco }}</th>
               <td mat-cell *matCellDef="let c"><app-status-chip [status]="c.status" /></td>
             </ng-container>
             <ng-container matColumnDef="capacity">
-              <th mat-header-cell *matHeaderCellDef>Cupo</th>
+              <th mat-header-cell *matHeaderCellDef>{{ 'companies.capacity' | transloco }}</th>
               <td mat-cell *matCellDef="let c">
                 @if (capacityOf(c.id); as cap) {
                   <span
@@ -102,14 +104,14 @@ import { CompanyService } from './company.service';
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let c" style="text-align:right">
                 @if (c.status === 'ACTIVE') {
-                  <button mat-icon-button (click)="toggleStatus(c); $event.stopPropagation()" aria-label="Suspender"><mat-icon>block</mat-icon></button>
+                  <button mat-icon-button (click)="toggleStatus(c); $event.stopPropagation()" [attr.aria-label]="'common.suspend' | transloco"><mat-icon>block</mat-icon></button>
                 } @else {
-                  <button mat-icon-button (click)="toggleStatus(c); $event.stopPropagation()" aria-label="Activar"><mat-icon>check_circle</mat-icon></button>
+                  <button mat-icon-button (click)="toggleStatus(c); $event.stopPropagation()" [attr.aria-label]="'common.activate' | transloco"><mat-icon>check_circle</mat-icon></button>
                 }
                 @if (canManageCapacity()) {
-                  <button mat-icon-button (click)="openCapacity(c); $event.stopPropagation()" matTooltip="Administrar cupo" aria-label="Administrar cupo"><mat-icon>groups</mat-icon></button>
+                  <button mat-icon-button (click)="openCapacity(c); $event.stopPropagation()" [matTooltip]="'companies.manageCapacity' | transloco" [attr.aria-label]="'companies.manageCapacity' | transloco"><mat-icon>groups</mat-icon></button>
                 }
-                <button mat-icon-button (click)="edit(c)" aria-label="Editar"><mat-icon>chevron_right</mat-icon></button>
+                <button mat-icon-button (click)="edit(c)" [attr.aria-label]="'common.edit' | transloco"><mat-icon>chevron_right</mat-icon></button>
               </td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -118,7 +120,7 @@ import { CompanyService } from './company.service';
         </div>
 
         @if (!loading() && companies().length === 0) {
-          <app-empty-state icon="business" message="No hay empresas para mostrar." />
+          <app-empty-state icon="business" [message]="'companies.empty' | transloco" />
         }
 
         <mat-paginator
@@ -153,6 +155,7 @@ export class CompaniesComponent {
   private readonly notify = inject(NotificationService);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthStore);
+  private readonly transloco = inject(TranslocoService);
   protected readonly router = inject(Router);
 
   protected readonly columns = ['code', 'name', 'emailDomain', 'status', 'capacity', 'actions'];
@@ -184,7 +187,7 @@ export class CompaniesComponent {
         this.loadCapacities(result.content.map((c) => c.id));
       },
       error: () => {
-        this.error.set('No se pudo cargar el listado (¿permiso company:manage?).');
+        this.error.set(this.transloco.translate('companies.loadError'));
         this.loading.set(false);
       },
     });
@@ -214,10 +217,11 @@ export class CompaniesComponent {
   }
 
   protected capacityTooltip(cap: TenantCapacity): string {
-    const base = `Cupo base ${cap.baseLimit} + ${cap.extraBlocks} bloque(s) de ${cap.blockSize}`;
-    return cap.available === 0
-      ? `${base}. Sin cupo disponible: el próximo alta será rechazada.`
-      : `${base}. ${cap.available} disponible(s).`;
+    const params = { base: cap.baseLimit, blocks: cap.extraBlocks, size: cap.blockSize, available: cap.available };
+    return this.transloco.translate(
+      cap.available === 0 ? 'companies.capacityTooltipFull' : 'companies.capacityTooltip',
+      params,
+    );
   }
 
   protected openCapacity(company: Company): void {
@@ -256,8 +260,11 @@ export class CompaniesComponent {
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
-          title: next === 'SUSPENDED' ? 'Suspender empresa' : 'Activar empresa',
-          message: `¿Confirmás cambiar el estado de "${company.name}" a ${next}?`,
+          title: this.transloco.translate(next === 'SUSPENDED' ? 'companies.suspend' : 'companies.activate'),
+          message: this.transloco.translate('companies.confirmStatus', {
+            name: company.name,
+            status: this.transloco.translate(`status.${next}`),
+          }),
           color: next === 'SUSPENDED' ? 'warn' : 'primary',
         },
       })
@@ -268,10 +275,10 @@ export class CompaniesComponent {
         }
         this.service.setStatus(company.id, next).subscribe({
           next: () => {
-            this.notify.success('Estado actualizado.');
+            this.notify.success(this.transloco.translate('common.statusUpdated'));
             this.reload();
           },
-          error: () => this.notify.error('No se pudo cambiar el estado.'),
+          error: () => this.notify.error(this.transloco.translate('common.statusError')),
         });
       });
   }

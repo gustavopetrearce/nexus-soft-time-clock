@@ -6,11 +6,13 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { toDataURL } from 'qrcode';
 
 import { NotificationService } from '../../../core/ui/notification.service';
 import { QrRequest, QrToken } from '../work-sites/geofence/geofence.models';
 import { CompanyQrService } from './company-qr.service';
+import { AppDatePipe } from '../../../core/i18n/app-date.pipe';
 
 type QrDurationMode = 'minutes' | 'date';
 
@@ -31,48 +33,46 @@ type QrDurationMode = 'minutes' | 'date';
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
+    TranslocoPipe,
+    AppDatePipe,
   ],
   template: `
     <mat-card class="qr-card">
       <mat-card-content>
-        <div class="card-head"><mat-icon>qr_code_2</mat-icon><h3>QR de empresa</h3></div>
-        <p class="muted sub">
-          Cartel único para toda la empresa, sin centro de trabajo. Quien lo escanee registrará su
-          asistencia con foto y ubicación, pero <b>sin validación de geocerca</b>. Generar uno nuevo
-          deja el anterior inservible de inmediato.
-        </p>
+        <div class="card-head"><mat-icon>qr_code_2</mat-icon><h3>{{ 'companyQr.title' | transloco }}</h3></div>
+        <p class="muted sub" [innerHTML]="'companyQr.text' | transloco"></p>
 
         <form [formGroup]="qrForm" (ngSubmit)="generate()" class="qr-form">
-          <mat-button-toggle-group formControlName="mode" aria-label="Modo de vigencia">
-            <mat-button-toggle value="minutes">Minutos</mat-button-toggle>
-            <mat-button-toggle value="date">Fecha de expiración</mat-button-toggle>
+          <mat-button-toggle-group formControlName="mode" [attr.aria-label]="'geofence.validityMode' | transloco">
+            <mat-button-toggle value="minutes">{{ 'geofence.minutes' | transloco }}</mat-button-toggle>
+            <mat-button-toggle value="date">{{ 'geofence.expiryDate' | transloco }}</mat-button-toggle>
           </mat-button-toggle-group>
 
           @if (qrForm.controls.mode.value === 'minutes') {
             <mat-form-field appearance="outline" style="width:180px">
-              <mat-label>Vigencia (min)</mat-label>
+              <mat-label>{{ 'geofence.validityMinutes' | transloco }}</mat-label>
               <input matInput type="number" min="1" max="1440" step="1" formControlName="ttlMinutes" />
-              <mat-hint>1 a 1440 minutos (máx. 24 h)</mat-hint>
+              <mat-hint>{{ 'geofence.validityHint' | transloco }}</mat-hint>
             </mat-form-field>
           } @else {
             <mat-form-field appearance="outline" style="width:220px">
-              <mat-label>Expira el</mat-label>
+              <mat-label>{{ 'geofence.expiresOn' | transloco }}</mat-label>
               <input matInput type="datetime-local" formControlName="expiresAt" />
-              <mat-hint>Para vigencias de días, semanas o meses</mat-hint>
+              <mat-hint>{{ 'geofence.expiresHint' | transloco }}</mat-hint>
             </mat-form-field>
           }
 
           <button mat-flat-button color="primary" type="submit" [disabled]="busy() || qrForm.invalid">
-            <mat-icon>qr_code_2</mat-icon> Generar / rotar QR
+            <mat-icon>qr_code_2</mat-icon> {{ 'geofence.generate' | transloco }}
           </button>
         </form>
 
         @if (qr(); as q) {
           <div class="qr-out">
             @if (qrImage(); as img) {
-              <img [src]="img" alt="QR de empresa" />
+              <img [src]="img" [alt]="'companyQr.title' | transloco" />
             }
-            <div class="muted">Vence: {{ q.expiresAt }}</div>
+            <div class="muted">{{ 'geofence.expires' | transloco: { date: (q.expiresAt | appDate: 'medium') } }}</div>
             <textarea readonly rows="3">{{ q.token }}</textarea>
           </div>
         }
@@ -97,6 +97,7 @@ export class CompanyQrCardComponent {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(CompanyQrService);
   private readonly notify = inject(NotificationService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly busy = signal(false);
   protected readonly qr = signal<QrToken | null>(null);
@@ -116,7 +117,7 @@ export class CompanyQrCardComponent {
     let request: QrRequest;
     if (raw.mode === 'date') {
       if (!raw.expiresAt) {
-        this.notify.error('Elegí una fecha de expiración.');
+        this.notify.error(this.transloco.translate('geofence.pickDate'));
         return;
       }
       request = { expiresAt: new Date(raw.expiresAt).toISOString() };
@@ -130,13 +131,11 @@ export class CompanyQrCardComponent {
         this.qr.set(token);
         void toDataURL(token.token, { width: 220 }).then((url) => this.qrImage.set(url));
         this.busy.set(false);
-        this.notify.success('QR de empresa generado. El anterior ya no sirve.');
+        this.notify.success(this.transloco.translate('companyQr.generated'));
       },
       error: () => {
         this.busy.set(false);
-        this.notify.error(
-          'No se pudo generar el QR. Comprueba que el registro sin centro esté habilitado y guardado.',
-        );
+        this.notify.error(this.transloco.translate('companyQr.error'));
       },
     });
   }

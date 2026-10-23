@@ -3,6 +3,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
@@ -13,16 +14,16 @@ import { NotificationsService } from './notifications.service';
 @Component({
   selector: 'app-notifications',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatPaginatorModule, MatProgressBarModule, PageHeaderComponent, EmptyStateComponent],
+  imports: [MatCardModule, MatIconModule, MatPaginatorModule, MatProgressBarModule, PageHeaderComponent, EmptyStateComponent, TranslocoPipe],
   template: `
-    <app-page-header title="Notificaciones" subtitle="Consulta las notificaciones enviadas por el sistema" />
+    <app-page-header [title]="'layout.nav.notifications' | transloco" [subtitle]="'notifications.subtitle' | transloco" />
     <mat-card>
       <mat-card-content>
         @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
         @if (error()) { <p class="error-text">{{ error() }}</p> }
 
         @if (!loading() && notifications().length === 0) {
-          <app-empty-state icon="notifications_none" message="No tenés notificaciones." />
+          <app-empty-state icon="notifications_none" [message]="'notifications.empty' | transloco" />
         }
 
         <div class="list">
@@ -81,6 +82,7 @@ import { NotificationsService } from './notifications.service';
 })
 export class NotificationsComponent {
   private readonly service = inject(NotificationsService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly notifications = signal<AppNotification[]>([]);
   protected readonly loading = signal(false);
@@ -104,7 +106,7 @@ export class NotificationsComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No se pudieron cargar las notificaciones.');
+        this.error.set(this.transloco.translate('notifications.loadError'));
         this.loading.set(false);
       },
     });

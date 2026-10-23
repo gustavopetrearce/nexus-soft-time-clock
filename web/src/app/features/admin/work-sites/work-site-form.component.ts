@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { BreadcrumbComponent } from '../../../core/ui/breadcrumb.component';
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
@@ -40,58 +41,59 @@ import { WorkSiteService } from './work-site.service';
     MapInlineComponent,
     PageHeaderComponent,
     StatusChipComponent,
+    TranslocoPipe,
   ],
   template: `
     <app-breadcrumb
       [items]="[
-        { label: 'Organización', route: '/work-sites' },
-        { label: 'Centros de trabajo', route: '/work-sites' },
-        { label: isEdit() ? (site()?.name ?? '') : 'Nuevo centro de trabajo' },
+        { label: ('layout.group.organization' | transloco), route: '/work-sites' },
+        { label: ('workSites.title' | transloco), route: '/work-sites' },
+        { label: isEdit() ? (site()?.name ?? '') : ('workSites.new' | transloco) },
       ]"
     />
-    <app-page-header [title]="isEdit() ? 'Editar centro de trabajo' : 'Nuevo centro de trabajo'" />
+    <app-page-header [title]="(isEdit() ? 'workSites.edit' : 'workSites.new') | transloco" />
 
     @if (loading()) { <mat-progress-bar mode="indeterminate" style="margin-bottom:16px" /> }
     @if (error()) { <p class="error-text">{{ error() }}</p> }
 
     <div class="form-page-layout">
       <div class="form-page-main">
-        <h3 class="form-section-title">Información del centro de trabajo</h3>
+        <h3 class="form-section-title">{{ 'workSites.form.info' | transloco }}</h3>
         <form [formGroup]="form">
           <div style="display:flex; gap: var(--sp-5); align-items:flex-start; flex-wrap:wrap">
             <div style="flex: 1 1 320px; min-width:280px">
               <div class="form-grid-2">
                 <mat-form-field appearance="outline" class="drawer-field">
-                  <mat-label>Código</mat-label>
+                  <mat-label>{{ 'common.code' | transloco }}</mat-label>
                   <input matInput formControlName="code" />
-                  <mat-hint>Código único del centro de trabajo.</mat-hint>
+                  <mat-hint>{{ 'workSites.form.codeHint' | transloco }}</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="drawer-field">
-                  <mat-label>Nombre del centro</mat-label>
+                  <mat-label>{{ 'workSites.form.name' | transloco }}</mat-label>
                   <input matInput formControlName="name" />
-                  <mat-hint>Nombre con el que se identifica el centro.</mat-hint>
+                  <mat-hint>{{ 'workSites.form.nameHint' | transloco }}</mat-hint>
                 </mat-form-field>
               </div>
               <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>Dirección</mat-label>
+                <mat-label>{{ 'profile.address' | transloco }}</mat-label>
                 <input matInput formControlName="address" />
-                <mat-hint>Dirección completa del centro de trabajo (opcional).</mat-hint>
+                <mat-hint>{{ 'workSites.form.addressHint' | transloco }}</mat-hint>
               </mat-form-field>
               <div class="form-grid-2">
                 <mat-form-field appearance="outline" class="drawer-field">
-                  <mat-label>Latitud</mat-label>
+                  <mat-label>{{ 'workSites.latitude' | transloco }}</mat-label>
                   <input matInput type="number" step="any" formControlName="latitude" readonly />
-                  <mat-hint>Coordenada en formato decimal.</mat-hint>
+                  <mat-hint>{{ 'workSites.form.coordHint' | transloco }}</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="drawer-field">
-                  <mat-label>Longitud</mat-label>
+                  <mat-label>{{ 'workSites.longitude' | transloco }}</mat-label>
                   <input matInput type="number" step="any" formControlName="longitude" readonly />
-                  <mat-hint>Coordenada en formato decimal.</mat-hint>
+                  <mat-hint>{{ 'workSites.form.coordHint' | transloco }}</mat-hint>
                 </mat-form-field>
               </div>
             </div>
             <div style="flex: 0 0 300px; min-width:260px">
-              <p class="row-title" style="margin:0 0 var(--sp-2)">Ubicación en el mapa</p>
+              <p class="row-title" style="margin:0 0 var(--sp-2)">{{ 'workSites.form.mapLocation' | transloco }}</p>
               <app-map-inline
                 #map
                 style="display:block; height:220px"
@@ -100,88 +102,88 @@ import { WorkSiteService } from './work-site.service';
                 [radiusMeters]="form.controls.gpsAccuracyMaxM.value ?? 50"
                 (positionChange)="setPosition($event)"
               />
-              <p class="row-desc" style="margin: var(--sp-2) 0">Radio de precisión: {{ form.controls.gpsAccuracyMaxM.value ?? 50 }} m</p>
+              <p class="row-desc" style="margin: var(--sp-2) 0">{{ 'workSites.form.accuracyRadius' | transloco: { m: form.controls.gpsAccuracyMaxM.value ?? 50 } }}</p>
               <button mat-stroked-button type="button" (click)="map.centerOnPoint()">
-                <mat-icon>my_location</mat-icon> Centrar mapa
+                <mat-icon>my_location</mat-icon> {{ 'workSites.form.centerMap' | transloco }}
               </button>
             </div>
           </div>
           <div class="form-grid-2">
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Zona horaria</mat-label>
+              <mat-label>{{ 'companies.form.timezone' | transloco }}</mat-label>
               <mat-select formControlName="timezone">
-                <mat-option [value]="''">Heredar de la empresa</mat-option>
+                <mat-option [value]="''">{{ 'workSites.form.inheritCompany' | transloco }}</mat-option>
                 @for (tz of tzOptions(); track tz.value) {
                   <mat-option [value]="tz.value">{{ tz.label }}</mat-option>
                 }
               </mat-select>
-              <mat-hint>Zona horaria del centro de trabajo (opcional).</mat-hint>
+              <mat-hint>{{ 'workSites.form.timezoneHint' | transloco }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>Precisión GPS máx (m)</mat-label>
+              <mat-label>{{ 'workSites.form.maxAccuracy' | transloco }}</mat-label>
               <input matInput type="number" formControlName="gpsAccuracyMaxM" />
-              <mat-hint>Radio máximo de validación de ubicación (opcional).</mat-hint>
+              <mat-hint>{{ 'workSites.form.maxAccuracyHint' | transloco }}</mat-hint>
             </mat-form-field>
           </div>
           <div class="policy-row">
             <div>
-              <p class="row-title">Foto al registrar</p>
-              <p class="row-desc">Los usuarios deben tomar foto al registrar asistencia.</p>
+              <p class="row-title">{{ 'workSites.form.photo' | transloco }}</p>
+              <p class="row-desc">{{ 'workSites.form.photoText' | transloco }}</p>
             </div>
-            <mat-button-toggle-group formControlName="requirePhoto" aria-label="Política de foto">
-              <mat-button-toggle [value]="null">Heredar</mat-button-toggle>
-              <mat-button-toggle [value]="true">Sí</mat-button-toggle>
-              <mat-button-toggle [value]="false">No</mat-button-toggle>
+            <mat-button-toggle-group formControlName="requirePhoto" [attr.aria-label]="'workSites.form.photoPolicy' | transloco">
+              <mat-button-toggle [value]="null">{{ 'workSites.form.inherit' | transloco }}</mat-button-toggle>
+              <mat-button-toggle [value]="true">{{ 'common.yes' | transloco }}</mat-button-toggle>
+              <mat-button-toggle [value]="false">{{ 'common.no' | transloco }}</mat-button-toggle>
             </mat-button-toggle-group>
           </div>
           <div class="policy-row">
             <div>
-              <p class="row-title">Verificación biométrica</p>
-              <p class="row-desc">Se requiere validación biométrica al registrar.</p>
+              <p class="row-title">{{ 'workSites.form.biometric' | transloco }}</p>
+              <p class="row-desc">{{ 'workSites.form.biometricText' | transloco }}</p>
             </div>
-            <mat-button-toggle-group formControlName="requireBiometric" aria-label="Política de biometría">
-              <mat-button-toggle [value]="null">Heredar</mat-button-toggle>
-              <mat-button-toggle [value]="true">Sí</mat-button-toggle>
-              <mat-button-toggle [value]="false">No</mat-button-toggle>
+            <mat-button-toggle-group formControlName="requireBiometric" [attr.aria-label]="'workSites.form.biometricPolicy' | transloco">
+              <mat-button-toggle [value]="null">{{ 'workSites.form.inherit' | transloco }}</mat-button-toggle>
+              <mat-button-toggle [value]="true">{{ 'common.yes' | transloco }}</mat-button-toggle>
+              <mat-button-toggle [value]="false">{{ 'common.no' | transloco }}</mat-button-toggle>
             </mat-button-toggle-group>
           </div>
           <p class="row-desc policy-hint">
             <mat-icon>info</mat-icon>
-            <span>«Heredar» aplica lo definido en Configuración → Políticas de registro.</span>
+            <span>{{ 'workSites.form.inheritHint' | transloco }}</span>
           </p>
         </form>
 
         <div class="form-callout">
           <mat-icon>info</mat-icon>
           <div>
-            <p class="row-title">Importante</p>
-            <p class="row-desc">El centro de trabajo debe tener coordenadas correctas. La precisión GPS define el radio donde se permitirá fichar.</p>
+            <p class="row-title">{{ 'companies.form.important' | transloco }}</p>
+            <p class="row-desc">{{ 'workSites.form.importantText' | transloco }}</p>
           </div>
         </div>
 
         <div class="form-actions">
-          <button mat-button type="button" (click)="cancel()">Cancelar</button>
+          <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
           <button mat-flat-button color="primary" [disabled]="!formValid() || saving()" (click)="save()">
-            <mat-icon>save</mat-icon> {{ isEdit() ? 'Guardar cambios' : 'Guardar centro' }}
+            <mat-icon>save</mat-icon> {{ (isEdit() ? 'common.saveChanges' : 'workSites.form.save') | transloco }}
           </button>
         </div>
       </div>
 
       <div class="form-page-side">
         <div class="info-card tip">
-          <h3 class="info-card-title">Información importante</h3>
+          <h3 class="info-card-title">{{ 'companies.form.importantInfo' | transloco }}</h3>
           <div class="icon-row">
             <mat-icon>my_location</mat-icon>
             <div>
-              <p class="row-title">Precisión GPS</p>
-              <p class="row-desc">Define el radio máximo (en metros) donde se permitirá registrar asistencia.</p>
+              <p class="row-title">{{ 'workSites.form.gpsAccuracy' | transloco }}</p>
+              <p class="row-desc">{{ 'workSites.form.gpsAccuracyText' | transloco }}</p>
             </div>
           </div>
           <div class="icon-row">
             <mat-icon>fingerprint</mat-icon>
             <div>
-              <p class="row-title">Biometría</p>
-              <p class="row-desc">Obligatoria si está habilitada. Asegura que quien ficha es el colaborador registrado.</p>
+              <p class="row-title">{{ 'workSites.form.biometrics' | transloco }}</p>
+              <p class="row-desc">{{ 'workSites.form.biometricsText' | transloco }}</p>
             </div>
           </div>
         </div>
@@ -195,23 +197,22 @@ import { WorkSiteService } from './work-site.service';
                 <app-status-chip [status]="s.status" />
               </div>
             </div>
-            <div class="info-row"><span class="k">Código</span><span class="v">{{ s.code }}</span></div>
+            <div class="info-row"><span class="k">{{ 'common.code' | transloco }}</span><span class="v">{{ s.code }}</span></div>
           </div>
           <div class="info-card">
-            <h3 class="info-card-title">Estado del centro</h3>
+            <h3 class="info-card-title">{{ 'workSites.form.statusTitle' | transloco }}</h3>
             <p class="muted" style="margin:0 0 var(--sp-3)">
-              @if (s.status === 'ACTIVE') { Solo los centros activos permiten registrar asistencia. }
-              @else { Este centro no permite fichajes mientras no esté activo. }
+              {{ (s.status === 'ACTIVE' ? 'workSites.form.statusActiveText' : 'workSites.form.statusInactiveText') | transloco }}
             </p>
             <button mat-stroked-button (click)="toggleStatus(s)">
-              {{ s.status === 'ACTIVE' ? 'Desactivar centro' : 'Activar centro' }}
+              {{ (s.status === 'ACTIVE' ? 'workSites.deactivate' : 'workSites.activate') | transloco }}
             </button>
           </div>
           <div class="info-card">
-            <h3 class="info-card-title">Geocerca y QR</h3>
-            <p class="muted" style="margin:0 0 var(--sp-3)">Define el radio de fichaje y genera el QR de acceso.</p>
+            <h3 class="info-card-title">{{ 'workSites.geofenceQr' | transloco }}</h3>
+            <p class="muted" style="margin:0 0 var(--sp-3)">{{ 'workSites.form.geofenceText' | transloco }}</p>
             <a mat-stroked-button [routerLink]="['/work-sites', s.id, 'geofence']">
-              <mat-icon>my_location</mat-icon> Ir a geocerca y QR
+              <mat-icon>my_location</mat-icon> {{ 'workSites.form.goToGeofence' | transloco }}
             </a>
           </div>
         }
@@ -250,6 +251,7 @@ export class WorkSiteFormComponent {
   private readonly service = inject(WorkSiteService);
   private readonly notify = inject(NotificationService);
   private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly siteId = this.route.snapshot.paramMap.get('id');
   protected readonly isEdit = computed(() => !!this.siteId);
@@ -300,7 +302,7 @@ export class WorkSiteFormComponent {
           this.loading.set(false);
         },
         error: () => {
-          this.error.set('No se pudo cargar el centro de trabajo.');
+          this.error.set(this.transloco.translate('workSites.form.loadError'));
           this.loading.set(false);
         },
       });
@@ -321,8 +323,11 @@ export class WorkSiteFormComponent {
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
-          title: next === 'INACTIVE' ? 'Desactivar centro' : 'Activar centro',
-          message: `¿Confirmás cambiar el estado de "${site.name}" a ${next}?`,
+          title: this.transloco.translate(next === 'INACTIVE' ? 'workSites.deactivate' : 'workSites.activate'),
+          message: this.transloco.translate('companies.confirmStatus', {
+            name: site.name,
+            status: this.transloco.translate(`status.${next}`),
+          }),
           color: next === 'INACTIVE' ? 'warn' : 'primary',
         },
       })
@@ -334,9 +339,9 @@ export class WorkSiteFormComponent {
         this.service.setStatus(site.id, next).subscribe({
           next: (updated) => {
             this.site.set(updated);
-            this.notify.success('Estado actualizado.');
+            this.notify.success(this.transloco.translate('common.statusUpdated'));
           },
-          error: () => this.notify.error('No se pudo cambiar el estado.'),
+          error: () => this.notify.error(this.transloco.translate('common.statusError')),
         });
       });
   }
@@ -362,12 +367,12 @@ export class WorkSiteFormComponent {
       : this.service.create({ code: raw.code, ...common });
     request$.subscribe({
       next: () => {
-        this.notify.success(this.siteId ? 'Centro actualizado.' : 'Centro creado.');
+        this.notify.success(this.transloco.translate(this.siteId ? 'workSites.form.updated' : 'workSites.form.created'));
         void this.router.navigate(['/work-sites']);
       },
       error: () => {
         this.saving.set(false);
-        this.notify.error('No se pudo guardar el centro.');
+        this.notify.error(this.transloco.translate('workSites.form.saveError'));
       },
     });
   }

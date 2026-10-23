@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { NotificationService } from '../../core/ui/notification.service';
 import { User } from '../admin/users/user.models';
@@ -23,17 +24,18 @@ import { VacationService } from './vacation.service';
   imports: [
     ReactiveFormsModule, MatDialogModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
+    TranslocoPipe,
   ],
   template: `
     <div class="m-head">
       <div class="badge-ic"><mat-icon>beach_access</mat-icon></div>
-      <div class="t"><h2>Nueva solicitud de vacaciones</h2><p>Los días se calculan según la política de la empresa.</p></div>
-      <button mat-icon-button (click)="close(false)" aria-label="Cerrar"><mat-icon>close</mat-icon></button>
+      <div class="t"><h2>{{ 'vacations.dialog.title' | transloco }}</h2><p>{{ 'vacations.dialog.subtitle' | transloco }}</p></div>
+      <button mat-icon-button (click)="close(false)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
     </div>
 
     <form [formGroup]="form" class="m-body">
       <mat-form-field appearance="outline" class="full">
-        <mat-label>Colaborador *</mat-label>
+        <mat-label>{{ 'users.employee' | transloco }} *</mat-label>
         <mat-select formControlName="userId">
           @for (u of users(); track u.id) {
             <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}{{ u.employeeCode ? ' · ' + u.employeeCode : '' }}</mat-option>
@@ -42,25 +44,25 @@ import { VacationService } from './vacation.service';
       </mat-form-field>
       <div class="grid2">
         <mat-form-field appearance="outline">
-          <mat-label>Desde *</mat-label>
+          <mat-label>{{ 'scheduling.from' | transloco }} *</mat-label>
           <input matInput type="date" formControlName="startDate" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Hasta *</mat-label>
+          <mat-label>{{ 'period.to' | transloco }} *</mat-label>
           <input matInput type="date" formControlName="endDate" />
         </mat-form-field>
       </div>
       <mat-form-field appearance="outline" class="full">
-        <mat-label>Motivo</mat-label>
-        <input matInput formControlName="reason" placeholder="Opcional" />
+        <mat-label>{{ 'vacations.reason' | transloco }}</mat-label>
+        <input matInput formControlName="reason" [placeholder]="'users.form.optional' | transloco" />
       </mat-form-field>
     </form>
 
     <div class="m-foot">
       <span class="fill"></span>
-      <button mat-button (click)="close(false)">Cancelar</button>
+      <button mat-button (click)="close(false)">{{ 'common.cancel' | transloco }}</button>
       <button mat-flat-button color="primary" [disabled]="form.invalid || saving()" (click)="submit()">
-        <mat-icon>check</mat-icon> Registrar solicitud
+        <mat-icon>check</mat-icon> {{ 'vacations.dialog.submit' | transloco }}
       </button>
     </div>
   `,
@@ -86,6 +88,7 @@ export class VacationRequestDialogComponent {
   private readonly userService = inject(UserService);
   private readonly notify = inject(NotificationService);
   private readonly dialogRef = inject(MatDialogRef<VacationRequestDialogComponent, boolean>);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly users = signal<User[]>([]);
   protected readonly saving = signal(false);
@@ -112,7 +115,7 @@ export class VacationRequestDialogComponent {
     if (this.form.invalid) return;
     const raw = this.form.getRawValue();
     if (raw.endDate < raw.startDate) {
-      this.notify.error('La fecha fin no puede ser anterior al inicio.');
+      this.notify.error(this.transloco.translate('vacations.dialog.endBeforeStart'));
       return;
     }
     this.saving.set(true);
@@ -121,12 +124,12 @@ export class VacationRequestDialogComponent {
       .subscribe({
         next: () => {
           this.saving.set(false);
-          this.notify.success('Solicitud registrada.');
+          this.notify.success(this.transloco.translate('vacations.dialog.created'));
           this.dialogRef.close(true);
         },
         error: () => {
           this.saving.set(false);
-          this.notify.error('No se pudo registrar la solicitud (revisa traslapes o permisos).');
+          this.notify.error(this.transloco.translate('vacations.dialog.createError'));
         },
       });
   }

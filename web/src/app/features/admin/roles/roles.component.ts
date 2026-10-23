@@ -2,9 +2,10 @@ import { Component, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
-import { Role } from './role.models';
+import { Role, roleLabel } from './role.models';
 import { RoleService } from './role.service';
 
 /**
@@ -15,9 +16,9 @@ import { RoleService } from './role.service';
 @Component({
   selector: 'app-roles',
   standalone: true,
-  imports: [MatCardModule, MatTableModule, MatProgressBarModule, PageHeaderComponent],
+  imports: [MatCardModule, MatTableModule, MatProgressBarModule, PageHeaderComponent, TranslocoPipe],
   template: `
-    <app-page-header title="Roles" />
+    <app-page-header [title]="'users.roles' | transloco" />
     <mat-card>
       <mat-card-content>
         @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
@@ -25,12 +26,12 @@ import { RoleService } from './role.service';
 
         <table mat-table [dataSource]="roles()" style="width:100%">
           <ng-container matColumnDef="code">
-            <th mat-header-cell *matHeaderCellDef>Código</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'common.code' | transloco }}</th>
             <td mat-cell *matCellDef="let r"><code>{{ r.code }}</code></td>
           </ng-container>
           <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef>Nombre</th>
-            <td mat-cell *matCellDef="let r">{{ r.name }}</td>
+            <th mat-header-cell *matHeaderCellDef>{{ 'common.name' | transloco }}</th>
+            <td mat-cell *matCellDef="let r">{{ roleLabel(r.code) }}</td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
           <tr mat-row *matRowDef="let row; columns: columns"></tr>
@@ -40,7 +41,9 @@ import { RoleService } from './role.service';
   `,
 })
 export class RolesComponent {
+  protected readonly roleLabel = roleLabel;
   private readonly service = inject(RoleService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly columns = ['code', 'name'];
   protected readonly roles = signal<Role[]>([]);
@@ -55,7 +58,7 @@ export class RolesComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No se pudo cargar el catálogo de roles (¿permiso role:manage?).');
+        this.error.set(this.transloco.translate('roles.loadError'));
         this.loading.set(false);
       },
     });

@@ -11,6 +11,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
@@ -24,24 +25,24 @@ import {
   DEFAULT_EVENT_TYPE_LABELS,
   RecordSortColumn,
   RecordSortState,
-  REJECTION_LABELS,
-  STATUS_LABELS,
   STATUS_TONES,
 } from './attendance-records.models';
 import { AttendanceRecordsService } from './attendance-records.service';
+import { recordStatusLabel, rejectionLabel } from '../../attendance-events/attendance-events.models';
 
 interface ColumnDef {
   key: RecordSortColumn;
+  /** Clave de traducción del encabezado. */
   label: string;
 }
 
 const COLUMNS: readonly ColumnDef[] = [
-  { key: 'employeeNumber', label: 'N.º empleado' },
-  { key: 'employeeName', label: 'Nombre' },
-  { key: 'serverTime', label: 'Fecha y hora' },
-  { key: 'eventType', label: 'Tipo de evento' },
-  { key: 'status', label: 'Estado' },
-  { key: 'workCenter', label: 'Centro de trabajo' },
+  { key: 'employeeNumber', label: 'reports.field.employeeNumber' },
+  { key: 'employeeName', label: 'common.name' },
+  { key: 'serverTime', label: 'attendanceEvents.col.date' },
+  { key: 'eventType', label: 'records.eventType' },
+  { key: 'status', label: 'common.status' },
+  { key: 'workCenter', label: 'attendanceEvents.col.site' },
 ];
 
 const STATUS_OPTIONS: readonly AttendanceRecordStatus[] = ['ACCEPTED', 'REJECTED', 'PENDING_REVIEW'];
@@ -72,47 +73,45 @@ const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
     MatPaginatorModule,
     PageHeaderComponent,
     EmptyStateComponent,
+    TranslocoPipe,
   ],
   template: `
-    <app-page-header
-      title="Registros de asistencia"
-      subtitle="Marcaciones individuales por empleado (entrada, salida y eventos intermedios)"
-    />
+    <app-page-header [title]="'records.title' | transloco" [subtitle]="'records.subtitle' | transloco" />
 
     <mat-card>
       <mat-card-content>
         <div class="toolbar" [formGroup]="form">
           <mat-form-field appearance="outline" class="search">
             <mat-icon matPrefix>search</mat-icon>
-            <mat-label>Buscar (nombre, número o centro)</mat-label>
+            <mat-label>{{ 'reports.search' | transloco }}</mat-label>
             <input matInput formControlName="search" autocomplete="off" />
           </mat-form-field>
 
           <div class="dates">
             <mat-form-field appearance="outline" class="date">
-              <mat-label>Desde</mat-label>
+              <mat-label>{{ 'scheduling.from' | transloco }}</mat-label>
               <input matInput type="date" formControlName="from" />
             </mat-form-field>
             <mat-form-field appearance="outline" class="date">
-              <mat-label>Hasta</mat-label>
+              <mat-label>{{ 'period.to' | transloco }}</mat-label>
               <input matInput type="date" formControlName="to" />
             </mat-form-field>
           </div>
 
           <mat-form-field appearance="outline" class="filter">
-            <mat-label>Estado</mat-label>
+            <mat-label>{{ 'common.status' | transloco }}</mat-label>
             <mat-select formControlName="status">
-              <mat-option value="ALL">Todos</mat-option>
+              <mat-option value="ALL">{{ 'common.all' | transloco }}</mat-option>
               @for (s of statusOptions; track s) {
-                <mat-option [value]="s">{{ statusLabels[s] }}</mat-option>
+                <mat-option [value]="s">{{ statusLabel(s) }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="filter">
-            <mat-label>Tipo de evento</mat-label>
+            <mat-label>{{ 'records.eventType' | transloco }}</mat-label>
             <mat-select formControlName="eventType">
-              <mat-option value="ALL">Todos</mat-option>
+              <mat-option value="ALL">{{ 'common.all' | transloco }}</mat-option>
               @for (t of eventTypeOptions; track t) {
                 <mat-option [value]="t">{{ eventLabel(t) }}</mat-option>
               }
@@ -123,8 +122,8 @@ const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
         <div class="indicators">
           <span class="count">
             <strong>{{ filtered().length }}</strong>
-            @if (filtered().length !== total()) { <span class="muted">de {{ total() }}</span> }
-            registro{{ filtered().length === 1 ? '' : 's' }}
+            @if (filtered().length !== total()) { <span class="muted">{{ 'reports.ofTotal' | transloco: { total: total() } }}</span> }
+            {{ (filtered().length === 1 ? 'reports.recordOne' : 'reports.recordMany') | transloco }}
           </span>
         </div>
 
@@ -139,13 +138,13 @@ const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
             <mat-icon>cloud_off</mat-icon>
             <p>{{ error() }}</p>
             <button mat-flat-button color="primary" (click)="reload()">
-              <mat-icon>refresh</mat-icon> Reintentar
+              <mat-icon>refresh</mat-icon> {{ 'common.retry' | transloco }}
             </button>
           </div>
         } @else if (filtered().length === 0) {
           <app-empty-state
             icon="search_off"
-            [message]="total() === 0 ? 'No hay registros para el periodo seleccionado.' : 'Ningún registro coincide con los filtros aplicados.'"
+            [message]="(total() === 0 ? 'records.emptyPeriod' : 'records.emptyFilters') | transloco"
           />
         } @else {
           <div class="table-wrap">
@@ -155,7 +154,7 @@ const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
                   @for (col of columns; track col.key) {
                     <th [class.sorted]="sort().column === col.key" (click)="onSort(col.key)">
                       <span class="th-content">
-                        {{ col.label }}
+                        {{ col.label | transloco }}
                         <mat-icon class="sort-icon">{{ sortIcon(col.key) }}</mat-icon>
                       </span>
                     </th>
@@ -176,7 +175,7 @@ const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
                         [matTooltip]="rejectionTooltip(row)"
                         [matTooltipDisabled]="!rejectionTooltip(row)"
                       >
-                        {{ statusLabels[row.status] }}
+                        {{ statusLabel(row.status) }}
                       </span>
                     </td>
                     <td>{{ row.workCenter }}</td>
@@ -293,11 +292,11 @@ export class AttendanceRecordsComponent {
   private readonly service = inject(AttendanceRecordsService);
   private readonly eventTypes = inject(EventTypesService);
   private readonly notify = inject(NotificationService);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly skeletonRows = Array.from({ length: 8 }, (_, i) => i);
   protected readonly columns = COLUMNS;
   protected readonly statusOptions = STATUS_OPTIONS;
-  protected readonly statusLabels = STATUS_LABELS;
   protected readonly eventTypeOptions = Object.keys(DEFAULT_EVENT_TYPE_LABELS) as AttendanceEventType[];
 
   protected readonly form: FormGroup = this.buildForm();
@@ -306,8 +305,8 @@ export class AttendanceRecordsComponent {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
 
-  /** Etiquetas de tipo de evento por empresa (sobre las de respaldo). */
-  private readonly eventLabels = signal<Record<string, string>>({ ...DEFAULT_EVENT_TYPE_LABELS });
+  /** Etiquetas de tipo de evento personalizadas por la empresa; las predeterminadas se traducen. */
+  private readonly eventLabels = signal<Record<string, string>>({});
 
   protected readonly sort = signal<RecordSortState>({ column: 'serverTime', direction: 'desc' });
   protected readonly pageIndex = signal(0);
@@ -371,16 +370,20 @@ export class AttendanceRecordsComponent {
       },
       error: () => {
         this.rawRows.set([]);
-        this.error.set('No se pudo cargar el reporte de registros de asistencia.');
+        this.error.set(this.transloco.translate('records.loadError'));
         this.loading.set(false);
-        this.notify.error('No se pudo cargar el reporte de registros de asistencia.');
+        this.notify.error(this.transloco.translate('records.loadError'));
       },
     });
   }
 
   /** Traduce un código de tipo de evento a su etiqueta (empresa o respaldo). */
   protected eventLabel(code: string): string {
-    return this.eventLabels()[code] ?? code;
+    return this.eventLabels()[code] ?? this.transloco.translate(`records.event.${code}`);
+  }
+
+  protected statusLabel(status: AttendanceRecordStatus): string {
+    return recordStatusLabel(status);
   }
 
   protected statusTone(status: AttendanceRecordStatus): string {
@@ -391,7 +394,7 @@ export class AttendanceRecordsComponent {
     if (!row.rejectionReason) {
       return '';
     }
-    return REJECTION_LABELS[row.rejectionReason] ?? row.rejectionReason;
+    return rejectionLabel(row.rejectionReason);
   }
 
   protected onSort(column: RecordSortColumn): void {
@@ -419,9 +422,10 @@ export class AttendanceRecordsComponent {
   private loadEventTypeLabels(): void {
     this.eventTypes.list().subscribe({
       next: (settings) => {
-        const map: Record<string, string> = { ...DEFAULT_EVENT_TYPE_LABELS };
+        const map: Record<string, string> = {};
         for (const s of settings) {
-          if (s.label?.trim()) {
+          // La etiqueta sembrada por defecto no cuenta como personalizada: se muestra traducida.
+          if (s.label?.trim() && s.label.trim() !== DEFAULT_EVENT_TYPE_LABELS[s.eventType]) {
             map[s.eventType] = s.label;
           }
         }

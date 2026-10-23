@@ -1,7 +1,10 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { TranslocoService } from '@jsverse/transloco';
 import { of, throwError } from 'rxjs';
 
+import { translocoTesting } from '../../../core/i18n/transloco-testing';
 import { NotificationService } from '../../../core/ui/notification.service';
 import { CapacityDialogComponent } from './capacity-dialog.component';
 import { Company, TenantCapacity } from './company.models';
@@ -37,6 +40,7 @@ describe('CapacityDialogComponent', () => {
     ]);
 
     TestBed.configureTestingModule({
+      imports: [translocoTesting()],
       providers: [
         { provide: CompanyService, useValue: service },
         { provide: NotificationService, useValue: notify },
@@ -137,5 +141,31 @@ describe('CapacityDialogComponent', () => {
     expect(service.setExtraBlocks).toHaveBeenCalledWith(company.id, 1);
     expect(notify.success).toHaveBeenCalledWith('Cupo actualizado: 200 colaboradores activos.');
     expect(dialogRef.close).toHaveBeenCalledWith(true);
+  });
+
+  it('en inglés el aviso y el error del backend salen en inglés', () => {
+    const { service, notify } = setup({ company, capacity: capacity() });
+    TestBed.inject(TranslocoService).setActiveLang('en');
+    service.setExtraBlocks.and.returnValues(
+      of(capacity({ extraBlocks: 1, limit: 200 })),
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: { code: 'CAPACITY_BELOW_USAGE', detail: 'Haga 20 baja(s).' },
+          }),
+      ),
+    );
+    const component = create() as unknown as { step: (d: number) => void; save: () => void };
+
+    component.step(1);
+    component.save();
+    component.step(1);
+    component.save();
+
+    expect(notify.success).toHaveBeenCalledWith('Capacity updated: 200 active employees.');
+    expect(notify.error).toHaveBeenCalledWith(
+      'The capacity cannot be lower than the number of active employees.',
+    );
   });
 });

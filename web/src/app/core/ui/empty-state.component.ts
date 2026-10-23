@@ -1,15 +1,16 @@
 import { Component, input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 /** Estado vacío para tablas/listas sin resultados. */
 @Component({
   selector: 'app-empty-state',
   standalone: true,
-  imports: [MatIconModule],
+  imports: [MatIconModule, TranslocoPipe],
   template: `
     <div class="empty">
       <mat-icon>{{ icon() }}</mat-icon>
-      <p>{{ message() }}</p>
+      <p>{{ message() || ('common.noData' | transloco) }}</p>
     </div>
   `,
   styles: [
@@ -35,5 +36,6 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class EmptyStateComponent {
   readonly icon = input('inbox');
-  readonly message = input('No hay datos para mostrar.');
+  /** Texto ya traducido; vacío muestra el genérico «No hay datos para mostrar». */
+  readonly message = input('');
 }

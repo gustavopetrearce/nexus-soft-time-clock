@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import * as L from 'leaflet';
 import { toDataURL } from 'qrcode';
 
@@ -16,6 +17,7 @@ import { PageHeaderComponent } from '../../../../core/ui/page-header.component';
 import { WorkSiteService } from '../work-site.service';
 import { QrRequest, QrToken } from './geofence.models';
 import { GeofenceService } from './geofence.service';
+import { AppDatePipe } from '../../../../core/i18n/app-date.pipe';
 
 type QrDurationMode = 'minutes' | 'date';
 
@@ -37,10 +39,12 @@ type QrDurationMode = 'minutes' | 'date';
     MatInputModule,
     MatProgressBarModule,
     PageHeaderComponent,
+    TranslocoPipe,
+    AppDatePipe,
   ],
   template: `
-    <app-page-header title="Geocerca y QR del centro" subtitle="Define el radio permitido y genera el QR de acceso">
-      <a mat-stroked-button routerLink="/work-sites"><mat-icon>arrow_back</mat-icon> Volver</a>
+    <app-page-header [title]="'geofence.title' | transloco" [subtitle]="'geofence.subtitle' | transloco">
+      <a mat-stroked-button routerLink="/work-sites"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | transloco }}</a>
     </app-page-header>
 
     @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
@@ -48,64 +52,64 @@ type QrDurationMode = 'minutes' | 'date';
 
     <div style="display:flex;gap:16px;flex-wrap:wrap">
       <mat-card style="flex:1 1 480px">
-        <mat-card-header><mat-card-title>Geocerca circular</mat-card-title></mat-card-header>
+        <mat-card-header><mat-card-title>{{ 'geofence.circular' | transloco }}</mat-card-title></mat-card-header>
         <mat-card-content>
-          <p class="muted">Hacé clic en el mapa para fijar el centro; ajustá el radio en metros.</p>
+          <p class="muted">{{ 'geofence.mapHint' | transloco }}</p>
           <div #mapEl style="height:340px;border-radius:8px;overflow:hidden"></div>
           <form [formGroup]="form" (ngSubmit)="save()" style="display:flex;gap:12px;flex-wrap:wrap;align-items:baseline;margin-top:12px">
             <mat-form-field appearance="outline" style="width:150px">
-              <mat-label>Latitud</mat-label>
+              <mat-label>{{ 'workSites.latitude' | transloco }}</mat-label>
               <input matInput type="number" step="any" formControlName="latitude" (change)="syncMap()" />
             </mat-form-field>
             <mat-form-field appearance="outline" style="width:150px">
-              <mat-label>Longitud</mat-label>
+              <mat-label>{{ 'workSites.longitude' | transloco }}</mat-label>
               <input matInput type="number" step="any" formControlName="longitude" (change)="syncMap()" />
             </mat-form-field>
             <mat-form-field appearance="outline" style="width:150px">
-              <mat-label>Radio (m)</mat-label>
+              <mat-label>{{ 'geofence.radius' | transloco }}</mat-label>
               <input matInput type="number" step="any" formControlName="radiusM" (change)="syncMap()" />
             </mat-form-field>
             <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || loading()">
-              Guardar geocerca
+              {{ 'geofence.save' | transloco }}
             </button>
           </form>
         </mat-card-content>
       </mat-card>
 
       <mat-card style="flex:1 1 320px">
-        <mat-card-header><mat-card-title>QR del centro</mat-card-title></mat-card-header>
+        <mat-card-header><mat-card-title>{{ 'geofence.qrTitle' | transloco }}</mat-card-title></mat-card-header>
         <mat-card-content>
-          <p class="muted">El QR es un token firmado con vigencia; generarlo de nuevo rota el anterior.</p>
+          <p class="muted">{{ 'geofence.qrText' | transloco }}</p>
           <form [formGroup]="qrForm" (ngSubmit)="generateQr()" style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
-            <mat-button-toggle-group formControlName="mode" aria-label="Modo de vigencia">
-              <mat-button-toggle value="minutes">Minutos</mat-button-toggle>
-              <mat-button-toggle value="date">Fecha de expiración</mat-button-toggle>
+            <mat-button-toggle-group formControlName="mode" [attr.aria-label]="'geofence.validityMode' | transloco">
+              <mat-button-toggle value="minutes">{{ 'geofence.minutes' | transloco }}</mat-button-toggle>
+              <mat-button-toggle value="date">{{ 'geofence.expiryDate' | transloco }}</mat-button-toggle>
             </mat-button-toggle-group>
 
             @if (qrForm.controls.mode.value === 'minutes') {
               <mat-form-field appearance="outline" style="width:180px">
-                <mat-label>Vigencia (min)</mat-label>
+                <mat-label>{{ 'geofence.validityMinutes' | transloco }}</mat-label>
                 <input matInput type="number" min="1" max="1440" step="1" formControlName="ttlMinutes" />
-                <mat-hint>1 a 1440 minutos (máx. 24 h)</mat-hint>
+                <mat-hint>{{ 'geofence.validityHint' | transloco }}</mat-hint>
               </mat-form-field>
             } @else {
               <mat-form-field appearance="outline" style="width:220px">
-                <mat-label>Expira el</mat-label>
+                <mat-label>{{ 'geofence.expiresOn' | transloco }}</mat-label>
                 <input matInput type="datetime-local" formControlName="expiresAt" />
-                <mat-hint>Para vigencias de días, semanas o meses</mat-hint>
+                <mat-hint>{{ 'geofence.expiresHint' | transloco }}</mat-hint>
               </mat-form-field>
             }
 
             <button mat-flat-button color="primary" type="submit" [disabled]="loading() || qrForm.invalid">
-              <mat-icon>qr_code_2</mat-icon> Generar / rotar QR
+              <mat-icon>qr_code_2</mat-icon> {{ 'geofence.generate' | transloco }}
             </button>
           </form>
           @if (qr(); as q) {
             <div style="margin-top:16px;text-align:center">
               @if (qrImage(); as img) {
-                <img [src]="img" alt="QR del centro" style="width:220px;height:220px" />
+                <img [src]="img" [alt]="'geofence.qrTitle' | transloco" style="width:220px;height:220px" />
               }
-              <div class="muted" style="margin-top:8px">Vence: {{ q.expiresAt }}</div>
+              <div class="muted" style="margin-top:8px">{{ 'geofence.expires' | transloco: { date: (q.expiresAt | appDate: 'medium') } }}</div>
               <textarea readonly style="width:100%;margin-top:8px;font-family:monospace;font-size:.75rem" rows="3">{{ q.token }}</textarea>
             </div>
           }
@@ -122,6 +126,7 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
   private readonly geofence = inject(GeofenceService);
   private readonly workSites = inject(WorkSiteService);
   private readonly notify = inject(NotificationService);
+  private readonly transloco = inject(TranslocoService);
 
   private readonly workSiteId = this.route.snapshot.paramMap.get('id') ?? '';
   private map?: L.Map;
@@ -183,7 +188,7 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
         });
       },
       error: () => {
-        this.error.set('No se pudo cargar el centro de trabajo.');
+        this.error.set(this.transloco.translate('workSites.form.loadError'));
         this.loading.set(false);
       },
     });
@@ -214,12 +219,12 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
     this.loading.set(true);
     this.geofence.upsert(this.workSiteId, this.form.getRawValue()).subscribe({
       next: () => {
-        this.notify.success('Geocerca guardada.');
+        this.notify.success(this.transloco.translate('geofence.saved'));
         this.loading.set(false);
       },
       error: () => {
         this.loading.set(false);
-        this.notify.error('No se pudo guardar la geocerca.');
+        this.notify.error(this.transloco.translate('geofence.saveError'));
       },
     });
   }
@@ -232,7 +237,7 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
     let request: QrRequest;
     if (raw.mode === 'date') {
       if (!raw.expiresAt) {
-        this.notify.error('Elegí una fecha de expiración.');
+        this.notify.error(this.transloco.translate('geofence.pickDate'));
         return;
       }
       request = { expiresAt: new Date(raw.expiresAt).toISOString() };
@@ -244,12 +249,12 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
       next: (token) => {
         this.qr.set(token);
         void toDataURL(token.token, { width: 220 }).then((url) => this.qrImage.set(url));
-        this.notify.success('QR generado.');
+        this.notify.success(this.transloco.translate('geofence.qrGenerated'));
         this.loading.set(false);
       },
       error: () => {
         this.loading.set(false);
-        this.notify.error('No se pudo generar el QR.');
+        this.notify.error(this.transloco.translate('geofence.qrError'));
       },
     });
   }
