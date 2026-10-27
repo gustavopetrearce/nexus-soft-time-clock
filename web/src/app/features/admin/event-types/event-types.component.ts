@@ -80,9 +80,9 @@ import { EventTypesService } from './event-types.service';
       .row {
         display: flex;
         align-items: center;
-        gap: var(--sp-4);
-        padding: var(--sp-3) 0;
-        border-bottom: 1px solid var(--border);
+        gap: var(--nx-space-4);
+        padding: var(--nx-space-3) 0;
+        border-bottom: 1px solid var(--nx-color-border-default);
       }
       .row:last-of-type { border-bottom: none; }
       .info {
@@ -92,13 +92,13 @@ import { EventTypesService } from './event-types.service';
         gap: 2px;
       }
       .code {
-        font-weight: 650;
-        font-size: var(--font-body);
+        font-weight: var(--nx-font-weight-semibold);
+        font-size: var(--nx-text-body-size);
       }
       .core-tag {
-        font-size: var(--font-caption);
-        font-weight: 700;
-        color: var(--brand);
+        font-size: var(--nx-text-caption-size);
+        font-weight: var(--nx-font-weight-bold);
+        color: var(--nx-color-action-primary);
         text-transform: uppercase;
         letter-spacing: 0.04em;
       }
@@ -106,9 +106,9 @@ import { EventTypesService } from './event-types.service';
         flex: 1 1 auto;
       }
       .actions {
-        margin-top: var(--sp-4);
+        margin-top: var(--nx-space-4);
         display: flex;
-        gap: var(--sp-2);
+        gap: var(--nx-space-2);
       }
     `,
   ],

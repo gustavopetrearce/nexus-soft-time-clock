@@ -176,44 +176,44 @@ import { UserService } from './user.service';
   styles: [
     `
       .users-table { border-collapse: separate; }
-      .urow { cursor: pointer; transition: background 0.12s ease; }
-      .urow:hover { background: var(--surface-2); }
+      .urow { cursor: pointer; transition: background 0.12s var(--nx-motion-easing-standard); }
+      .urow:hover { background: var(--nx-color-surface-subtle); }
       .users-table td.mat-mdc-cell { padding-top: 10px; padding-bottom: 10px; }
 
       .u-cell { display: flex; align-items: center; gap: 12px; }
       .u-cell .av {
-        width: 38px; height: 38px; border-radius: 50%; flex: none;
-        display: grid; place-items: center; font-weight: 700; font-size: 0.78rem;
-        background: var(--brand-soft); color: var(--brand); border: none;
+        width: 38px; height: 38px; border-radius: var(--nx-radius-full); flex: none;
+        display: grid; place-items: center; font-weight: var(--nx-font-weight-bold); font-size: 0.78rem;
+        background: var(--nx-color-action-primary-subtle); color: var(--nx-color-action-primary); border: none;
       }
       .u-cell .u-txt { min-width: 0; }
-      .u-cell .nm { font-weight: 600; color: var(--text); line-height: 1.2; }
-      .u-cell .sub { font-size: var(--font-small); color: var(--text-muted); line-height: 1.3; }
+      .u-cell .nm { font-weight: var(--nx-font-weight-semibold); color: var(--nx-color-text-primary); line-height: 1.2; }
+      .u-cell .sub { font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); line-height: 1.3; }
 
-      .code { font-variant-numeric: tabular-nums; color: var(--text-muted); font-weight: 600; }
+      .code { font-variant-numeric: tabular-nums; color: var(--nx-color-text-secondary); font-weight: var(--nx-font-weight-semibold); }
 
       .role-tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
-      .role-tag { background: var(--brand-soft); border: 1px solid var(--brand-border); color: var(--brand); border-radius: 999px; padding: 2px 10px; font-size: var(--font-small); font-weight: 600; white-space: nowrap; }
+      .role-tag { background: var(--nx-color-action-primary-subtle); border: 1px solid var(--nx-color-border-brand); color: var(--nx-color-action-primary); border-radius: var(--nx-radius-full); padding: 2px 10px; font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); white-space: nowrap; }
 
       .cap-chip {
         display: inline-flex; align-items: center; gap: 6px;
-        padding: 6px 12px; border-radius: 999px;
-        background: var(--brand-soft); border: 1px solid var(--brand-border); color: var(--brand);
-        font-size: var(--font-small); font-weight: 600; font-variant-numeric: tabular-nums;
+        padding: 6px 12px; border-radius: var(--nx-radius-full);
+        background: var(--nx-color-action-primary-subtle); border: 1px solid var(--nx-color-border-brand); color: var(--nx-color-action-primary);
+        font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); font-variant-numeric: tabular-nums;
       }
       .cap-chip mat-icon { font-size: 18px; width: 18px; height: 18px; }
-      .cap-chip-full { background: var(--warning-bg); border-color: var(--warning); color: var(--warning); }
+      .cap-chip-full { background: var(--nx-color-status-warning-bg); border-color: var(--nx-color-status-warning-fg); color: var(--nx-color-status-warning-fg); }
 
       .cap-banner {
         display: flex; align-items: flex-start; gap: 8px;
         margin: 0 0 16px; padding: 10px 14px; border-radius: 10px;
-        background: var(--warning-bg); color: var(--warning); font-size: var(--font-small);
+        background: var(--nx-color-status-warning-bg); color: var(--nx-color-status-warning-fg); font-size: var(--nx-text-small-size);
       }
       .cap-banner mat-icon { font-size: 18px; width: 18px; height: 18px; flex: none; }
 
-      .fcell { padding-top: 6px !important; padding-bottom: 6px !important; background: var(--surface-2); }
-      .col-filter { width: 100%; min-width: 90px; padding: 7px 9px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: var(--font-small); }
-      .col-filter:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+      .fcell { padding-top: 6px !important; padding-bottom: 6px !important; background: var(--nx-color-surface-subtle); }
+      .col-filter { width: 100%; min-width: 90px; padding: 7px 9px; border: 1px solid var(--nx-color-border-strong); border-radius: 8px; background: var(--nx-color-surface-default); color: var(--nx-color-text-primary); font: inherit; font-size: var(--nx-text-small-size); }
+      .col-filter:focus { outline: none; border-color: var(--nx-color-action-primary); box-shadow: 0 0 0 3px var(--nx-color-action-primary-subtle); }
       select.col-filter { cursor: pointer; }
     `,
   ],
@@ -301,11 +301,11 @@ export class UsersComponent {
 
   /** Paleta sobria (fondos suaves + texto) para los avatares, asignada de forma estable por usuario. */
   private readonly avatarPalette = [
-    { bg: 'var(--brand-soft)', fg: 'var(--brand)' },
-    { bg: 'var(--info-bg)', fg: 'var(--info)' },
-    { bg: 'var(--success-bg)', fg: 'var(--success)' },
-    { bg: 'var(--warning-bg)', fg: 'var(--warning)' },
-    { bg: 'var(--neutral-bg)', fg: 'var(--neutral)' },
+    { bg: 'var(--nx-color-action-primary-subtle)', fg: 'var(--nx-color-action-primary)' },
+    { bg: 'var(--nx-color-status-info-bg)', fg: 'var(--nx-color-status-info-fg)' },
+    { bg: 'var(--nx-color-status-success-bg)', fg: 'var(--nx-color-status-success-fg)' },
+    { bg: 'var(--nx-color-status-warning-bg)', fg: 'var(--nx-color-status-warning-fg)' },
+    { bg: 'var(--nx-color-status-neutral-bg)', fg: 'var(--nx-color-status-neutral-fg)' },
   ];
 
   protected avatarColor(u: User): { bg: string; fg: string } {

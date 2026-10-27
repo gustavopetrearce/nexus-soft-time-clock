@@ -81,16 +81,16 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   styles: [
     `
       :host { display: block; }
-      .m-head { display: flex; align-items: center; gap: 14px; padding: 20px 28px 16px; border-bottom: 1px solid var(--border); }
-      .m-head .badge-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; border: 1px solid var(--brand-border); flex: none; }
+      .m-head { display: flex; align-items: center; gap: 14px; padding: 20px 28px 16px; border-bottom: 1px solid var(--nx-color-border-default); }
+      .m-head .badge-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--nx-color-action-primary-subtle); color: var(--nx-color-action-primary); display: grid; place-items: center; border: 1px solid var(--nx-color-border-brand); flex: none; }
       .m-head .t { flex: 1; }
-      .m-head h2 { margin: 0; font-size: 1.15rem; font-weight: 700; }
-      .m-head p { margin: 2px 0 0; color: var(--text-muted); font-size: var(--font-small); }
+      .m-head h2 { margin: 0; font-size: 1.15rem; font-weight: var(--nx-font-weight-bold); }
+      .m-head p { margin: 2px 0 0; color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
       .m-body { padding: 16px 28px 4px; display: flex; flex-direction: column; }
       .m-body .full { width: 100%; }
-      .m-foot { display: flex; align-items: center; gap: 10px; padding: 14px 28px 18px; border-top: 1px solid var(--border); }
+      .m-foot { display: flex; align-items: center; gap: 10px; padding: 14px 28px 18px; border-top: 1px solid var(--nx-color-border-default); }
       .m-foot .fill { flex: 1; }
-      .link { color: var(--brand); cursor: pointer; font-weight: 600; }
+      .link { color: var(--nx-color-action-primary); cursor: pointer; font-weight: var(--nx-font-weight-semibold); }
     `,
   ],
 })

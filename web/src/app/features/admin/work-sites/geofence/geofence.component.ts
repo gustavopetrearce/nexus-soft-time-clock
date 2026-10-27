@@ -18,6 +18,7 @@ import { WorkSiteService } from '../work-site.service';
 import { QrRequest, QrToken } from './geofence.models';
 import { GeofenceService } from './geofence.service';
 import { AppDatePipe } from '../../../../core/i18n/app-date.pipe';
+import { cssToken } from '../../../../core/ui/css-token';
 
 type QrDurationMode = 'minutes' | 'date';
 
@@ -202,8 +203,8 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
     const { latitude, longitude, radiusM } = this.form.getRawValue();
     const center: L.LatLngExpression = [latitude, longitude];
     if (!this.centerMarker) {
-      this.centerMarker = L.circleMarker(center, { radius: 6, color: '#3949ab' }).addTo(this.map);
-      this.radiusCircle = L.circle(center, { radius: radiusM, color: '#3949ab', fillOpacity: 0.1 }).addTo(this.map);
+      this.centerMarker = L.circleMarker(center, { radius: 6, color: cssToken('color-action-primary') }).addTo(this.map);
+      this.radiusCircle = L.circle(center, { radius: radiusM, color: cssToken('color-action-primary'), fillOpacity: 0.1 }).addTo(this.map);
     } else {
       this.centerMarker.setLatLng(center);
       this.radiusCircle?.setLatLng(center);

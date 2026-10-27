@@ -114,7 +114,7 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="columns"></tr>
                 <tr mat-row *matRowDef="let row; columns: columns"
-                    [style.background]="row.id === selected()?.id ? 'var(--brand-soft)' : ''"></tr>
+                    [style.background]="row.id === selected()?.id ? 'var(--nx-color-action-primary-subtle)' : ''"></tr>
               </table>
             </div>
 
@@ -187,11 +187,11 @@ import { VacationRequestDialogComponent } from './vacation-request-dialog.compon
   `,
   styles: [
     `
-      .count-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: var(--warning-bg); color: var(--warning); font-weight: 600; font-size: var(--font-small); }
+      .count-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--nx-radius-full); background: var(--nx-color-status-warning-bg); color: var(--nx-color-status-warning-fg); font-weight: var(--nx-font-weight-semibold); font-size: var(--nx-text-small-size); }
       .count-pill mat-icon { font-size: 18px; width: 18px; height: 18px; }
       .who { display: flex; flex-direction: column; }
-      .who .nm { font-weight: 600; }
-      .who .sub { font-size: var(--font-small); color: var(--text-muted); }
+      .who .nm { font-weight: var(--nx-font-weight-semibold); }
+      .who .sub { font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); }
     `,
   ],
 })

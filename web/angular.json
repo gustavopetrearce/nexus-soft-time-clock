@@ -24,7 +24,9 @@
             "styles": [
               "node_modules/@fontsource-variable/inter/index.css",
               "node_modules/@fontsource/material-icons/index.css",
+              "node_modules/@fontsource/material-icons-outlined/index.css",
               "node_modules/leaflet/dist/leaflet.css",
+              "src/styles/tokens.css",
               "src/styles.scss"
             ],
             "scripts": []
@@ -33,7 +35,7 @@
             "production": {
               "budgets": [
                 { "type": "initial", "maximumWarning": "500kB", "maximumError": "1MB" },
-                { "type": "anyComponentStyle", "maximumWarning": "2kB", "maximumError": "4kB" }
+                { "type": "anyComponentStyle", "maximumWarning": "4kB", "maximumError": "8kB" }
               ],
               "outputHashing": "all",
               "serviceWorker": "ngsw-config.json"
@@ -68,7 +70,7 @@
           "options": {
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
-            "styles": ["src/styles.scss"]
+            "styles": ["src/styles/tokens.css", "src/styles.scss"]
           }
         }
       }

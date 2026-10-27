@@ -81,11 +81,11 @@ type QrDurationMode = 'minutes' | 'date';
   `,
   styles: [
     `
-      .qr-card { margin-bottom: var(--sp-4); }
+      .qr-card { margin-bottom: var(--nx-space-4); }
       .card-head { display: flex; align-items: center; gap: 10px; }
-      .card-head mat-icon { color: var(--brand); }
-      .card-head h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
-      .sub { margin: 4px 0 12px; font-size: var(--font-small); }
+      .card-head mat-icon { color: var(--nx-color-action-primary); }
+      .card-head h3 { margin: 0; font-size: 1.05rem; font-weight: var(--nx-font-weight-bold); }
+      .sub { margin: 4px 0 12px; font-size: var(--nx-text-small-size); }
       .qr-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: baseline; }
       .qr-out { margin-top: 16px; text-align: center; }
       .qr-out img { width: 220px; height: 220px; }

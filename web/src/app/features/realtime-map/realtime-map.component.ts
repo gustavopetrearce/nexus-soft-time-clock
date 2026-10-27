@@ -12,6 +12,7 @@ import { WorkSiteService } from '../admin/work-sites/work-site.service';
 import { AttendanceEvent, RealtimeService } from './realtime.service';
 import { AppDatePipe } from '../../core/i18n/app-date.pipe';
 import { eventLabel, rejectionLabel } from '../attendance-events/attendance-events.models';
+import { cssToken } from '../../core/ui/css-token';
 
 /**
  * Mapa en tiempo real (RF-25, CU-11): grafica los registros de asistencia aceptados sobre
@@ -52,7 +53,7 @@ import { eventLabel, rejectionLabel } from '../attendance-events/attendance-even
           <mat-list>
             @for (e of feed(); track e.attendanceId) {
               <mat-list-item>
-                <mat-icon matListItemIcon [style.color]="e.type === 'ACCEPTED' ? 'var(--success)' : 'var(--danger)'">
+                <mat-icon matListItemIcon [style.color]="e.type === 'ACCEPTED' ? 'var(--nx-color-status-success-fg)' : 'var(--nx-color-status-error-fg)'">
                   {{ e.type === 'ACCEPTED' ? 'check_circle' : 'cancel' }}
                 </mat-icon>
                 <span matListItemTitle>{{ feedTitle(e) }}</span>
@@ -70,33 +71,33 @@ import { eventLabel, rejectionLabel } from '../attendance-events/attendance-even
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        font-size: var(--font-small);
-        font-weight: 600;
+        font-size: var(--nx-text-small-size);
+        font-weight: var(--nx-font-weight-semibold);
         padding: 4px 12px;
-        border-radius: 999px;
-        color: var(--neutral);
-        background: var(--neutral-bg);
+        border-radius: var(--nx-radius-full);
+        color: var(--nx-color-status-neutral-fg);
+        background: var(--nx-color-status-neutral-bg);
       }
-      .conn-badge.on { color: var(--success); background: var(--success-bg); }
+      .conn-badge.on { color: var(--nx-color-status-success-fg); background: var(--nx-color-status-success-bg); }
       .conn-badge mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
-      .map-layout { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+      .map-layout { display: flex; gap: var(--nx-space-4); flex-wrap: wrap; }
       .map-card { flex: 2 1 520px; }
       .feed-card { flex: 1 1 300px; }
-      .map-canvas { height: 460px; border-radius: var(--radius-md); overflow: hidden; }
+      .map-canvas { height: 460px; border-radius: var(--nx-radius-md); overflow: hidden; }
 
-      .feed-stats { display: flex; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+      .feed-stats { display: flex; gap: var(--nx-space-3); margin-bottom: var(--nx-space-3); }
       .stat {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        font-size: var(--font-small);
-        font-weight: 600;
+        font-size: var(--nx-text-small-size);
+        font-weight: var(--nx-font-weight-semibold);
         padding: 3px 10px;
-        border-radius: 999px;
+        border-radius: var(--nx-radius-full);
       }
-      .stat.success { color: var(--success); background: var(--success-bg); }
-      .stat.danger { color: var(--danger); background: var(--danger-bg); }
+      .stat.success { color: var(--nx-color-status-success-fg); background: var(--nx-color-status-success-bg); }
+      .stat.danger { color: var(--nx-color-status-error-fg); background: var(--nx-color-status-error-bg); }
       .stat mat-icon { font-size: 14px; width: 14px; height: 14px; }
     `,
   ],
@@ -147,8 +148,8 @@ export class RealtimeMapComponent implements AfterViewInit, OnDestroy {
     for (const site of sites) {
       const marker = L.circleMarker([site.latitude, site.longitude], {
         radius: 8,
-        color: '#3949ab',
-        fillColor: '#3949ab',
+        color: cssToken('color-action-primary'),
+        fillColor: cssToken('color-action-primary'),
         fillOpacity: 0.4,
       })
         .addTo(this.map)
@@ -174,8 +175,8 @@ export class RealtimeMapComponent implements AfterViewInit, OnDestroy {
 
   /** Resalta brevemente el centro que recibió un registro. */
   private pulse(marker: L.CircleMarker): void {
-    marker.setStyle({ color: '#0f7a52', fillColor: '#0f7a52', radius: 14 });
-    setTimeout(() => marker.setStyle({ color: '#3949ab', fillColor: '#3949ab', radius: 8 }), 1200);
+    marker.setStyle({ color: cssToken('color-status-success-fg'), fillColor: cssToken('color-status-success-fg'), radius: 14 });
+    setTimeout(() => marker.setStyle({ color: cssToken('color-action-primary'), fillColor: cssToken('color-action-primary'), radius: 8 }), 1200);
   }
 
   /** Título de un evento del feed: tipo de marcación si se aceptó, motivo si se rechazó. */

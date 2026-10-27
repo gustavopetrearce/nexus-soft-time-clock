@@ -120,7 +120,7 @@ import { translateOr } from '../../core/i18n/translate-or';
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="columns"></tr>
                 <tr mat-row *matRowDef="let row; columns: columns"
-                    [style.background]="row.id === selected()?.id ? 'var(--brand-soft)' : ''"></tr>
+                    [style.background]="row.id === selected()?.id ? 'var(--nx-color-action-primary-subtle)' : ''"></tr>
               </table>
             </div>
 
@@ -203,8 +203,8 @@ import { translateOr } from '../../core/i18n/translate-or';
     `
       .open-count {
         display: flex; align-items: center; gap: 6px;
-        font-size: var(--font-small); font-weight: 600; color: var(--text-muted);
-        margin-bottom: var(--sp-4);
+        font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); color: var(--nx-color-text-secondary);
+        margin-bottom: var(--nx-space-4);
       }
       .open-count mat-icon { font-size: 18px; width: 18px; height: 18px; }
     `,

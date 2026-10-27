@@ -210,34 +210,34 @@ import { VacationPolicyService } from './vacation-policy.service';
   `,
   styles: [
     `
-      .cfg-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--sp-4); align-items: start; }
+      .cfg-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--nx-space-4); align-items: start; }
       @media (max-width: 1000px) { .cfg-grid { grid-template-columns: 1fr; } }
       .card-head { display: flex; align-items: center; gap: 10px; }
-      .card-head mat-icon { color: var(--brand); }
-      .card-head h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
-      .sub { margin: 4px 0 12px; font-size: var(--font-small); }
-      .tier-head, .tier-row { display: grid; grid-template-columns: 1fr 1fr 44px; gap: var(--sp-3); align-items: center; }
-      .tier-head { font-size: var(--font-caption); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); padding: 0 4px 6px; }
+      .card-head mat-icon { color: var(--nx-color-action-primary); }
+      .card-head h3 { margin: 0; font-size: 1.05rem; font-weight: var(--nx-font-weight-bold); }
+      .sub { margin: 4px 0 12px; font-size: var(--nx-text-small-size); }
+      .tier-head, .tier-row { display: grid; grid-template-columns: 1fr 1fr 44px; gap: var(--nx-space-3); align-items: center; }
+      .tier-head { font-size: var(--nx-text-caption-size); font-weight: var(--nx-font-weight-bold); text-transform: uppercase; letter-spacing: .04em; color: var(--nx-color-text-secondary); padding: 0 4px 6px; }
       .tier-row { padding: 4px 0; }
-      .num input, .inline-num { border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; padding: 9px 10px; width: 100%; text-align: center; font-weight: 600; }
-      .num input:focus, .inline-num:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
-      .add { margin-top: var(--sp-2); }
-      .beyond { margin: var(--sp-4) 0; padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); }
-      .beyond-title { font-size: var(--font-small); font-weight: 600; margin-bottom: var(--sp-2); }
-      .inc { margin-top: var(--sp-3); font-size: var(--font-body); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .num input, .inline-num { border: 1px solid var(--nx-color-border-strong); border-radius: 8px; background: var(--nx-color-surface-default); color: var(--nx-color-text-primary); font: inherit; padding: 9px 10px; width: 100%; text-align: center; font-weight: var(--nx-font-weight-semibold); }
+      .num input:focus, .inline-num:focus { outline: none; border-color: var(--nx-color-action-primary); box-shadow: 0 0 0 3px var(--nx-color-action-primary-subtle); }
+      .add { margin-top: var(--nx-space-2); }
+      .beyond { margin: var(--nx-space-4) 0; padding: var(--nx-space-4); border: 1px solid var(--nx-color-border-default); border-radius: var(--nx-radius-md); background: var(--nx-color-surface-subtle); }
+      .beyond-title { font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); margin-bottom: var(--nx-space-2); }
+      .inc { margin-top: var(--nx-space-3); font-size: var(--nx-text-body-size); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
       .inline-num { width: 64px; }
-      .policy-card { margin-bottom: var(--sp-4); }
-      .cfg-item { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) 0; border-top: 1px solid var(--border); }
-      .ci-ic { width: 40px; height: 40px; border-radius: 11px; background: var(--brand-soft); border: 1px solid var(--brand-border); color: var(--brand); display: grid; place-items: center; flex: none; }
+      .policy-card { margin-bottom: var(--nx-space-4); }
+      .cfg-item { display: flex; align-items: center; gap: var(--nx-space-4); padding: var(--nx-space-4) 0; border-top: 1px solid var(--nx-color-border-default); }
+      .ci-ic { width: 40px; height: 40px; border-radius: 11px; background: var(--nx-color-action-primary-subtle); border: 1px solid var(--nx-color-border-brand); color: var(--nx-color-action-primary); display: grid; place-items: center; flex: none; }
       .ci-txt { flex: 1; }
-      .ci-txt h4 { margin: 0; font-size: var(--font-body); font-weight: 600; }
-      .ci-txt p { margin: 3px 0 0; font-size: var(--font-small); color: var(--text-muted); }
-      .actions { margin-top: var(--sp-4); display: flex; justify-content: flex-end; gap: var(--sp-2); }
-      .info-box { display: flex; gap: 11px; padding: 4px; color: var(--text); font-size: var(--font-small); line-height: 1.5; }
-      .info-box mat-icon { color: var(--info); flex: none; }
-      .preview { margin-top: var(--sp-4); border-top: 1px solid var(--border); padding-top: var(--sp-3); }
-      .preview-title { font-size: var(--font-small); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin-bottom: var(--sp-2); }
-      .preview-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: var(--font-body); }
+      .ci-txt h4 { margin: 0; font-size: var(--nx-text-body-size); font-weight: var(--nx-font-weight-semibold); }
+      .ci-txt p { margin: 3px 0 0; font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); }
+      .actions { margin-top: var(--nx-space-4); display: flex; justify-content: flex-end; gap: var(--nx-space-2); }
+      .info-box { display: flex; gap: 11px; padding: 4px; color: var(--nx-color-text-primary); font-size: var(--nx-text-small-size); line-height: 1.5; }
+      .info-box mat-icon { color: var(--nx-color-status-info-fg); flex: none; }
+      .preview { margin-top: var(--nx-space-4); border-top: 1px solid var(--nx-color-border-default); padding-top: var(--nx-space-3); }
+      .preview-title { font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-bold); text-transform: uppercase; letter-spacing: .04em; color: var(--nx-color-text-secondary); margin-bottom: var(--nx-space-2); }
+      .preview-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: var(--nx-text-body-size); }
     `,
   ],
 })

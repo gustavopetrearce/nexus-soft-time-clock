@@ -135,17 +135,17 @@ import { CompanyService } from './company.service';
   `,
   styles: [
     `
-      .cap { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
-      .cap-full { color: var(--warning); }
+      .cap { font-variant-numeric: tabular-nums; font-weight: var(--nx-font-weight-semibold); white-space: nowrap; }
+      .cap-full { color: var(--nx-color-status-warning-fg); }
       .cap .blk {
         margin-left: 6px;
         padding: 1px 7px;
-        border-radius: 999px;
-        background: var(--brand-soft);
-        color: var(--brand);
-        font-size: var(--font-small);
+        border-radius: var(--nx-radius-full);
+        background: var(--nx-color-action-primary-subtle);
+        color: var(--nx-color-action-primary);
+        font-size: var(--nx-text-small-size);
       }
-      .cap-empty { color: var(--text-muted); }
+      .cap-empty { color: var(--nx-color-text-secondary); }
     `,
   ],
 })

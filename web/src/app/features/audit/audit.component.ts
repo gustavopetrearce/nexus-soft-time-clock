@@ -68,7 +68,7 @@ import { AppDatePipe } from '../../core/i18n/app-date.pipe';
                 <tr mat-row *matRowDef="let row; columns: columns"
                     (click)="select(row)"
                     style="cursor:pointer"
-                    [style.background]="row.id === selected()?.id ? 'var(--brand-soft)' : ''"></tr>
+                    [style.background]="row.id === selected()?.id ? 'var(--nx-color-action-primary-subtle)' : ''"></tr>
               </table>
             </div>
 
@@ -120,10 +120,10 @@ import { AppDatePipe } from '../../core/i18n/app-date.pipe';
     `
       .values-block {
         margin: 0;
-        padding: var(--sp-3);
-        background: var(--surface-2);
-        border-radius: var(--radius-sm);
-        font-size: var(--font-small);
+        padding: var(--nx-space-3);
+        background: var(--nx-color-surface-subtle);
+        border-radius: var(--nx-radius-sm);
+        font-size: var(--nx-text-small-size);
         white-space: pre-wrap;
         word-break: break-word;
       }

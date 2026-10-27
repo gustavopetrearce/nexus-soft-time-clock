@@ -1,0 +1,93 @@
+// Base del documento y alias derivados de tokens (DS/01–DS/07). Solo var(--nx-*).
+
+// Superficie de las capas elevadas (toolbar, menús): en oscuro suben un paso (DS/06).
+:root {
+  --nx-elevation-2-surface: var(--nx-color-surface-default);
+  --nx-elevation-3-surface: var(--nx-color-surface-default);
+  --nx-size-target-min: var(--nx-size-target-min-portal);
+}
+body.dark {
+  --nx-elevation-2-surface: var(--nx-color-surface-hover);
+  --nx-elevation-3-surface: var(--nx-color-surface-hover);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: var(--nx-space-0);
+}
+body {
+  font-family: var(--nx-font-family-sans);
+  font-size: var(--nx-text-body-size);
+  line-height: var(--nx-font-line-height-150);
+  color: var(--nx-color-text-primary);
+  background: var(--nx-color-bg-app);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4 { letter-spacing: var(--nx-font-tracking-tight); }
+a { color: var(--nx-color-action-primary); }
+
+:focus-visible {
+  outline: var(--nx-border-width-focus) solid var(--nx-color-focus-ring);
+  outline-offset: var(--nx-focus-offset);
+}
+
+[hidden] { display: none !important; }
+
+/* Solo para lectores de pantalla. */
+.nx-sr-only {
+  position: absolute;
+  width: var(--nx-border-width-default);
+  height: var(--nx-border-width-default);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Íconos (DS/04): Material Icons Outlined; relleno solo en estados activos ---------- */
+.material-icons,
+.material-icons-outlined {
+  font-weight: var(--nx-font-weight-regular);
+  font-style: normal;
+  line-height: var(--nx-font-line-height-100);
+  letter-spacing: var(--nx-font-tracking-normal);
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+.material-icons { font-family: 'Material Icons'; }
+.mat-icon { font-size: var(--nx-icon-size-lg); }
+.material-icons-outlined { font-family: 'Material Icons Outlined'; }
+
+/* ---------- Barras de desplazamiento (DS/09, reglas comunes) ----------
+   Delgadas y ocultas; aparecen al desplazar (clase `is-scrolling`, directiva nxScroll) y se
+   ocultan `motion-delay-hide` después. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.is-scrolling { scrollbar-color: var(--nx-color-border-strong) transparent; }
+*::-webkit-scrollbar { width: var(--nx-space-2); height: var(--nx-space-2); }
+*::-webkit-scrollbar-thumb { background: transparent; border-radius: var(--nx-radius-full); }
+.is-scrolling::-webkit-scrollbar-thumb { background: var(--nx-color-border-strong); }
+
+/* ---------- Movimiento reducido (DS/07, DS/11) ----------
+   Desplazamientos y escalas instantáneos; los fundidos quedan en `fast`; el progreso se conserva. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: var(--nx-motion-duration-instant) !important;
+    animation-duration: var(--nx-motion-duration-fast) !important;
+    scroll-behavior: auto !important;
+  }
+  .nx-carga--barra::after,
+  .nx-spin,
+  .mat-mdc-progress-bar *,
+  .mat-mdc-progress-spinner * {
+    animation-duration: var(--nx-motion-duration-loop) !important;
+  }
+}

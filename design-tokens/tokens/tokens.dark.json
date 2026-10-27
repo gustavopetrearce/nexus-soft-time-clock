@@ -1,0 +1,163 @@
+{
+  "$description": "Tema oscuro: reasigna SOLO el nivel semántico (DS/01). Se aplica encima de tokens.json; la navegación lateral no cambia.",
+  "color": {
+    "bg": {
+      "app": {
+        "$value": "{color.neutral.950}",
+        "$type": "color"
+      }
+    },
+    "surface": {
+      "default": {
+        "$value": "{color.neutral.800}",
+        "$type": "color"
+      },
+      "subtle": {
+        "$value": "{color.neutral.900}",
+        "$type": "color"
+      },
+      "hover": {
+        "$value": "{color.neutral.700}",
+        "$type": "color"
+      }
+    },
+    "text": {
+      "primary": {
+        "$value": "{color.neutral.200}",
+        "$type": "color"
+      },
+      "secondary": {
+        "$value": "{color.neutral.400}",
+        "$type": "color"
+      },
+      "disabled": {
+        "$value": "{color.neutral.500}",
+        "$type": "color"
+      },
+      "placeholder": {
+        "$value": "{color.neutral.400}",
+        "$type": "color"
+      },
+      "inverse": {
+        "$value": "{color.neutral.900}",
+        "$type": "color"
+      }
+    },
+    "action": {
+      "primary": {
+        "$value": "{color.indigo.300}",
+        "$type": "color"
+      },
+      "primary-hover": {
+        "$value": "{color.indigo.200}",
+        "$type": "color"
+      },
+      "primary-subtle": {
+        "$value": "{color.indigo.900}",
+        "$type": "color"
+      }
+    },
+    "on": {
+      "action-primary": {
+        "$value": "{color.indigo.950}",
+        "$type": "color"
+      }
+    },
+    "border": {
+      "default": {
+        "$value": "{color.white-a10}",
+        "$type": "color"
+      },
+      "strong": {
+        "$value": "{color.white-a16}",
+        "$type": "color"
+      },
+      "brand": {
+        "$value": "{color.indigo.400}",
+        "$type": "color"
+      },
+      "input": {
+        "$value": "{color.neutral.400}",
+        "$type": "color"
+      }
+    },
+    "focus": {
+      "ring": {
+        "$value": "{color.indigo.300}",
+        "$type": "color"
+      }
+    },
+    "status": {
+      "success-fg": {
+        "$value": "{color.green.300}",
+        "$type": "color"
+      },
+      "success-bg": {
+        "$value": "{color.green.900}",
+        "$type": "color"
+      },
+      "warning-fg": {
+        "$value": "{color.orange.300}",
+        "$type": "color"
+      },
+      "warning-bg": {
+        "$value": "{color.orange.900}",
+        "$type": "color"
+      },
+      "error-fg": {
+        "$value": "{color.red.300}",
+        "$type": "color"
+      },
+      "error-bg": {
+        "$value": "{color.red.900}",
+        "$type": "color"
+      },
+      "info-fg": {
+        "$value": "{color.blue.300}",
+        "$type": "color"
+      },
+      "info-bg": {
+        "$value": "{color.blue.900}",
+        "$type": "color"
+      },
+      "neutral-fg": {
+        "$value": "{color.neutral.300}",
+        "$type": "color"
+      },
+      "neutral-bg": {
+        "$value": "{color.neutral.700}",
+        "$type": "color"
+      }
+    }
+  },
+  "shadow": {
+    "1": {
+      "$value": [],
+      "$type": "shadow"
+    },
+    "2": {
+      "$value": [
+        {
+          "offsetX": "0px",
+          "offsetY": "6px",
+          "blur": "16px",
+          "spread": "0px",
+          "color": "{color.neutral.950-a40}"
+        }
+      ],
+      "$type": "shadow"
+    },
+    "3": {
+      "$value": [
+        {
+          "offsetX": "0px",
+          "offsetY": "16px",
+          "blur": "32px",
+          "spread": "0px",
+          "color": "{color.neutral.950-a50}"
+        }
+      ],
+      "$type": "shadow"
+    }
+  }
+}

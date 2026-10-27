@@ -60,7 +60,7 @@ import { WorkSiteService } from './work-site.service';
       <div class="form-page-main">
         <h3 class="form-section-title">{{ 'workSites.form.info' | transloco }}</h3>
         <form [formGroup]="form">
-          <div style="display:flex; gap: var(--sp-5); align-items:flex-start; flex-wrap:wrap">
+          <div style="display:flex; gap: var(--nx-space-6); align-items:flex-start; flex-wrap:wrap">
             <div style="flex: 1 1 320px; min-width:280px">
               <div class="form-grid-2">
                 <mat-form-field appearance="outline" class="drawer-field">
@@ -93,7 +93,7 @@ import { WorkSiteService } from './work-site.service';
               </div>
             </div>
             <div style="flex: 0 0 300px; min-width:260px">
-              <p class="row-title" style="margin:0 0 var(--sp-2)">{{ 'workSites.form.mapLocation' | transloco }}</p>
+              <p class="row-title" style="margin:0 0 var(--nx-space-2)">{{ 'workSites.form.mapLocation' | transloco }}</p>
               <app-map-inline
                 #map
                 style="display:block; height:220px"
@@ -102,7 +102,7 @@ import { WorkSiteService } from './work-site.service';
                 [radiusMeters]="form.controls.gpsAccuracyMaxM.value ?? 50"
                 (positionChange)="setPosition($event)"
               />
-              <p class="row-desc" style="margin: var(--sp-2) 0">{{ 'workSites.form.accuracyRadius' | transloco: { m: form.controls.gpsAccuracyMaxM.value ?? 50 } }}</p>
+              <p class="row-desc" style="margin: var(--nx-space-2) 0">{{ 'workSites.form.accuracyRadius' | transloco: { m: form.controls.gpsAccuracyMaxM.value ?? 50 } }}</p>
               <button mat-stroked-button type="button" (click)="map.centerOnPoint()">
                 <mat-icon>my_location</mat-icon> {{ 'workSites.form.centerMap' | transloco }}
               </button>
@@ -201,7 +201,7 @@ import { WorkSiteService } from './work-site.service';
           </div>
           <div class="info-card">
             <h3 class="info-card-title">{{ 'workSites.form.statusTitle' | transloco }}</h3>
-            <p class="muted" style="margin:0 0 var(--sp-3)">
+            <p class="muted" style="margin:0 0 var(--nx-space-3)">
               {{ (s.status === 'ACTIVE' ? 'workSites.form.statusActiveText' : 'workSites.form.statusInactiveText') | transloco }}
             </p>
             <button mat-stroked-button (click)="toggleStatus(s)">
@@ -210,7 +210,7 @@ import { WorkSiteService } from './work-site.service';
           </div>
           <div class="info-card">
             <h3 class="info-card-title">{{ 'workSites.geofenceQr' | transloco }}</h3>
-            <p class="muted" style="margin:0 0 var(--sp-3)">{{ 'workSites.form.geofenceText' | transloco }}</p>
+            <p class="muted" style="margin:0 0 var(--nx-space-3)">{{ 'workSites.form.geofenceText' | transloco }}</p>
             <a mat-stroked-button [routerLink]="['/work-sites', s.id, 'geofence']">
               <mat-icon>my_location</mat-icon> {{ 'workSites.form.goToGeofence' | transloco }}
             </a>
@@ -225,16 +225,16 @@ import { WorkSiteService } from './work-site.service';
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: var(--sp-4);
+        gap: var(--nx-space-4);
         flex-wrap: wrap;
-        padding: var(--sp-3) 0;
+        padding: var(--nx-space-3) 0;
       }
       .policy-hint {
         display: flex;
         align-items: center;
         gap: 6px;
-        margin: 0 0 var(--sp-3);
-        color: var(--text-muted);
+        margin: 0 0 var(--nx-space-3);
+        color: var(--nx-color-text-secondary);
       }
       .policy-hint mat-icon {
         font-size: 18px;

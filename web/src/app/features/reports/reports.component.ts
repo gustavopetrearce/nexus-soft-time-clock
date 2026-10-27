@@ -160,32 +160,32 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
     `
       .toolbar {
         display: flex;
-        gap: var(--sp-3);
+        gap: var(--nx-space-3);
         align-items: flex-start;
         flex-wrap: wrap;
-        margin-bottom: var(--sp-2);
+        margin-bottom: var(--nx-space-2);
       }
       .toolbar .search { flex: 1 1 320px; }
-      .dates { display: flex; gap: var(--sp-2); }
+      .dates { display: flex; gap: var(--nx-space-2); }
       .date { width: 160px; }
-      .toolbar-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+      .toolbar-actions { display: flex; gap: var(--nx-space-2); flex-wrap: wrap; }
       .spacer { flex: 1 1 auto; }
 
       .indicators {
         display: flex;
         align-items: center;
-        gap: var(--sp-4);
-        margin: var(--sp-2) 0 var(--sp-3);
+        gap: var(--nx-space-4);
+        margin: var(--nx-space-2) 0 var(--nx-space-3);
         flex-wrap: wrap;
       }
       .count { font-size: 0.9rem; }
-      .count strong { font-size: 1.05rem; color: var(--brand); }
+      .count strong { font-size: 1.05rem; color: var(--nx-color-action-primary); }
       .hint-inline {
         display: inline-flex;
         align-items: center;
         gap: 6px;
         font-size: 0.8rem;
-        color: var(--text-soft);
+        color: var(--nx-color-text-disabled);
       }
       .hint-inline mat-icon { font-size: 16px; width: 16px; height: 16px; }
       .demo-badge {
@@ -193,11 +193,11 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
         align-items: center;
         gap: 6px;
         font-size: 0.8rem;
-        font-weight: 600;
+        font-weight: var(--nx-font-weight-semibold);
         padding: 3px 10px;
-        border-radius: 999px;
-        color: var(--warning);
-        background: var(--warning-bg);
+        border-radius: var(--nx-radius-full);
+        color: var(--nx-color-status-warning-fg);
+        background: var(--nx-color-status-warning-bg);
       }
       .demo-badge mat-icon { font-size: 16px; width: 16px; height: 16px; }
       .filter-badge {
@@ -208,21 +208,21 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
         height: 18px;
         padding: 0 5px;
         margin-left: 6px;
-        border-radius: 999px;
-        background: var(--brand);
-        color: #fff;
+        border-radius: var(--nx-radius-full);
+        background: var(--nx-color-action-primary);
+        color: var(--nx-color-on-action-primary);
         font-size: 0.7rem;
-        font-weight: 700;
+        font-weight: var(--nx-font-weight-bold);
       }
-      .loader-bar { margin: var(--sp-2) 0; }
+      .loader-bar { margin: var(--nx-space-2) 0; }
 
-      .skeleton { display: flex; flex-direction: column; gap: 10px; padding: var(--sp-4) 0; }
+      .skeleton { display: flex; flex-direction: column; gap: 10px; padding: var(--nx-space-4) 0; }
       .skeleton-row {
         height: 40px;
-        border-radius: var(--radius-sm);
-        background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 37%, var(--surface-2) 63%);
+        border-radius: var(--nx-radius-sm);
+        background: linear-gradient(90deg, var(--nx-color-surface-subtle) 25%, var(--nx-color-border-default) 37%, var(--nx-color-surface-subtle) 63%);
         background-size: 400% 100%;
-        animation: shimmer 1.4s ease infinite;
+        animation: shimmer 1.4s var(--nx-motion-easing-standard) infinite;
       }
       @keyframes shimmer {
         0% { background-position: 100% 50%; }
@@ -233,15 +233,15 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: var(--sp-3);
+        gap: var(--nx-space-3);
         padding: 48px 16px;
-        color: var(--text-muted);
+        color: var(--nx-color-text-secondary);
         text-align: center;
       }
       .error-block mat-icon { font-size: 44px; width: 44px; height: 44px; opacity: 0.6; }
       .error-block p { margin: 0; max-width: 420px; }
 
-      mat-paginator { background: transparent; margin-top: var(--sp-2); }
+      mat-paginator { background: transparent; margin-top: var(--nx-space-2); }
     `,
   ],
 })

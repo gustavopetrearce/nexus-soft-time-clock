@@ -39,7 +39,15 @@
     "add": "Add",
     "remove": "Remove",
     "clear": "Clear",
-    "retry": "Retry"
+    "retry": "Retry",
+    "paginator": {
+      "rows": "Rows per page",
+      "next": "Next page",
+      "previous": "Previous page",
+      "first": "First page",
+      "last": "Last page",
+      "range": "{{from}}–{{to}} of {{total}}"
+    }
   },
   "language": {
     "change": "Change language"
@@ -66,6 +74,7 @@
       "incidents": "Incidents",
       "reports": "Reports",
       "attendanceEvents": "Clock-ins and clock-outs",
+      "attendanceRecords": "Attendance records",
       "audit": "Audit",
       "users": "Users",
       "people": "People",
@@ -77,7 +86,13 @@
       "vacations": "Vacations",
       "notifications": "Notifications",
       "settings": "Settings"
-    }
+    },
+    "closeMenu": "Close menu",
+    "home": "Nexus Soft Time Clock: go to Dashboard",
+    "toThemeLight": "Switch to light theme",
+    "toThemeDark": "Switch to dark theme",
+    "profile": "Profile",
+    "navLabel": "Side navigation"
   },
   "roles": {
     "SUPER_ADMIN": "Super Administrator",

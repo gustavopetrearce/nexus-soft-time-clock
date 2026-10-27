@@ -1,5 +1,6 @@
 import { AfterViewInit, Component, ElementRef, OnChanges, OnDestroy, SimpleChanges, ViewChild, input, output } from '@angular/core';
 import * as L from 'leaflet';
+import { cssToken } from './css-token';
 
 export interface MapPosition {
   latitude: number;
@@ -14,7 +15,7 @@ export interface MapPosition {
 @Component({
   selector: 'app-map-inline',
   standalone: true,
-  template: `<div #mapEl style="height:100%;min-height:220px;border-radius:var(--radius-md);overflow:hidden"></div>`,
+  template: `<div #mapEl style="height:100%;min-height:220px;border-radius:var(--nx-radius-md);overflow:hidden"></div>`,
 })
 export class MapInlineComponent implements AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('mapEl') private mapEl!: ElementRef<HTMLDivElement>;
@@ -85,7 +86,7 @@ export class MapInlineComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
     const radius = this.radiusMeters();
     if (!this.circle) {
-      this.circle = L.circle(point, { radius, color: '#3949ab', fillColor: '#3949ab', fillOpacity: 0.12 }).addTo(this.map as L.Map);
+      this.circle = L.circle(point, { radius, color: cssToken('color-action-primary'), fillColor: cssToken('color-action-primary'), fillOpacity: 0.12 }).addTo(this.map as L.Map);
     } else {
       this.circle.setLatLng(point);
       this.circle.setRadius(radius);
