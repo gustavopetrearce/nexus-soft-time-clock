@@ -83,7 +83,7 @@ import { SchedulingService } from './scheduling.service';
                     <tr mat-row *matRowDef="let row; columns: scheduleColumns"
                         (click)="selectSchedule(row)"
                         style="cursor:pointer"
-                        [style.background]="row.id === selectedSchedule()?.id ? 'var(--brand-soft)' : ''"></tr>
+                        [style.background]="row.id === selectedSchedule()?.id ? 'var(--nx-color-action-primary-subtle)' : ''"></tr>
                   </table>
                 </div>
                 @if (schedules().length === 0) {

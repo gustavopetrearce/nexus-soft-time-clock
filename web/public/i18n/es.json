@@ -39,7 +39,15 @@
     "add": "Agregar",
     "remove": "Quitar",
     "clear": "Limpiar",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "paginator": {
+      "rows": "Filas por página",
+      "next": "Página siguiente",
+      "previous": "Página anterior",
+      "first": "Primera página",
+      "last": "Última página",
+      "range": "{{from}}–{{to}} de {{total}}"
+    }
   },
   "language": {
     "change": "Cambiar idioma"
@@ -66,6 +74,7 @@
       "incidents": "Incidencias",
       "reports": "Reportes",
       "attendanceEvents": "Entradas y salidas",
+      "attendanceRecords": "Registros de asistencia",
       "audit": "Auditoría",
       "users": "Usuarios",
       "people": "Personas",
@@ -77,7 +86,13 @@
       "vacations": "Vacaciones",
       "notifications": "Notificaciones",
       "settings": "Configuración"
-    }
+    },
+    "closeMenu": "Cerrar menú",
+    "home": "Nexus Soft Time Clock: ir al Panel",
+    "toThemeLight": "Cambiar a tema claro",
+    "toThemeDark": "Cambiar a tema oscuro",
+    "profile": "Perfil",
+    "navLabel": "Navegación lateral"
   },
   "roles": {
     "SUPER_ADMIN": "Super Administrador",
@@ -139,7 +154,7 @@
   },
   "password": {
     "title": "Cambiar contraseña",
-    "subtitle": "Ingresá tu contraseña actual y definí una nueva.",
+    "subtitle": "Ingresa tu contraseña actual y define una nueva.",
     "current": "Contraseña actual",
     "new": "Nueva contraseña",
     "confirm": "Confirmar nueva contraseña",
@@ -147,7 +162,7 @@
     "minLength": "mínimo 8 caracteres",
     "mismatch": "Las contraseñas no coinciden.",
     "submit": "Cambiar contraseña",
-    "updated": "Contraseña actualizada. Iniciá sesión nuevamente.",
+    "updated": "Contraseña actualizada. Inicia sesión nuevamente.",
     "wrongCurrent": "La contraseña actual no es correcta.",
     "failed": "No se pudo cambiar la contraseña."
   },
@@ -155,7 +170,7 @@
     "platformTitle": "Panel de plataforma",
     "platformSubtitle": "Administración global de empresas",
     "companies": "Empresas",
-    "companiesText": "Gestioná las empresas (tenants) de la plataforma y aprovisioná el administrador inicial de cada una.",
+    "companiesText": "Gestiona las empresas (tenants) de la plataforma y aprovisiona el administrador inicial de cada una.",
     "goToCompanies": "Ir a Empresas",
     "title": "Panel",
     "subtitle": "Resumen operativo de tu empresa",
@@ -182,7 +197,7 @@
   },
   "errors": {
     "generic": "Ocurrió un error inesperado.",
-    "FORBIDDEN_ROLE_GRANT": "No podés otorgar un rol de nivel igual o superior al tuyo.",
+    "FORBIDDEN_ROLE_GRANT": "No puedes otorgar un rol de nivel igual o superior al tuyo.",
     "CAPACITY_BELOW_USAGE": "El cupo no puede ser menor que la cantidad de colaboradores activos.",
     "CAPACITY_EXCEEDED": "La empresa alcanzó su cupo de colaboradores activos.",
     "DUPLICATE_CODE": "Ya existe un registro con ese código.",
@@ -214,7 +229,7 @@
     "capacityTooltipFull": "Cupo base {{base}} + {{blocks}} bloque(s) de {{size}}. Sin cupo disponible: el próximo alta será rechazada.",
     "suspend": "Suspender empresa",
     "activate": "Activar empresa",
-    "confirmStatus": "¿Confirmás cambiar el estado de \"{{name}}\" a {{status}}?",
+    "confirmStatus": "¿Confirmas cambiar el estado de \"{{name}}\" a {{status}}?",
     "form": {
       "info": "Información de la empresa",
       "codeHint": "Código único que identifica a la empresa en el sistema.",
@@ -246,7 +261,7 @@
       "statusActiveText": "Solo las empresas activas pueden usar el sistema.",
       "statusInactiveText": "Esta empresa no puede operar mientras no esté activa.",
       "admin": "Administrador",
-      "adminText": "Aprovisioná un usuario COMPANY_ADMIN para esta empresa (el primer acceso del tenant).",
+      "adminText": "Aprovisiona un usuario COMPANY_ADMIN para esta empresa (el primer acceso del tenant).",
       "addAdmin": "Agregar administrador",
       "saveAdmin": "Guardar administrador",
       "loadError": "No se pudo cargar la empresa.",
@@ -254,7 +269,7 @@
       "saveError": "No se pudo guardar la empresa.",
       "createError": "No se pudo crear la empresa.",
       "created": "Empresa creada y administrador aprovisionado.",
-      "createdNoAdmin": "La empresa se creó, pero no se pudo aprovisionar el administrador. Reintentá desde la ficha de la empresa.",
+      "createdNoAdmin": "La empresa se creó, pero no se pudo aprovisionar el administrador. Reintenta desde la ficha de la empresa.",
       "adminProvisioned": "Administrador aprovisionado.",
       "adminError": "No se pudo aprovisionar el administrador."
     }
@@ -300,7 +315,7 @@
     "subtitle": "Administra las personas con acceso al sistema y su información laboral",
     "capacityChip": "Cupo {{used}}/{{limit}}",
     "new": "Nuevo usuario",
-    "capacityFull": "La empresa agotó su cupo de colaboradores activos ({{limit}}). Podés seguir creando cuentas de portal, pero habilitar a otro colaborador exige dar de baja a alguien o pedirle al super administrador un bloque adicional de {{size}}.",
+    "capacityFull": "La empresa agotó su cupo de colaboradores activos ({{limit}}). Puedes seguir creando cuentas de portal, pero habilitar a otro colaborador exige dar de baja a alguien o pedirle al super administrador un bloque adicional de {{size}}.",
     "search": "Buscar por nombre o correo",
     "employee": "Colaborador",
     "roles": "Roles",
@@ -349,7 +364,7 @@
       "revokeMessage": "El colaborador no podrá registrar asistencia desde este dispositivo hasta que se apruebe de nuevo. ¿Continuar?",
       "deviceRevoked": "Dispositivo revocado.",
       "deviceRevokeError": "No se pudo revocar el dispositivo.",
-      "resetMessage": "¿Confirmás establecer una nueva contraseña para \"{{name}}\"? Deberás comunicársela para que pueda ingresar.",
+      "resetMessage": "¿Confirmas establecer una nueva contraseña para \"{{name}}\"? Deberás comunicársela para que pueda ingresar.",
       "passwordReset": "Contraseña restablecida.",
       "passwordResetError": "No se pudo restablecer la contraseña.",
       "updated": "Usuario actualizado.",
@@ -463,7 +478,7 @@
     "title": "Geocerca y QR del centro",
     "subtitle": "Define el radio permitido y genera el QR de acceso",
     "circular": "Geocerca circular",
-    "mapHint": "Hacé clic en el mapa para fijar el centro; ajustá el radio en metros.",
+    "mapHint": "Haz clic en el mapa para fijar el centro; ajusta el radio en metros.",
     "radius": "Radio (m)",
     "save": "Guardar geocerca",
     "qrTitle": "QR del centro",
@@ -479,7 +494,7 @@
     "expires": "Vence: {{date}}",
     "saved": "Geocerca guardada.",
     "saveError": "No se pudo guardar la geocerca.",
-    "pickDate": "Elegí una fecha de expiración.",
+    "pickDate": "Elige una fecha de expiración.",
     "qrGenerated": "QR generado.",
     "qrError": "No se pudo generar el QR."
   },
@@ -553,7 +568,7 @@
     "toOptional": "Hasta (opcional)",
     "assign": "Asignar",
     "listByUser": "Listar asignaciones por usuario",
-    "pickUser": "Buscá un usuario para ver sus asignaciones.",
+    "pickUser": "Busca un usuario para ver sus asignaciones.",
     "usersError": "No se pudo cargar la lista de usuarios.",
     "sitesError": "No se pudo cargar la lista de centros de trabajo.",
     "scheduleShiftsError": "No se pudieron cargar los turnos del horario.",
@@ -850,7 +865,7 @@
   },
   "notifications": {
     "subtitle": "Consulta las notificaciones enviadas por el sistema",
-    "empty": "No tenés notificaciones.",
+    "empty": "No tienes notificaciones.",
     "loadError": "No se pudieron cargar las notificaciones."
   },
   "map": {

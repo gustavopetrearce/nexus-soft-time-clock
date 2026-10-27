@@ -142,29 +142,29 @@ type Period = 'week' | 'fortnight' | 'month' | 'range';
   `,
   styles: [
     `
-      .period-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: var(--sp-4); }
+      .period-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: var(--nx-space-4); }
       .dates { display: flex; gap: 12px; }
-      .dates label { font-size: var(--font-small); color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; }
-      .dates input { border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 10px; background: var(--surface); color: var(--text); font: inherit; }
+      .dates label { font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); display: flex; flex-direction: column; gap: 4px; }
+      .dates input { border: 1px solid var(--nx-color-border-strong); border-radius: 8px; padding: 8px 10px; background: var(--nx-color-surface-default); color: var(--nx-color-text-primary); font: inherit; }
       .spacer { flex: 1; }
       .mono { font-variant-numeric: tabular-nums; }
-      .nm { font-weight: 600; }
-      .sub { font-size: var(--font-small); color: var(--text-muted); }
+      .nm { font-weight: var(--nx-font-weight-semibold); }
+      .sub { font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); }
       td.mat-mdc-cell { white-space: nowrap; }
-      .chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: var(--font-small); font-weight: 600; background: var(--neutral-bg); color: var(--neutral); }
-      .chip.in { background: var(--success-bg); color: var(--success); }
-      .chip.out { background: var(--warning-bg); color: var(--warning); }
-      .chip.ok { background: var(--success-bg); color: var(--success); }
-      .chip.bad { background: var(--danger-bg); color: var(--danger); }
-      .fcell { padding-top: 6px !important; padding-bottom: 6px !important; background: var(--surface-2); }
+      .chip { display: inline-block; padding: 2px 10px; border-radius: var(--nx-radius-full); font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); background: var(--nx-color-status-neutral-bg); color: var(--nx-color-status-neutral-fg); }
+      .chip.in { background: var(--nx-color-status-success-bg); color: var(--nx-color-status-success-fg); }
+      .chip.out { background: var(--nx-color-status-warning-bg); color: var(--nx-color-status-warning-fg); }
+      .chip.ok { background: var(--nx-color-status-success-bg); color: var(--nx-color-status-success-fg); }
+      .chip.bad { background: var(--nx-color-status-error-bg); color: var(--nx-color-status-error-fg); }
+      .fcell { padding-top: 6px !important; padding-bottom: 6px !important; background: var(--nx-color-surface-subtle); }
       .ecell { width: 64px; text-align: center; }
-      .has-photo { color: var(--brand); vertical-align: middle; }
+      .has-photo { color: var(--nx-color-action-primary); vertical-align: middle; }
       tr.clickable { cursor: pointer; }
-      tr.clickable:hover { background: var(--surface-2); }
-      .cf { width: 100%; min-width: 110px; padding: 7px 9px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: var(--font-small); }
-      .cf:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+      tr.clickable:hover { background: var(--nx-color-surface-subtle); }
+      .cf { width: 100%; min-width: 110px; padding: 7px 9px; border: 1px solid var(--nx-color-border-strong); border-radius: 8px; background: var(--nx-color-surface-default); color: var(--nx-color-text-primary); font: inherit; font-size: var(--nx-text-small-size); }
+      .cf:focus { outline: none; border-color: var(--nx-color-action-primary); box-shadow: 0 0 0 3px var(--nx-color-action-primary-subtle); }
       select.cf { cursor: pointer; }
-      .siteless { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: var(--font-small); font-weight: 600; background: var(--warning-bg); color: var(--warning); }
+      .siteless { display: inline-block; padding: 2px 10px; border-radius: var(--nx-radius-full); font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); background: var(--nx-color-status-warning-bg); color: var(--nx-color-status-warning-fg); }
     `,
   ],
 })

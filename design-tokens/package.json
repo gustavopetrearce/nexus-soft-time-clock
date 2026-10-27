@@ -1,0 +1,12 @@
+{
+  "name": "nexus-design-tokens",
+  "description": "Design tokens de Nexus Soft Time Clock (DTCG → CSS/Sass)",
+  "scripts": {
+    "build": "node config.mjs"
+  },
+  "type": "module",
+  "devDependencies": {
+    "style-dictionary": "^4.4.0"
+  },
+  "private": true
+}

@@ -43,3 +43,6 @@ mocks/
 *.key
 *.crt
 *.p12
+
+# --- Design tokens (Style Dictionary) ---
+design-tokens/node_modules/

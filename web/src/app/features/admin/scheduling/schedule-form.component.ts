@@ -125,7 +125,7 @@ import { SchedulingService } from './scheduling.service';
           </div>
           <div class="info-card">
             <h3 class="info-card-title">{{ 'scheduling.form.shiftsTitle' | transloco }}</h3>
-            <p class="muted" style="margin:0 0 var(--sp-3)">{{ 'scheduling.form.shiftsText' | transloco }}</p>
+            <p class="muted" style="margin:0 0 var(--nx-space-3)">{{ 'scheduling.form.shiftsText' | transloco }}</p>
             <a mat-stroked-button [routerLink]="['/scheduling']">
               <mat-icon>schedule</mat-icon> {{ 'scheduling.form.goToList' | transloco }}
             </a>

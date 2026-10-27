@@ -107,40 +107,40 @@ export interface CapacityDialogData {
       mat-dialog-content { min-width: min(460px, 80vw); }
 
       .usage-head { display: flex; align-items: baseline; gap: 8px; }
-      .usage-head .big { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
-      .usage-head .of { color: var(--text-muted); }
+      .usage-head .big { font-size: 2rem; font-weight: var(--nx-font-weight-bold); letter-spacing: -0.02em; }
+      .usage-head .of { color: var(--nx-color-text-secondary); }
 
       .bar {
         margin: 10px 0 6px;
         height: 8px;
-        border-radius: 999px;
-        background: var(--surface-2);
+        border-radius: var(--nx-radius-full);
+        background: var(--nx-color-surface-subtle);
         overflow: hidden;
       }
-      .bar .fill { height: 100%; background: var(--brand); transition: width 0.2s ease; }
-      .bar.full .fill { background: var(--warning); }
+      .bar .fill { height: 100%; background: var(--nx-color-action-primary); transition: width 0.2s var(--nx-motion-easing-standard); }
+      .bar.full .fill { background: var(--nx-color-status-warning-fg); }
 
-      .hint { margin: 0; color: var(--text-muted); font-size: var(--font-small); }
+      .hint { margin: 0; color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
 
       .blocks {
         margin-top: 20px;
         padding-top: 16px;
-        border-top: 1px solid var(--border);
+        border-top: 1px solid var(--nx-color-border-default);
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 12px;
       }
-      .blocks .label { font-weight: 600; }
+      .blocks .label { font-weight: var(--nx-font-weight-semibold); }
       .stepper { display: flex; align-items: center; gap: 4px; }
       .stepper .count {
         min-width: 2.5ch;
         text-align: center;
         font-variant-numeric: tabular-nums;
-        font-weight: 700;
+        font-weight: var(--nx-font-weight-bold);
         font-size: 1.1rem;
       }
-      .blocks .result { color: var(--text-muted); font-size: var(--font-small); }
+      .blocks .result { color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
 
       .warn {
         display: flex;
@@ -149,9 +149,9 @@ export interface CapacityDialogData {
         margin: 16px 0 0;
         padding: 10px 12px;
         border-radius: 10px;
-        background: var(--warning-bg);
-        color: var(--warning);
-        font-size: var(--font-small);
+        background: var(--nx-color-status-warning-bg);
+        color: var(--nx-color-status-warning-fg);
+        font-size: var(--nx-text-small-size);
       }
       .warn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     `,

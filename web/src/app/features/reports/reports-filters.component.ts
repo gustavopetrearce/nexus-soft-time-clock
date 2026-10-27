@@ -84,17 +84,17 @@ const RANGE_FIELDS: readonly RangeField[] = [
       .filters-grid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: var(--sp-1);
-        margin-bottom: var(--sp-2);
+        gap: var(--nx-space-1);
+        margin-bottom: var(--nx-space-2);
       }
       .ranges-grid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: var(--sp-3);
+        gap: var(--nx-space-3);
       }
       .range-item { display: flex; flex-direction: column; gap: 4px; }
-      .range-label { font-size: var(--font-small); font-weight: 600; color: var(--text-muted); }
-      .range-inputs { display: flex; gap: var(--sp-2); }
+      .range-label { font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); color: var(--nx-color-text-secondary); }
+      .range-inputs { display: flex; gap: var(--nx-space-2); }
       .range-field { flex: 1; }
       mat-form-field { width: 100%; }
     `,

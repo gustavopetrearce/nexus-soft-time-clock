@@ -1,0 +1,257 @@
+// Utilidades de layout heredadas de las iteraciones 1–13 (split con drawer, formulario con panel
+// lateral, pares etiqueta/valor, doble lista, insignia de rango). Migradas a tokens; las pantallas
+// las irán sustituyendo por los componentes nx-* al pasar por las tandas 4 y 5.
+/* ---------- Utilidades ---------- */
+.page { max-width: var(--nx-container-max-page); margin: var(--nx-space-0) auto; }
+.full-width { width: 100%; }
+.spacer { flex: 1 1 auto; }
+.muted { color: var(--nx-color-text-secondary); }
+.error-text { color: var(--nx-color-status-error-fg); }
+.form-grid { display: flex; gap: var(--nx-space-3); flex-wrap: wrap; align-items: baseline; }
+.toolbar-actions { display: flex; gap: var(--nx-space-2); align-items: center; }
+
+/* ---------- Barra de filtros de catálogo ---------- */
+.filter-bar {
+  display: flex;
+  gap: var(--nx-space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--nx-space-4);
+}
+.filter-bar .search { flex: 1 1 calc(var(--nx-space-16) * 4); }
+.filter-bar mat-form-field { width: 100%; }
+
+/* ---------- Layout tabla + drawer lateral (revelado progresivo) ---------- */
+.split-layout {
+  display: flex;
+  gap: var(--nx-space-4);
+  align-items: flex-start;
+}
+.split-main {
+  flex: 1 1 0;
+  min-width: var(--nx-space-0);
+}
+.split-drawer {
+  flex: var(--nx-space-0) 0 var(--nx-layout-drawer-max);
+  background: var(--nx-color-surface-default);
+  border: var(--nx-border-width-default) solid var(--nx-color-border-default);
+  border-radius: var(--nx-radius-lg);
+  box-shadow: var(--nx-shadow-1);
+  overflow: hidden;
+  animation: drawer-in var(--nx-motion-duration-medium) var(--nx-motion-easing-enter);
+}
+@keyframes drawer-in {
+  from { opacity: var(--nx-space-0); transform: translateX(var(--nx-space-2)); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.drawer-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nx-space-2);
+  padding: var(--nx-space-4) var(--nx-space-6);
+  border-bottom: var(--nx-border-width-default) solid var(--nx-color-border-default);
+}
+.drawer-header .titles { flex: 1 1 auto; }
+.drawer-header h3 { margin: var(--nx-space-0); font-size: var(--nx-text-heading-3-size); font-weight: var(--nx-font-weight-bold); }
+.drawer-header .sub { margin: var(--nx-space-1) var(--nx-space-0) var(--nx-space-0); color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
+.drawer-body { padding: var(--nx-space-6); max-height: calc(100vh - var(--nx-space-16) * 4); overflow-y: auto; }
+.drawer-actions {
+  display: flex;
+  gap: var(--nx-space-2);
+  justify-content: flex-end;
+  padding: var(--nx-space-4) var(--nx-space-6);
+  border-top: var(--nx-border-width-default) solid var(--nx-color-border-default);
+  background: var(--nx-color-surface-subtle);
+}
+.drawer-field { width: 100%; margin-bottom: var(--nx-space-1); }
+
+@media (max-width: 1100px) {
+  .split-layout { flex-direction: column; }
+  .split-drawer { flex: 1 1 auto; width: 100%; }
+}
+
+/* ---------- Sección de detalle (pares etiqueta/valor) ---------- */
+.detail-grid { display: flex; flex-direction: column; gap: var(--nx-space-3); }
+.detail-row { display: flex; justify-content: space-between; gap: var(--nx-space-3); font-size: var(--nx-text-body-size); }
+.detail-row .k { color: var(--nx-color-text-secondary); }
+.detail-row .v { font-weight: var(--nx-font-weight-semibold); text-align: right; }
+.detail-section-title {
+  font-size: var(--nx-text-small-size);
+  font-weight: var(--nx-font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nx-color-text-secondary);
+  margin: var(--nx-space-4) 0 var(--nx-space-2);
+}
+.detail-section-title:first-child { margin-top: var(--nx-space-0); }
+
+/* ---------- Página de formulario (crear/editar): form + panel lateral de ayuda ---------- */
+.form-page-layout {
+  display: flex;
+  gap: var(--nx-space-6);
+  align-items: flex-start;
+}
+.form-page-main {
+  flex: 1 1 0;
+  min-width: var(--nx-space-0);
+  background: var(--nx-color-surface-default);
+  border: var(--nx-border-width-default) solid var(--nx-color-border-default);
+  border-radius: var(--nx-radius-lg);
+  box-shadow: var(--nx-shadow-1);
+  padding: var(--nx-space-6);
+}
+.form-page-side {
+  flex: var(--nx-space-0) 0 calc(var(--nx-space-16) * 5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nx-space-4);
+}
+.form-section-title {
+  font-size: var(--nx-text-heading-3-size);
+  font-weight: var(--nx-font-weight-bold);
+  margin: var(--nx-space-0) 0 var(--nx-space-4);
+}
+.form-section + .form-section { margin-top: var(--nx-space-8); padding-top: var(--nx-space-6); border-top: var(--nx-border-width-default) solid var(--nx-color-border-default); }
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(calc(var(--nx-space-16) * 3 + var(--nx-space-8)), 1fr));
+  gap: var(--nx-space-0) var(--nx-space-4);
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--nx-space-2);
+  margin-top: var(--nx-space-6);
+  padding-top: var(--nx-space-4);
+  border-top: var(--nx-border-width-default) solid var(--nx-color-border-default);
+}
+
+.info-card {
+  background: var(--nx-color-surface-default);
+  border: var(--nx-border-width-default) solid var(--nx-color-border-default);
+  border-radius: var(--nx-radius-lg);
+  box-shadow: var(--nx-shadow-1);
+  padding: var(--nx-space-4) var(--nx-space-6);
+}
+.info-card-title { font-size: var(--nx-text-heading-3-size); font-weight: var(--nx-font-weight-bold); margin: var(--nx-space-0) 0 var(--nx-space-3); }
+.info-card.tip { background: var(--nx-color-action-primary-subtle); border-color: var(--nx-color-border-brand); }
+.info-card .info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--nx-space-3);
+  font-size: var(--nx-text-small-size);
+  padding: var(--nx-space-2) 0;
+  border-bottom: var(--nx-border-width-default) solid var(--nx-color-border-default);
+}
+.info-card .info-row:last-child { border-bottom: none; }
+.info-card .info-row .k { color: var(--nx-color-text-secondary); }
+.info-card .info-row .v { font-weight: var(--nx-font-weight-semibold); text-align: right; }
+
+/* Fila con icono para paneles laterales (ej. "Precisión GPS", "Foto obligatoria"). */
+.icon-row { display: flex; gap: var(--nx-space-3); align-items: flex-start; }
+.icon-row + .icon-row { margin-top: var(--nx-space-3); }
+.icon-row mat-icon {
+  flex: var(--nx-space-0) 0 auto;
+  color: var(--nx-color-action-primary);
+  background: var(--nx-color-action-primary-subtle);
+  border-radius: var(--nx-radius-sm);
+  padding: var(--nx-space-2);
+  box-sizing: content-box;
+  width: var(--nx-icon-size-md);
+  height: var(--nx-icon-size-md);
+  font-size: var(--nx-icon-size-md);
+}
+.icon-row .row-title { font-weight: var(--nx-font-weight-semibold); margin: var(--nx-space-0) var(--nx-space-0) var(--nx-space-1); font-size: var(--nx-text-body-size); }
+.icon-row .row-desc { color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); margin: var(--nx-space-0); }
+
+/* Callout informativo (azul) al pie de un formulario, ej. "Importante". */
+.form-callout {
+  display: flex;
+  gap: var(--nx-space-3);
+  align-items: flex-start;
+  background: var(--nx-color-status-info-bg);
+  border: var(--nx-border-width-default) solid var(--nx-color-status-info-fg);
+  border-radius: var(--nx-radius-md);
+  padding: var(--nx-space-3) var(--nx-space-4);
+  margin-top: var(--nx-space-6);
+}
+.form-callout mat-icon { color: var(--nx-color-status-info-fg); flex: var(--nx-space-0) 0 auto; }
+.form-callout .row-title { font-weight: var(--nx-font-weight-semibold); margin: var(--nx-space-0) var(--nx-space-0) var(--nx-space-1); font-size: var(--nx-text-body-size); }
+.form-callout .row-desc { color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); margin: var(--nx-space-0); }
+
+@media (max-width: 1100px) {
+  .form-page-layout { flex-direction: column; }
+  .form-page-side { flex: 1 1 auto; width: 100%; }
+}
+
+/* Fila con avatar/ícono circular + nombre, para el encabezado de "Información actual". */
+.entity-avatar-row { display: flex; align-items: center; gap: var(--nx-space-3); margin-bottom: var(--nx-space-3); }
+.entity-avatar {
+  width: var(--nx-space-10);
+  height: var(--nx-space-10);
+  border-radius: var(--nx-radius-full);
+  background: var(--nx-color-action-primary-subtle);
+  color: var(--nx-color-action-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--nx-font-weight-bold);
+  font-size: var(--nx-text-body-size);
+  flex: var(--nx-space-0) 0 auto;
+}
+.entity-avatar mat-icon { font-size: var(--nx-icon-size-lg); width: var(--nx-icon-size-lg); height: var(--nx-icon-size-lg); }
+.entity-avatar-name { font-weight: var(--nx-font-weight-bold); margin: var(--nx-space-0) var(--nx-space-0) var(--nx-space-1); }
+
+/* Selector de roles de doble lista (disponibles ↔ asignados). */
+.dual-list { display: flex; gap: var(--nx-space-3); align-items: stretch; }
+.dual-list-col { flex: 1 1 0; min-width: var(--nx-space-0); display: flex; flex-direction: column; }
+.dual-list-title { font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); color: var(--nx-color-text-secondary); margin: var(--nx-space-0) 0 var(--nx-space-2); }
+.dual-list-box {
+  border: var(--nx-border-width-default) solid var(--nx-color-border-default);
+  border-radius: var(--nx-radius-md);
+  max-height: calc(var(--nx-space-16) * 4);
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+.dual-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nx-space-2);
+  width: 100%;
+  padding: var(--nx-space-2) var(--nx-space-3);
+  border: none;
+  border-bottom: var(--nx-border-width-default) solid var(--nx-color-border-default);
+  background: transparent;
+  color: var(--nx-color-text-primary);
+  font-size: var(--nx-text-body-size);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.dual-list-item:last-child { border-bottom: none; }
+.dual-list-item:hover { background: var(--nx-color-surface-hover); }
+.dual-list-item.assigned { cursor: default; }
+.dual-list-arrows { display: flex; align-items: center; justify-content: center; color: var(--nx-color-text-secondary); }
+
+@media (max-width: 700px) {
+  .dual-list { flex-direction: column; }
+  .dual-list-arrows { flex-direction: row; justify-content: center; }
+}
+
+/* Insignia de rango de rol (ej. "Rango 80"), coloreada por nivel de privilegio. */
+.rank-badge { display: inline-block; padding: var(--nx-space-inset-chip-y) var(--nx-space-inset-chip-x); border-radius: var(--nx-radius-full); font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); }
+.rank-badge.tier-1 { background: var(--nx-color-action-primary-subtle); color: var(--nx-color-action-primary); }
+.rank-badge.tier-2 { background: var(--nx-color-status-warning-bg); color: var(--nx-color-status-warning-fg); }
+.rank-badge.tier-3 { background: var(--nx-color-status-info-bg); color: var(--nx-color-status-info-fg); }
+.rank-badge.tier-4 { background: var(--nx-color-status-success-bg); color: var(--nx-color-status-success-fg); }
+
+/* Chip de estado con clases sueltas (.status-chip.success…): mismo aspecto que .nx-chip. */
+.status-chip {
+  @extend .nx-chip;
+  &.success { @extend .nx-chip--success; }
+  &.warning { @extend .nx-chip--warning; }
+  &.danger, &.error { @extend .nx-chip--error; }
+  &.info { @extend .nx-chip--info; }
+  &.neutral { @extend .nx-chip--neutral; }
+}

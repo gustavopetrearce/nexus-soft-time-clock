@@ -1,25 +1,90 @@
-import { Component, computed, inject } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { filter } from 'rxjs';
 
 import { AuthService } from '../core/auth/auth.service';
 import { AuthStore } from '../core/auth/auth.store';
 import { ChangePasswordDialogComponent } from '../core/auth/change-password-dialog.component';
 import { LanguageSwitcherComponent } from '../core/i18n/language-switcher.component';
 import { ThemeService } from '../core/theme/theme.service';
+import { LogoComponent } from '../core/ui/logo.component';
+import { ScrollDirective } from '../core/ui/scroll.directive';
 import { roleLabel } from '../features/admin/roles/role.models';
 
+interface NavItem {
+  route: string;
+  icon: string;
+  /** Clave `layout.nav.<key>`. */
+  key: string;
+  /** Permiso requerido; sin permiso el ítem se muestra a todos. */
+  permission?: string;
+}
+
+interface NavGroup {
+  /** Clave `layout.group.<key>`; sin clave, el grupo va sin encabezado. */
+  key?: string;
+  items: NavItem[];
+}
+
+/** Menú real del portal (LOWFI/05), en el orden de la maqueta hi-fi. */
+const NAV: readonly NavGroup[] = [
+  {
+    items: [
+      { route: '/dashboard', icon: 'dashboard', key: 'dashboard' },
+      { route: '/map', icon: 'public', key: 'map', permission: 'dashboard:read' },
+      { route: '/incidents', icon: 'report_problem', key: 'incidents', permission: 'incident:approve' },
+    ],
+  },
+  {
+    key: 'analysis',
+    items: [
+      { route: '/reports', icon: 'bar_chart', key: 'reports', permission: 'report:export' },
+      { route: '/attendance-events', icon: 'login', key: 'attendanceEvents', permission: 'report:export' },
+      { route: '/reports/attendance-records', icon: 'history', key: 'attendanceRecords', permission: 'report:export' },
+      { route: '/audit', icon: 'fact_check', key: 'audit', permission: 'audit:read' },
+    ],
+  },
+  {
+    key: 'organization',
+    items: [
+      { route: '/users', icon: 'group', key: 'users', permission: 'user:manage' },
+      { route: '/people', icon: 'groups', key: 'people', permission: 'user:manage' },
+      { route: '/companies', icon: 'business', key: 'companies', permission: 'company:manage' },
+      { route: '/work-sites', icon: 'location_on', key: 'workSites', permission: 'worksite:manage' },
+      { route: '/projects', icon: 'work', key: 'projects', permission: 'project:manage' },
+    ],
+  },
+  {
+    key: 'planning',
+    items: [
+      { route: '/scheduling', icon: 'event', key: 'scheduling', permission: 'schedule:manage' },
+      { route: '/event-types', icon: 'tune', key: 'eventTypes', permission: 'schedule:manage' },
+      { route: '/vacations', icon: 'beach_access', key: 'vacations', permission: 'vacation:approve' },
+    ],
+  },
+  {
+    key: 'account',
+    items: [
+      { route: '/notifications', icon: 'notifications', key: 'notifications' },
+      { route: '/settings', icon: 'settings', key: 'settings', permission: 'vacation:manage' },
+    ],
+  },
+];
+
 /**
- * Shell de la aplicación autenticada: topbar (marca + idioma + tema + usuario) y sidenav de
- * navegación agrupada, gateada por permiso (RBAC). Carga la identidad actual (/me) al entrar.
+ * Shell del portal (DS/09 n.º 25–26): toolbar y navegación lateral filtrada por permiso (RBAC).
+ * La navegación arranca cerrada en todos los anchos y se abre encima del contenido con velo; se
+ * cierra con la X, el velo, Esc o al elegir un ítem. Al abrir, el foco va al primer ítem y al
+ * cerrar vuelve al botón de menú (MatSidenav en modo `over`). Carga la identidad actual (/me).
  */
 @Component({
   selector: 'app-main-layout',
@@ -30,230 +95,152 @@ import { roleLabel } from '../features/admin/roles/role.models';
     RouterLinkActive,
     MatToolbarModule,
     MatSidenavModule,
-    MatListModule,
     MatDividerModule,
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
     TranslocoPipe,
     LanguageSwitcherComponent,
+    LogoComponent,
+    ScrollDirective,
   ],
   styles: [
     `
-      .layout { display: flex; flex-direction: column; height: 100vh; }
-      .content { padding: 24px; }
-      .brand-word { font-weight: 700; letter-spacing: -0.01em; }
+      :host { display: block; height: 100vh; }
+      mat-sidenav-container { height: 100%; }
 
-      mat-sidenav { width: 264px; }
-      .brand {
-        display: flex; align-items: center; gap: 12px;
-        padding: 18px 20px; border-bottom: 1px solid var(--sidenav-border);
+      /* Navegación lateral: la ficha .nx-nav, dentro del panel de MatSidenav. */
+      mat-sidenav {
+        border-right: var(--nx-border-width-default) solid var(--nx-color-nav-border);
+        box-shadow: var(--nx-shadow-3);
+        color-scheme: dark;
       }
-      .brand .logo { width: 34px; height: 34px; flex: 0 0 auto; }
-      .brand .name { font-weight: 700; font-size: 1.05rem; line-height: 1; color: var(--sidenav-text); }
-      .brand .tag { font-size: 0.72rem; color: var(--sidenav-text-muted); }
+      .nx-nav { position: static; transform: none; visibility: visible; box-shadow: none; border: 0; min-height: 100%; }
+      .nx-nav__logo .nx-lockup { color: var(--nx-color-on-surface-brand); }
+      .nx-nav__cerrar { --mdc-icon-button-icon-color: var(--nx-color-nav-icon); }
+      .nx-nav__item mat-icon { color: var(--nx-color-nav-icon); }
+      .nx-nav__item.is-active mat-icon { color: var(--nx-color-nav-active-fg); }
 
-      .nav-group {
-        padding: 18px 20px 6px; font-size: 0.7rem; font-weight: 700;
-        text-transform: uppercase; letter-spacing: 0.06em; color: var(--sidenav-text-muted);
+      /* Toolbar: fija arriba del contenido que se desplaza. */
+      mat-sidenav-content { display: flex; flex-direction: column; }
+      .mat-toolbar {
+        position: sticky;
+        top: var(--nx-space-0);
+        z-index: 2;
+        flex: none;
+        gap: var(--nx-space-gap-inline);
+        padding: var(--nx-space-0) var(--nx-space-inset-page);
       }
-      mat-nav-list a.nav-item,
-      mat-nav-list a.nav-item mat-icon,
-      mat-nav-list a.nav-item span {
-        color: var(--sidenav-text);
-      }
-      a.nav-item {
-        margin: 2px 10px; border-radius: 10px;
-        border-left: 3px solid transparent;
-      }
-      a.nav-item:hover:not(.active) { background: var(--sidenav-surface); }
-      a.nav-item.active {
-        background: var(--sidenav-active-bg);
-        border-left-color: var(--sidenav-brand);
-        color: var(--sidenav-active-text) !important;
-      }
-      a.nav-item.active mat-icon, a.nav-item.active span { color: var(--sidenav-active-text) !important; }
+      .nx-toolbar__marca { font-size: var(--nx-text-heading-4-size); font-weight: var(--nx-font-weight-semibold); }
+      .nx-toolbar__perfil { border: 0; background: transparent; font: inherit; cursor: pointer; }
+      .nx-toolbar__perfil:hover { background: var(--nx-color-surface-hover); }
+      .nx-toolbar__perfil mat-icon { color: var(--nx-color-text-secondary); }
 
-      .avatar {
-        width: 32px; height: 32px; border-radius: 50%;
-        display: grid; place-items: center; font-size: 0.72rem; font-weight: 700;
-        background: color-mix(in srgb, var(--brand) 16%, transparent); color: var(--brand);
+      .nx-pagina { margin: var(--nx-space-0) auto; }
+
+      .menu-head { padding: var(--nx-space-3) var(--nx-space-4); max-width: calc(var(--nx-space-16) * 4); }
+      .menu-head .who { font-weight: var(--nx-font-weight-semibold); }
+
+      /* Estrecho: solo el isotipo, para que quepan idioma, tema y perfil. */
+      .nx-toolbar__nombre { display: none; }
+
+      @media (min-width: 700px) {
+        .nx-toolbar__nombre { display: inline; }
+        .nx-toolbar__empresa { display: inline-flex; }
+        .nx-toolbar__perfil .nx-text-small { display: inline; }
       }
-      .user-btn { display: flex; align-items: center; gap: 8px; }
-      .menu-head { padding: 12px 16px; max-width: 260px; }
-      .menu-head .who { font-weight: 600; }
     `,
   ],
   template: `
-    <div class="layout">
-      <mat-toolbar color="primary">
-        <button mat-icon-button (click)="drawer.toggle()" [attr.aria-label]="'layout.menu' | transloco">
-          <mat-icon>menu</mat-icon>
-        </button>
-        <span class="brand-word" style="margin-left:4px">Nexus Soft Time Clock</span>
-        <span class="spacer"></span>
-        <div class="toolbar-actions">
+    <mat-sidenav-container>
+      <mat-sidenav #drawer mode="over" autoFocus=".nx-nav__item">
+        <nav class="nx-nav" nxScroll [attr.aria-label]="'layout.navLabel' | transloco">
+          <div class="nx-nav__logo">
+            <span class="nx-lockup nx-lockup--compact">
+              <app-logo />
+              <span class="nx-lockup__name">Nexus<small>Time Clock</small></span>
+            </span>
+            <button mat-icon-button class="nx-nav__cerrar" (click)="drawer.close()" [attr.aria-label]="'layout.closeMenu' | transloco">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          @for (group of nav(); track $index) {
+            @if (group.key) {
+              <div class="nx-nav__grupo nx-text-heading-6">{{ 'layout.group.' + group.key | transloco }}</div>
+            }
+            @for (item of group.items; track item.route) {
+              <a
+                class="nx-nav__item"
+                [routerLink]="item.route"
+                routerLinkActive="is-active"
+                [routerLinkActiveOptions]="{ exact: item.route === '/reports' }"
+                ariaCurrentWhenActive="page"
+                #rla="routerLinkActive"
+              >
+                <mat-icon [fontSet]="rla.isActive ? 'material-icons' : 'material-icons-outlined'">{{ item.icon }}</mat-icon>
+                <span class="nx-nav__label">{{ 'layout.nav.' + item.key | transloco }}</span>
+              </a>
+            }
+          }
+        </nav>
+      </mat-sidenav>
+
+      <mat-sidenav-content nxScroll (scroll)="onScroll($event)">
+        <mat-toolbar [class.is-raised]="raised()">
+          <button
+            #menuButton
+            mat-icon-button
+            (click)="drawer.open()"
+            [attr.aria-label]="'layout.menu' | transloco"
+            [attr.aria-expanded]="drawer.opened"
+          >
+            <mat-icon>menu</mat-icon>
+          </button>
+          <a class="nx-toolbar__marca" routerLink="/dashboard" [attr.aria-label]="'layout.home' | transloco">
+            <app-logo />
+            <span class="nx-toolbar__nombre">Nexus Soft Time Clock</span>
+          </a>
+          <span class="nx-toolbar__esp"></span>
+          <span class="nx-toolbar__empresa nx-text-small-strong">
+            <mat-icon>domain</mat-icon>{{ tenantLabel() }}
+          </span>
           <app-language-switcher />
-          <button mat-icon-button (click)="theme.toggle()" [attr.aria-label]="'layout.toggleTheme' | transloco">
+          <button
+            mat-icon-button
+            (click)="theme.toggle()"
+            [attr.aria-label]="(isDark() ? 'layout.toThemeLight' : 'layout.toThemeDark') | transloco"
+          >
             <mat-icon>{{ isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
           </button>
-          <button mat-button [matMenuTriggerFor]="userMenu" class="user-btn">
-            <span class="avatar">{{ initials() }}</span>
-            <span>{{ userLabel() }}</span>
+          <button class="nx-toolbar__perfil" [matMenuTriggerFor]="userMenu" [attr.aria-label]="'layout.profile' | transloco">
+            <mat-icon>account_circle</mat-icon>
+            <span class="nx-text-small">{{ userLabel() }}</span>
             <mat-icon>arrow_drop_down</mat-icon>
           </button>
-        </div>
-        <mat-menu #userMenu="matMenu">
-          <div class="menu-head">
-            <div class="who">{{ userLabel() }}</div>
-            <div class="muted" style="font-size:.82rem">{{ tenantLabel() }}</div>
-            <div class="muted" style="font-size:.82rem">{{ rolesLabel() }}</div>
-          </div>
-          <mat-divider></mat-divider>
-          <button mat-menu-item (click)="openChangePassword()">
-            <mat-icon>lock_reset</mat-icon>
-            <span>{{ 'layout.changePassword' | transloco }}</span>
-          </button>
-          <button mat-menu-item (click)="logout()">
-            <mat-icon>logout</mat-icon>
-            <span>{{ 'layout.logout' | transloco }}</span>
-          </button>
-        </mat-menu>
-      </mat-toolbar>
-
-      <mat-sidenav-container style="flex:1 1 auto">
-        <mat-sidenav #drawer mode="side" opened>
-          <div class="brand">
-            <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
-              <defs>
-                <linearGradient id="navlogo" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#5c6bc0" />
-                  <stop offset="1" stop-color="#303f9f" />
-                </linearGradient>
-              </defs>
-              <rect width="64" height="64" rx="16" fill="url(#navlogo)" />
-              <circle cx="32" cy="32" r="18" fill="none" stroke="#fff" stroke-width="3.5" />
-              <path d="M32 22v11l7 5" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <div>
-              <div class="name">Nexus</div>
-              <div class="tag">Time Clock</div>
+          <mat-menu #userMenu="matMenu" xPosition="before">
+            <div class="menu-head">
+              <div class="who">{{ userLabel() }}</div>
+              <div class="nx-sec nx-text-small">{{ tenantLabel() }}</div>
+              <div class="nx-sec nx-text-small">{{ rolesLabel() }}</div>
             </div>
-          </div>
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="openChangePassword()">
+              <mat-icon>lock_reset</mat-icon>
+              <span>{{ 'layout.changePassword' | transloco }}</span>
+            </button>
+            <button mat-menu-item (click)="logout()">
+              <mat-icon>logout</mat-icon>
+              <span>{{ 'layout.logout' | transloco }}</span>
+            </button>
+          </mat-menu>
+        </mat-toolbar>
 
-          <mat-nav-list>
-            <a mat-list-item class="nav-item" routerLink="/dashboard" routerLinkActive="active">
-              <mat-icon matListItemIcon>dashboard</mat-icon>
-              <span matListItemTitle>{{ 'layout.nav.dashboard' | transloco }}</span>
-            </a>
-            @if (can('dashboard:read')) {
-              <a mat-list-item class="nav-item" routerLink="/map" routerLinkActive="active">
-                <mat-icon matListItemIcon>public</mat-icon>
-                <span matListItemTitle>{{ 'layout.nav.map' | transloco }}</span>
-              </a>
-            }
-
-            @if (can('incident:approve')) {
-              <a mat-list-item class="nav-item" routerLink="/incidents" routerLinkActive="active">
-                <mat-icon matListItemIcon>report_problem</mat-icon>
-                <span matListItemTitle>{{ 'layout.nav.incidents' | transloco }}</span>
-              </a>
-            }
-
-            @if (can('report:export') || can('audit:read')) {
-              <div class="nav-group">{{ 'layout.group.analysis' | transloco }}</div>
-              @if (can('report:export')) {
-                <a mat-list-item class="nav-item" routerLink="/reports" routerLinkActive="active">
-                  <mat-icon matListItemIcon>bar_chart</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.reports' | transloco }}</span>
-                </a>
-                <a mat-list-item class="nav-item" routerLink="/attendance-events" routerLinkActive="active">
-                  <mat-icon matListItemIcon>login</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.attendanceEvents' | transloco }}</span>
-                </a>
-                
-              }
-              @if (can('audit:read')) {
-                <a mat-list-item class="nav-item" routerLink="/audit" routerLinkActive="active">
-                  <mat-icon matListItemIcon>fact_check</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.audit' | transloco }}</span>
-                </a>
-              }
-            }
-
-            @if (can('user:manage') || can('company:manage') || can('worksite:manage') || can('project:manage')) {
-              <div class="nav-group">{{ 'layout.group.organization' | transloco }}</div>
-              @if (can('user:manage')) {
-                <a mat-list-item class="nav-item" routerLink="/users" routerLinkActive="active">
-                  <mat-icon matListItemIcon>group</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.users' | transloco }}</span>
-                </a>
-                <a mat-list-item class="nav-item" routerLink="/people" routerLinkActive="active">
-                  <mat-icon matListItemIcon>groups</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.people' | transloco }}</span>
-                </a>
-              }
-              @if (can('company:manage')) {
-                <a mat-list-item class="nav-item" routerLink="/companies" routerLinkActive="active">
-                  <mat-icon matListItemIcon>business</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.companies' | transloco }}</span>
-                </a>
-              }
-              @if (can('worksite:manage')) {
-                <a mat-list-item class="nav-item" routerLink="/work-sites" routerLinkActive="active">
-                  <mat-icon matListItemIcon>place</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.workSites' | transloco }}</span>
-                </a>
-              }
-              @if (can('project:manage')) {
-                <a mat-list-item class="nav-item" routerLink="/projects" routerLinkActive="active">
-                  <mat-icon matListItemIcon>work</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.projects' | transloco }}</span>
-                </a>
-              }
-            }
-
-            @if (can('schedule:manage') || can('vacation:approve')) {
-              <div class="nav-group">{{ 'layout.group.planning' | transloco }}</div>
-              @if (can('schedule:manage')) {
-                <a mat-list-item class="nav-item" routerLink="/scheduling" routerLinkActive="active">
-                  <mat-icon matListItemIcon>event</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.scheduling' | transloco }}</span>
-                </a>
-                <a mat-list-item class="nav-item" routerLink="/event-types" routerLinkActive="active">
-                  <mat-icon matListItemIcon>tune</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.eventTypes' | transloco }}</span>
-                </a>
-              }
-              @if (can('vacation:approve')) {
-                <a mat-list-item class="nav-item" routerLink="/vacations" routerLinkActive="active">
-                  <mat-icon matListItemIcon>beach_access</mat-icon>
-                  <span matListItemTitle>{{ 'layout.nav.vacations' | transloco }}</span>
-                </a>
-              }
-            }
-
-            <div class="nav-group">{{ 'layout.group.account' | transloco }}</div>
-            <a mat-list-item class="nav-item" routerLink="/notifications" routerLinkActive="active">
-              <mat-icon matListItemIcon>notifications</mat-icon>
-              <span matListItemTitle>{{ 'layout.nav.notifications' | transloco }}</span>
-            </a>
-            @if (can('vacation:manage')) {
-              <a mat-list-item class="nav-item" routerLink="/settings" routerLinkActive="active">
-                <mat-icon matListItemIcon>settings</mat-icon>
-                <span matListItemTitle>{{ 'layout.nav.settings' | transloco }}</span>
-              </a>
-            }
-          </mat-nav-list>
-        </mat-sidenav>
-
-        <mat-sidenav-content class="content">
-          <div class="page">
-            <router-outlet />
-          </div>
-        </mat-sidenav-content>
-      </mat-sidenav-container>
-    </div>
+        <main class="nx-pagina">
+          <router-outlet />
+        </main>
+      </mat-sidenav-content>
+    </mat-sidenav-container>
   `,
 })
 export class MainLayoutComponent {
@@ -264,17 +251,43 @@ export class MainLayoutComponent {
   private readonly transloco = inject(TranslocoService);
   protected readonly theme = inject(ThemeService);
 
-  protected readonly user = this.store.user;
+  private readonly drawer = viewChild.required<MatSidenav>('drawer');
+  private readonly menuButton = viewChild.required('menuButton', { read: ElementRef<HTMLElement> });
+
   protected readonly isDark = computed(() => this.theme.theme() === 'dark');
+  /** La toolbar toma `shadow-2` solo cuando el contenido se desplazó (HIFI/08 R2). */
+  protected readonly raised = signal(false);
+
+  /** Grupos e ítems que el usuario puede ver (C5: sin permiso, no aparecen). */
+  protected readonly nav = computed(() => {
+    this.store.user(); // recalcula cuando llega /me
+    return NAV.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.permission || this.store.hasPermission(item.permission)),
+    })).filter((group) => group.items.length > 0);
+  });
 
   constructor() {
     if (!this.store.user()) {
       this.authService.loadCurrentUser().subscribe({ error: () => void 0 });
     }
+    // Elegir un ítem cierra la navegación; el foco vuelve al botón de menú.
+    this.router.events
+      .pipe(
+        filter((e) => e instanceof NavigationEnd),
+        takeUntilDestroyed(inject(DestroyRef)),
+      )
+      .subscribe(() => {
+        if (this.drawer().opened) {
+          void this.drawer()
+            .close()
+            .then(() => this.menuButton().nativeElement.focus());
+        }
+      });
   }
 
-  protected can(permission: string): boolean {
-    return this.store.hasPermission(permission);
+  protected onScroll(event: Event): void {
+    this.raised.set((event.target as HTMLElement).scrollTop > 0);
   }
 
   protected userLabel(): string {
@@ -292,14 +305,6 @@ export class MainLayoutComponent {
     return this.store.user()?.platformAdmin
       ? this.transloco.translate('layout.scope.platform')
       : this.transloco.translate('layout.scope.company');
-  }
-
-  /** Iniciales para el avatar, derivadas del rol principal (p. ej. SUPER_ADMIN → SA). */
-  protected initials(): string {
-    const label = this.userLabel();
-    const parts = label.split(/[_\s]+/).filter(Boolean);
-    const letters = parts.length >= 2 ? parts[0][0] + parts[1][0] : label.slice(0, 2);
-    return letters.toUpperCase();
   }
 
   protected openChangePassword(): void {

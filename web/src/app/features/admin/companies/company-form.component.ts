@@ -99,8 +99,8 @@ import { CompanyService } from './company.service';
         </form>
 
         @if (!isEdit()) {
-          <h3 class="form-section-title" style="margin-top: var(--sp-6)">{{ 'companies.form.initialAdmin' | transloco }}</h3>
-          <p class="muted" style="margin: 0 0 var(--sp-4)">
+          <h3 class="form-section-title" style="margin-top: var(--nx-space-8)">{{ 'companies.form.initialAdmin' | transloco }}</h3>
+          <p class="muted" style="margin: 0 0 var(--nx-space-4)">
             {{ 'companies.form.initialAdminText' | transloco }}
           </p>
           <form [formGroup]="adminForm">
@@ -187,7 +187,7 @@ import { CompanyService } from './company.service';
           </div>
           <div class="info-card">
             <h3 class="info-card-title">{{ 'companies.form.statusTitle' | transloco }}</h3>
-            <p class="muted" style="margin:0 0 var(--sp-3)">
+            <p class="muted" style="margin:0 0 var(--nx-space-3)">
               {{ (c.status === 'ACTIVE' ? 'companies.form.statusActiveText' : 'companies.form.statusInactiveText') | transloco }}
             </p>
             <button mat-stroked-button (click)="toggleStatus(c)">
@@ -198,7 +198,7 @@ import { CompanyService } from './company.service';
           <div class="info-card">
             <h3 class="info-card-title">{{ 'companies.form.admin' | transloco }}</h3>
             @if (!showAdminForm()) {
-              <p class="muted" style="margin:0 0 var(--sp-3)">
+              <p class="muted" style="margin:0 0 var(--nx-space-3)">
                 {{ 'companies.form.adminText' | transloco }}
               </p>
               <button mat-stroked-button (click)="showAdminForm.set(true)">
@@ -224,7 +224,7 @@ import { CompanyService } from './company.service';
                   <mat-hint>{{ 'common.minPassword' | transloco }}</mat-hint>
                 </mat-form-field>
               </form>
-              <div style="display:flex; gap: var(--sp-2); margin-top: var(--sp-2)">
+              <div style="display:flex; gap: var(--nx-space-2); margin-top: var(--nx-space-2)">
                 <button mat-flat-button color="primary" [disabled]="!adminValid() || provisioningAdmin()" (click)="provisionAdmin()">
                   <mat-icon>save</mat-icon> {{ 'companies.form.saveAdmin' | transloco }}
                 </button>

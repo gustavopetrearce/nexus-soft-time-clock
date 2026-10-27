@@ -10,7 +10,11 @@ export interface ConfirmData {
   color?: 'primary' | 'warn';
 }
 
-/** Diálogo de confirmación reutilizable (cambios de estado, acciones destructivas). */
+/**
+ * Confirmación de acción (S01, DS/10 patrón 7): título con la acción, el mensaje, Cancelar
+ * (terciario, foco inicial; Esc equivale a Cancelar) y el botón de confirmar, en tono error para
+ * las acciones destructivas (rotar QR, dar de baja, reducir el cupo).
+ */
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
@@ -19,7 +23,7 @@ export interface ConfirmData {
     <h2 mat-dialog-title>{{ data.title }}</h2>
     <mat-dialog-content>{{ data.message }}</mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button [mat-dialog-close]="false">{{ 'common.cancel' | transloco }}</button>
+      <button mat-button cdkFocusInitial [mat-dialog-close]="false">{{ 'common.cancel' | transloco }}</button>
       <button mat-flat-button [color]="data.color ?? 'primary'" [mat-dialog-close]="true">
         {{ data.confirmText ?? ('common.confirm' | transloco) }}
       </button>

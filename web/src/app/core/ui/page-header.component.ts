@@ -1,41 +1,23 @@
 import { Component, Input } from '@angular/core';
 
-/** Encabezado de página: título (y subtítulo opcional) a la izquierda, acciones proyectadas a la derecha. */
+/** Encabezado de página (DS/09 n.º 23): título y descripción opcional; acciones proyectadas a la derecha. */
 @Component({
   selector: 'app-page-header',
   standalone: true,
   template: `
-    <div class="page-header">
-      <div class="titles">
-        <h2>{{ title }}</h2>
-        @if (subtitle) { <p class="subtitle">{{ subtitle }}</p> }
+    <header class="nx-encabezado">
+      <div class="nx-encabezado__texto">
+        <h1 class="nx-text-heading-1">{{ title }}</h1>
+        @if (subtitle) { <p class="nx-encabezado__desc">{{ subtitle }}</p> }
       </div>
-      <span class="spacer"></span>
-      <div class="actions"><ng-content></ng-content></div>
-    </div>
+      <div class="nx-encabezado__acciones"><ng-content></ng-content></div>
+    </header>
   `,
   styles: [
     `
-      .page-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 0 0 20px;
-        flex-wrap: wrap;
-      }
-      .titles h2 {
-        margin: 0;
-        font-size: var(--font-page-title);
-        font-weight: 700;
-        letter-spacing: -0.01em;
-      }
-      .subtitle {
-        margin: 4px 0 0;
-        color: var(--text-muted);
-        font-size: var(--font-body);
-      }
-      .spacer { flex: 1 1 auto; }
-      .actions { display: flex; gap: 8px; align-items: center; }
+      :host { display: block; margin-bottom: var(--nx-space-gap-section); }
+      h1, p { margin: var(--nx-space-0); }
+      .nx-encabezado__acciones:empty { display: none; }
     `,
   ],
 })

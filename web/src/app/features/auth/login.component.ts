@@ -11,6 +11,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { LanguageSwitcherComponent } from '../../core/i18n/language-switcher.component';
+import { LogoComponent } from '../../core/ui/logo.component';
 
 interface Feature {
   icon: string;
@@ -38,28 +39,29 @@ const FEATURES: readonly Feature[] = [
     MatTooltipModule,
     TranslocoPipe,
     LanguageSwitcherComponent,
+    LogoComponent,
   ],
   styles: [
     `
-      .auth { display: flex; min-height: 100vh; background: var(--surface); }
+      .auth { display: flex; min-height: 100vh; background: var(--nx-color-surface-default); }
 
       .hero {
         flex: 1 1 0;
-        background: var(--app-bg);
-        color: var(--text);
-        padding: var(--sp-6) clamp(32px, 6vw, 72px);
+        background: var(--nx-color-bg-app);
+        color: var(--nx-color-text-primary);
+        padding: var(--nx-space-8) clamp(32px, 6vw, 72px);
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         position: relative;
         overflow: hidden;
-        border-right: 1px solid var(--border);
+        border-right: 1px solid var(--nx-color-border-default);
       }
       .hero::before {
         content: '';
         position: absolute;
         inset: 0;
-        background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
+        background-image: radial-gradient(var(--nx-color-border-strong) 1px, transparent 1px);
         background-size: 22px 22px;
         opacity: 0.6;
       }
@@ -70,59 +72,59 @@ const FEATURES: readonly Feature[] = [
         width: min(52vw, 480px);
         height: auto;
         opacity: 0.8;
+        color: var(--nx-color-action-primary);
         pointer-events: none;
       }
       .hero-top { position: relative; }
-      .hero .brand { display: flex; align-items: center; gap: var(--sp-3); }
-      .hero .logo { width: 40px; height: 40px; flex: 0 0 auto; }
-      .hero .brand-word { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+      .hero .brand { display: flex; align-items: center; gap: var(--nx-space-3); }
+      .hero .brand-word { font-size: 1.05rem; font-weight: var(--nx-font-weight-bold); letter-spacing: -0.01em; color: var(--nx-color-text-primary); }
 
-      .hero-main { position: relative; margin-top: var(--sp-6); }
-      .hero h1 { font-size: clamp(1.9rem, 3vw, 2.5rem); margin: 0 0 var(--sp-3); line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
-      .hero .lead { font-size: var(--font-section-title); color: var(--text-muted); max-width: 440px; margin: 0; }
+      .hero-main { position: relative; margin-top: var(--nx-space-8); }
+      .hero h1 { font-size: clamp(1.9rem, 3vw, 2.5rem); margin: 0 0 var(--nx-space-3); line-height: 1.15; font-weight: var(--nx-font-weight-bold); letter-spacing: -0.01em; color: var(--nx-color-text-primary); }
+      .hero .lead { font-size: var(--nx-text-heading-2-size); color: var(--nx-color-text-secondary); max-width: 440px; margin: 0; }
 
-      .features { display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-6); position: relative; }
-      .feature { display: flex; align-items: flex-start; gap: var(--sp-3); }
+      .features { display: flex; flex-direction: column; gap: var(--nx-space-4); margin-top: var(--nx-space-8); position: relative; }
+      .feature { display: flex; align-items: flex-start; gap: var(--nx-space-3); }
       .feature-icon {
         flex: 0 0 auto;
         width: 40px; height: 40px;
-        border-radius: var(--radius-md);
-        background: var(--brand-soft);
+        border-radius: var(--nx-radius-md);
+        background: var(--nx-color-action-primary-subtle);
         display: grid; place-items: center;
       }
-      .feature-icon mat-icon { color: var(--brand); }
-      .feature-title { font-weight: 650; font-size: var(--font-body); margin: 0 0 2px; color: var(--text); }
-      .feature-text { font-size: var(--font-small); color: var(--text-muted); margin: 0; max-width: 340px; }
+      .feature-icon mat-icon { color: var(--nx-color-action-primary); }
+      .feature-title { font-weight: var(--nx-font-weight-semibold); font-size: var(--nx-text-body-size); margin: 0 0 2px; color: var(--nx-color-text-primary); }
+      .feature-text { font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); margin: 0; max-width: 340px; }
 
-      .hero .foot { font-size: var(--font-caption); color: var(--text-soft); position: relative; }
+      .hero .foot { font-size: var(--nx-text-caption-size); color: var(--nx-color-text-disabled); position: relative; }
 
       .panel {
         flex: 0 0 clamp(400px, 40%, 520px);
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: var(--sp-6);
-        background: var(--surface);
+        padding: var(--nx-space-8);
+        background: var(--nx-color-surface-default);
         position: relative;
       }
       .card { width: 100%; max-width: 380px; }
-      .lang { position: absolute; top: var(--sp-4); right: var(--sp-4); }
+      .lang { position: absolute; top: var(--nx-space-4); right: var(--nx-space-4); }
       .avatar {
         width: 56px; height: 56px;
-        border-radius: 50%;
-        background: var(--brand-soft);
+        border-radius: var(--nx-radius-full);
+        background: var(--nx-color-action-primary-subtle);
         display: grid; place-items: center;
-        margin: 0 auto var(--sp-4);
+        margin: 0 auto var(--nx-space-4);
       }
-      .avatar mat-icon { color: var(--brand); font-size: 28px; width: 28px; height: 28px; }
-      .card h2 { margin: 0 0 4px; font-size: var(--font-section-title); font-weight: 700; text-align: center; }
-      .card .sub { color: var(--text-muted); margin: 0 0 var(--sp-5); font-size: var(--font-body); text-align: center; }
+      .avatar mat-icon { color: var(--nx-color-action-primary); font-size: 28px; width: 28px; height: 28px; }
+      .card h2 { margin: 0 0 4px; font-size: var(--nx-text-heading-2-size); font-weight: var(--nx-font-weight-bold); text-align: center; }
+      .card .sub { color: var(--nx-color-text-secondary); margin: 0 0 var(--nx-space-6); font-size: var(--nx-text-body-size); text-align: center; }
 
       .secure-note {
         display: flex; align-items: center; justify-content: center; gap: 6px;
-        margin-top: var(--sp-4);
-        color: var(--text-soft);
-        font-size: var(--font-caption);
+        margin-top: var(--nx-space-4);
+        color: var(--nx-color-text-disabled);
+        font-size: var(--nx-text-caption-size);
       }
       .secure-note mat-icon { font-size: 14px; width: 14px; height: 14px; }
 
@@ -137,17 +139,7 @@ const FEATURES: readonly Feature[] = [
       <div class="hero">
         <div class="hero-top">
           <div class="brand">
-            <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
-              <defs>
-                <linearGradient id="loginlogo" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#5c6bc0" />
-                  <stop offset="1" stop-color="#303f9f" />
-                </linearGradient>
-              </defs>
-              <rect width="64" height="64" rx="16" fill="url(#loginlogo)" />
-              <circle cx="32" cy="32" r="18" fill="none" stroke="#fff" stroke-width="3.5" />
-              <path d="M32 22v11l7 5" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+            <app-logo class="logo md" />
             <span class="brand-word">Nexus Soft Time Clock</span>
           </div>
 
@@ -172,18 +164,18 @@ const FEATURES: readonly Feature[] = [
         <div class="foot">{{ 'login.footer' | transloco }}</div>
 
         <svg class="hero-art" viewBox="0 0 400 400" aria-hidden="true">
-          <circle cx="210" cy="210" r="160" stroke="#3949ab" stroke-opacity="0.12" stroke-width="1.5" fill="none" />
-          <circle cx="210" cy="210" r="120" stroke="#3949ab" stroke-opacity="0.18" stroke-width="1.5" fill="none" />
-          <line x1="210" y1="210" x2="90" y2="130" stroke="#3949ab" stroke-opacity="0.16" stroke-width="1" />
-          <line x1="210" y1="210" x2="360" y2="150" stroke="#3949ab" stroke-opacity="0.16" stroke-width="1" />
-          <line x1="210" y1="210" x2="120" y2="340" stroke="#3949ab" stroke-opacity="0.16" stroke-width="1" />
-          <line x1="210" y1="210" x2="210" y2="90" stroke="#3949ab" stroke-opacity="0.4" stroke-width="3" stroke-linecap="round" />
-          <line x1="210" y1="210" x2="270" y2="240" stroke="#3949ab" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round" />
-          <circle cx="210" cy="210" r="5" fill="#3949ab" />
-          <circle cx="90" cy="130" r="5" fill="#3949ab" fill-opacity="0.6" />
-          <circle cx="360" cy="150" r="4" fill="#3949ab" fill-opacity="0.45" />
-          <circle cx="120" cy="340" r="4" fill="#3949ab" fill-opacity="0.45" />
-          <circle cx="330" cy="330" r="3" fill="#3949ab" fill-opacity="0.3" />
+          <circle cx="210" cy="210" r="160" stroke="currentColor" stroke-opacity="0.12" stroke-width="1.5" fill="none" />
+          <circle cx="210" cy="210" r="120" stroke="currentColor" stroke-opacity="0.18" stroke-width="1.5" fill="none" />
+          <line x1="210" y1="210" x2="90" y2="130" stroke="currentColor" stroke-opacity="0.16" stroke-width="1" />
+          <line x1="210" y1="210" x2="360" y2="150" stroke="currentColor" stroke-opacity="0.16" stroke-width="1" />
+          <line x1="210" y1="210" x2="120" y2="340" stroke="currentColor" stroke-opacity="0.16" stroke-width="1" />
+          <line x1="210" y1="210" x2="210" y2="90" stroke="currentColor" stroke-opacity="0.4" stroke-width="3" stroke-linecap="round" />
+          <line x1="210" y1="210" x2="270" y2="240" stroke="currentColor" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round" />
+          <circle cx="210" cy="210" r="5" fill="currentColor" />
+          <circle cx="90" cy="130" r="5" fill="currentColor" fill-opacity="0.6" />
+          <circle cx="360" cy="150" r="4" fill="currentColor" fill-opacity="0.45" />
+          <circle cx="120" cy="340" r="4" fill="currentColor" fill-opacity="0.45" />
+          <circle cx="330" cy="330" r="3" fill="currentColor" fill-opacity="0.3" />
         </svg>
       </div>
 

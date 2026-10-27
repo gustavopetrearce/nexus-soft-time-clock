@@ -14,7 +14,7 @@ export interface BreadcrumbItem {
   standalone: true,
   imports: [RouterLink, MatIconModule, TranslocoPipe],
   template: `
-    <nav class="breadcrumb" [attr.aria-label]="'common.breadcrumb' | transloco">
+    <nav class="nx-breadcrumb breadcrumb" [attr.aria-label]="'common.breadcrumb' | transloco">
       @for (item of items(); track item.label; let last = $last) {
         @if (item.route && !last) {
           <a [routerLink]="item.route">{{ item.label }}</a>
@@ -29,18 +29,11 @@ export interface BreadcrumbItem {
   `,
   styles: [
     `
-      .breadcrumb {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-size: var(--font-small);
-        color: var(--text-muted);
-        margin-bottom: var(--sp-2);
-      }
-      .breadcrumb a { color: var(--text-muted); text-decoration: none; }
-      .breadcrumb a:hover { color: var(--brand); text-decoration: underline; }
-      .breadcrumb .current { color: var(--text); font-weight: 600; }
-      .breadcrumb mat-icon { font-size: 16px; width: 16px; height: 16px; color: var(--text-soft); }
+      .breadcrumb { margin-bottom: var(--nx-space-2); }
+      .breadcrumb a { color: var(--nx-color-text-secondary); text-decoration: none; }
+      .breadcrumb a:hover { color: var(--nx-color-action-primary); text-decoration: underline; }
+      .breadcrumb .current { color: var(--nx-color-text-primary); font-weight: var(--nx-font-weight-semibold); }
+      .breadcrumb mat-icon { font-size: var(--nx-icon-size-sm); width: var(--nx-icon-size-sm); height: var(--nx-icon-size-sm); color: var(--nx-color-text-disabled); }
     `,
   ],
 })

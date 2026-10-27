@@ -1,0 +1,129 @@
+// Tema de Angular Material sobre el design system (DS/01, DS/09).
+// Los componentes M3 leen variables de sistema (`use-system-variables`); aquí cada variable de
+// sistema apunta a un token semántico `--nx-*`, así el cambio claro/oscuro lo hace tokens.css
+// (bajo `body.dark`) y Material lo sigue sin un segundo tema de color.
+@use 'sass:map';
+@use '@angular/material' as mat;
+@use 'tokens' as nx;
+
+// Paleta tonal índigo/neutral de los primitivos. Material solo la usa para validar el tema y para
+// las pocas variables de sistema que no se reasignan abajo.
+$_primary: map.merge(mat.$blue-palette, (
+  10: nx.$nx-color-indigo-950,
+  20: nx.$nx-color-indigo-900,
+  25: nx.$nx-color-indigo-800,
+  30: nx.$nx-color-indigo-700,
+  35: nx.$nx-color-indigo-600,
+  40: nx.$nx-color-indigo-500,
+  50: nx.$nx-color-indigo-400,
+  60: nx.$nx-color-indigo-400,
+  70: nx.$nx-color-indigo-300,
+  80: nx.$nx-color-indigo-300,
+  90: nx.$nx-color-indigo-200,
+  95: nx.$nx-color-indigo-100,
+  98: nx.$nx-color-indigo-50,
+  99: nx.$nx-color-indigo-50,
+  neutral: map.merge(map.get(mat.$blue-palette, neutral), (
+    10: nx.$nx-color-neutral-900,
+    20: nx.$nx-color-neutral-800,
+    30: nx.$nx-color-neutral-700,
+    40: nx.$nx-color-neutral-600,
+    50: nx.$nx-color-neutral-500,
+    60: nx.$nx-color-neutral-400,
+    80: nx.$nx-color-neutral-300,
+    90: nx.$nx-color-neutral-200,
+    94: nx.$nx-color-neutral-100,
+    98: nx.$nx-color-neutral-50,
+  )),
+));
+
+$_type: (
+  plain-family: nx.$nx-font-family-sans,
+  brand-family: nx.$nx-font-family-sans,
+  bold-weight: nx.$nx-font-weight-semibold,
+  medium-weight: nx.$nx-font-weight-medium,
+  regular-weight: nx.$nx-font-weight-regular,
+  use-system-variables: true,
+);
+
+$theme: mat.define-theme((
+  color: (theme-type: light, primary: $_primary, tertiary: $_primary, use-system-variables: true),
+  typography: $_type,
+  density: (scale: 0),
+));
+
+// Variables de sistema M3 → tokens semánticos. Todo se declara en <body> (no en <html>): una
+// propiedad personalizada se resuelve donde se declara, y los tokens oscuros viven en body.dark.
+$_sys-colors: (
+  primary: var(--nx-color-action-primary),
+  on-primary: var(--nx-color-on-action-primary),
+  primary-container: var(--nx-color-action-primary-subtle),
+  on-primary-container: var(--nx-color-action-primary),
+  primary-fixed: var(--nx-color-action-primary-subtle),
+  primary-fixed-dim: var(--nx-color-action-primary-subtle),
+  on-primary-fixed: var(--nx-color-action-primary),
+  on-primary-fixed-variant: var(--nx-color-action-primary),
+  inverse-primary: var(--nx-color-action-primary-subtle),
+  secondary: var(--nx-color-action-primary),
+  on-secondary: var(--nx-color-on-action-primary),
+  secondary-container: var(--nx-color-action-primary-subtle),
+  on-secondary-container: var(--nx-color-action-primary),
+  secondary-fixed: var(--nx-color-action-primary-subtle),
+  secondary-fixed-dim: var(--nx-color-action-primary-subtle),
+  on-secondary-fixed: var(--nx-color-action-primary),
+  on-secondary-fixed-variant: var(--nx-color-action-primary),
+  tertiary: var(--nx-color-action-primary),
+  on-tertiary: var(--nx-color-on-action-primary),
+  tertiary-container: var(--nx-color-action-primary-subtle),
+  on-tertiary-container: var(--nx-color-action-primary),
+  tertiary-fixed: var(--nx-color-action-primary-subtle),
+  tertiary-fixed-dim: var(--nx-color-action-primary-subtle),
+  on-tertiary-fixed: var(--nx-color-action-primary),
+  on-tertiary-fixed-variant: var(--nx-color-action-primary),
+  error: var(--nx-color-status-error-fg),
+  on-error: var(--nx-color-text-inverse),
+  error-container: var(--nx-color-status-error-bg),
+  on-error-container: var(--nx-color-status-error-fg),
+  background: var(--nx-color-bg-app),
+  on-background: var(--nx-color-text-primary),
+  surface: var(--nx-color-surface-default),
+  on-surface: var(--nx-color-text-primary),
+  surface-variant: var(--nx-color-surface-subtle),
+  on-surface-variant: var(--nx-color-text-secondary),
+  surface-dim: var(--nx-color-surface-subtle),
+  surface-bright: var(--nx-color-surface-default),
+  surface-container-lowest: var(--nx-color-surface-default),
+  surface-container-low: var(--nx-color-surface-default),
+  surface-container: var(--nx-color-surface-default),
+  surface-container-high: var(--nx-color-surface-default),
+  surface-container-highest: var(--nx-color-surface-hover),
+  surface-tint: transparent,
+  inverse-surface: var(--nx-color-text-primary),
+  inverse-on-surface: var(--nx-color-text-inverse),
+  outline: var(--nx-color-border-input),
+  outline-variant: var(--nx-color-border-default),
+  shadow: var(--nx-color-neutral-900),
+  scrim: var(--nx-color-overlay-scrim),
+);
+
+@mixin theme {
+  @include mat.core();
+
+  body {
+    @include mat.all-component-themes($theme);
+    @include mat.system-level-colors($theme, $_sys-colors);
+    @include mat.system-level-typography($theme);
+    @include mat.system-level-elevation($theme);
+    @include mat.system-level-shape($theme);
+    @include mat.system-level-motion($theme);
+    @include mat.system-level-state($theme);
+    // Portal: áreas táctiles de 40 (DS/11). Campos y botones de ícono un paso más densos.
+    @include mat.icon-button-density(-2);
+    @include mat.form-field-density(-4);
+    color-scheme: light;
+  }
+
+  body.dark {
+    color-scheme: dark;
+  }
+}

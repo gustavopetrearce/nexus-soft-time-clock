@@ -163,22 +163,22 @@ const COLUMNS: readonly ColumnDef[] = [
         z-index: 3;
         height: 40px;
         box-sizing: border-box;
-        background: var(--surface-2);
-        color: var(--text-muted);
+        background: var(--nx-color-surface-subtle);
+        color: var(--nx-color-text-secondary);
         font-size: 0.72rem;
-        font-weight: 650;
+        font-weight: var(--nx-font-weight-semibold);
         text-transform: uppercase;
         letter-spacing: 0.04em;
         text-align: left;
-        padding: 0 var(--sp-3);
-        border-bottom: 1px solid var(--border);
+        padding: 0 var(--nx-space-3);
+        border-bottom: 1px solid var(--nx-color-border-default);
         cursor: pointer;
         user-select: none;
         white-space: nowrap;
-        transition: color 0.12s ease;
+        transition: color 0.12s var(--nx-motion-easing-standard);
       }
-      .head-row th:hover { color: var(--text); }
-      .head-row th.sorted { color: var(--brand); }
+      .head-row th:hover { color: var(--nx-color-text-primary); }
+      .head-row th.sorted { color: var(--nx-color-action-primary); }
       .head-row th.numeric { text-align: right; }
       .th-content { display: inline-flex; align-items: center; gap: 2px; }
       .head-row th.numeric .th-content { flex-direction: row-reverse; }
@@ -189,9 +189,9 @@ const COLUMNS: readonly ColumnDef[] = [
         position: sticky;
         top: 40px;
         z-index: 2;
-        background: color-mix(in srgb, var(--surface-2) 60%, var(--surface));
-        padding: 6px var(--sp-2);
-        border-bottom: 1px solid var(--border);
+        background: color-mix(in srgb, var(--nx-color-surface-subtle) 60%, var(--nx-color-surface-default));
+        padding: 6px var(--nx-space-2);
+        border-bottom: 1px solid var(--nx-color-border-default);
         vertical-align: middle;
       }
       .f-input,
@@ -199,21 +199,21 @@ const COLUMNS: readonly ColumnDef[] = [
         width: 100%;
         box-sizing: border-box;
         padding: 6px 8px;
-        border: 1px solid var(--border);
+        border: 1px solid var(--nx-color-border-default);
         border-radius: 8px;
-        background: var(--surface);
-        color: var(--text);
+        background: var(--nx-color-surface-default);
+        color: var(--nx-color-text-primary);
         font-size: 0.78rem;
         font-family: inherit;
         outline: none;
-        transition: border-color 0.12s ease, box-shadow 0.12s ease;
+        transition: border-color 0.12s var(--nx-motion-easing-standard), box-shadow 0.12s var(--nx-motion-easing-standard);
       }
       .f-input:focus,
       .f-select:focus {
-        border-color: var(--brand);
-        box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 20%, transparent);
+        border-color: var(--nx-color-action-primary);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-color-action-primary) 20%, transparent);
       }
-      .f-input::placeholder { color: var(--text-soft); }
+      .f-input::placeholder { color: var(--nx-color-text-disabled); }
       .f-select { cursor: pointer; }
       .f-range { display: flex; gap: 4px; }
       .f-input.sm { padding: 6px 6px; text-align: right; }
@@ -224,32 +224,32 @@ const COLUMNS: readonly ColumnDef[] = [
 
       /* --- Cuerpo --- */
       tbody td {
-        padding: var(--sp-3) var(--sp-3);
-        border-bottom: 1px solid var(--border);
-        color: var(--text);
+        padding: var(--nx-space-3) var(--nx-space-3);
+        border-bottom: 1px solid var(--nx-color-border-default);
+        color: var(--nx-color-text-primary);
         white-space: nowrap;
       }
       tbody td.numeric { text-align: right; font-variant-numeric: tabular-nums; }
-      tbody td.mono { font-variant-numeric: tabular-nums; color: var(--text-muted); }
-      tbody td.strong { font-weight: 650; }
-      tbody tr { transition: background 0.12s ease; animation: fade-in 0.18s ease; }
-      tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
-      tbody tr:hover { background: var(--surface-2); }
+      tbody td.mono { font-variant-numeric: tabular-nums; color: var(--nx-color-text-secondary); }
+      tbody td.strong { font-weight: var(--nx-font-weight-semibold); }
+      tbody tr { transition: background 0.12s var(--nx-motion-easing-standard); animation: fade-in 0.18s var(--nx-motion-easing-standard); }
+      tbody tr:nth-child(even) { background: color-mix(in srgb, var(--nx-color-surface-subtle) 55%, transparent); }
+      tbody tr:hover { background: var(--nx-color-surface-subtle); }
 
       .badge {
         display: inline-block;
         min-width: 34px;
         padding: 2px 8px;
-        border-radius: 999px;
+        border-radius: var(--nx-radius-full);
         font-size: 0.78rem;
-        font-weight: 650;
+        font-weight: var(--nx-font-weight-semibold);
         text-align: center;
         font-variant-numeric: tabular-nums;
       }
-      .badge.success { color: var(--success); background: var(--success-bg); }
-      .badge.warning { color: var(--warning); background: var(--warning-bg); }
-      .badge.danger { color: var(--danger); background: var(--danger-bg); }
-      .badge.neutral { color: var(--neutral); background: var(--neutral-bg); }
+      .badge.success { color: var(--nx-color-status-success-fg); background: var(--nx-color-status-success-bg); }
+      .badge.warning { color: var(--nx-color-status-warning-fg); background: var(--nx-color-status-warning-bg); }
+      .badge.danger { color: var(--nx-color-status-error-fg); background: var(--nx-color-status-error-bg); }
+      .badge.neutral { color: var(--nx-color-status-neutral-fg); background: var(--nx-color-status-neutral-bg); }
 
       @keyframes fade-in {
         from { opacity: 0; }

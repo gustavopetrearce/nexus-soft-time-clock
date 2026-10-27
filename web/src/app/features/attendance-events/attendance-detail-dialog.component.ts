@@ -78,14 +78,14 @@ import { AttendanceEventsService } from './attendance-events.service';
   `,
   styles: [
     `
-      .meta { display: grid; gap: 2px; margin-bottom: var(--sp-4); min-width: 320px; }
-      .row { display: flex; justify-content: space-between; gap: var(--sp-4); padding: 5px 0; font-size: var(--font-small); }
-      .k { color: var(--text-muted); }
-      .v { font-weight: 600; text-align: right; }
+      .meta { display: grid; gap: 2px; margin-bottom: var(--nx-space-4); min-width: 320px; }
+      .row { display: flex; justify-content: space-between; gap: var(--nx-space-4); padding: 5px 0; font-size: var(--nx-text-small-size); }
+      .k { color: var(--nx-color-text-secondary); }
+      .v { font-weight: var(--nx-font-weight-semibold); text-align: right; }
       .mono { font-variant-numeric: tabular-nums; }
-      .ph-title { margin: 0 0 var(--sp-2); font-size: var(--font-body); font-weight: 700; }
-      .ph-empty { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: var(--font-small); }
-      .evidence { display: block; width: 100%; max-width: 420px; border-radius: 10px; border: 1px solid var(--border); }
+      .ph-title { margin: 0 0 var(--nx-space-2); font-size: var(--nx-text-body-size); font-weight: var(--nx-font-weight-bold); }
+      .ph-empty { display: flex; align-items: center; gap: 8px; color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
+      .evidence { display: block; width: 100%; max-width: 420px; border-radius: 10px; border: 1px solid var(--nx-color-border-default); }
     `,
   ],
 })

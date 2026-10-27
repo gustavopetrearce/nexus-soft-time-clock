@@ -1,0 +1,181 @@
+// Angular Material vestido con las fichas de DS/09. Equivalencias:
+//   mat-flat-button → Botón principal · mat-stroked-button → secundario · mat-button → terciario
+//   mat-flat-button color="warn" → Botón en tono error (S01) · mat-icon-button → Botón de ícono
+//   mat-form-field outline → Campo · mat-table → Tabla compacta · mat-card → Panel
+// Solo var(--nx-*). Se declara en <body> para que siga a body.dark (ver _material.scss).
+
+body {
+  /* Botones (n.º 1): radio md, alto 40, label 14/500. */
+  --mdc-filled-button-container-shape: var(--nx-radius-md);
+  --mdc-outlined-button-container-shape: var(--nx-radius-md);
+  --mdc-text-button-container-shape: var(--nx-radius-md);
+  --mdc-protected-button-container-shape: var(--nx-radius-md);
+  --mdc-filled-button-container-height: var(--nx-size-target-min);
+  --mdc-outlined-button-container-height: var(--nx-size-target-min);
+  --mdc-text-button-container-height: var(--nx-size-target-min);
+  --mdc-protected-button-container-height: var(--nx-size-target-min);
+  --mdc-outlined-button-outline-color: var(--nx-color-border-brand);
+  --mdc-outlined-button-label-text-color: var(--nx-color-action-primary);
+  --mdc-filled-button-label-text-weight: var(--nx-font-weight-medium);
+  --mdc-outlined-button-label-text-weight: var(--nx-font-weight-medium);
+  --mdc-text-button-label-text-weight: var(--nx-font-weight-medium);
+  --mdc-filled-button-label-text-tracking: var(--nx-font-tracking-normal);
+  --mdc-outlined-button-label-text-tracking: var(--nx-font-tracking-normal);
+  --mdc-text-button-label-text-tracking: var(--nx-font-tracking-normal);
+  --mdc-filled-button-disabled-container-color: var(--nx-color-surface-hover);
+  --mdc-filled-button-disabled-label-text-color: var(--nx-color-text-disabled);
+  --mdc-outlined-button-disabled-outline-color: var(--nx-color-border-default);
+  --mdc-outlined-button-disabled-label-text-color: var(--nx-color-text-disabled);
+  --mdc-text-button-disabled-label-text-color: var(--nx-color-text-disabled);
+  --mat-outlined-button-state-layer-color: var(--nx-color-action-primary);
+  --mat-text-button-state-layer-color: var(--nx-color-action-primary);
+  --mat-filled-button-horizontal-padding: var(--nx-space-4);
+  --mat-outlined-button-horizontal-padding: var(--nx-space-4);
+  --mat-text-button-horizontal-padding: var(--nx-space-3);
+
+  /* Botón de ícono (n.º 2): secundario por defecto. */
+  --mdc-icon-button-icon-color: var(--nx-color-text-secondary);
+  --mat-icon-button-state-layer-color: var(--nx-color-text-secondary);
+
+  /* Campos (n.º 3–8): borde border-input, radio md, foco 2 px focus-ring. */
+  --mdc-outlined-text-field-container-shape: var(--nx-radius-md);
+  --mdc-outlined-text-field-outline-color: var(--nx-color-border-input);
+  --mdc-outlined-text-field-hover-outline-color: var(--nx-color-text-secondary);
+  --mdc-outlined-text-field-focus-outline-color: var(--nx-color-focus-ring);
+  --mdc-outlined-text-field-focus-outline-width: var(--nx-border-width-focus);
+  --mdc-outlined-text-field-outline-width: var(--nx-border-width-default);
+  --mdc-outlined-text-field-error-outline-color: var(--nx-color-status-error-fg);
+  --mdc-outlined-text-field-input-text-color: var(--nx-color-text-primary);
+  --mdc-outlined-text-field-input-text-placeholder-color: var(--nx-color-text-placeholder);
+  --mdc-outlined-text-field-label-text-color: var(--nx-color-text-secondary);
+  --mdc-outlined-text-field-label-text-size: var(--nx-text-body-size);
+  --mat-form-field-container-text-size: var(--nx-text-body-size);
+  --mat-form-field-subscript-text-size: var(--nx-text-caption-size);
+  --mat-form-field-error-text-color: var(--nx-color-status-error-fg);
+  --mat-select-panel-background-color: var(--nx-elevation-2-surface);
+  --mat-select-trigger-text-size: var(--nx-text-body-size);
+  --mat-option-label-text-size: var(--nx-text-body-size);
+  --mat-option-selected-state-layer-color: var(--nx-color-action-primary-subtle);
+  --mat-option-selected-state-label-text-color: var(--nx-color-action-primary);
+
+  /* Tarjeta → Panel (n.º 15). */
+  --mdc-elevated-card-container-shape: var(--nx-radius-lg);
+  --mdc-outlined-card-container-shape: var(--nx-radius-lg);
+  --mdc-elevated-card-container-color: var(--nx-color-surface-default);
+  --mdc-elevated-card-container-elevation: var(--nx-shadow-1);
+  --mdc-outlined-card-outline-color: var(--nx-color-border-default);
+
+  /* Diálogo (n.º 29) y menú. */
+  --mdc-dialog-container-shape: var(--nx-radius-lg);
+  --mdc-dialog-container-color: var(--nx-elevation-3-surface);
+  --mdc-dialog-subhead-color: var(--nx-color-text-primary);
+  --mdc-dialog-subhead-size: var(--nx-text-heading-3-size);
+  --mdc-dialog-subhead-weight: var(--nx-font-weight-semibold);
+  --mdc-dialog-supporting-text-color: var(--nx-color-text-primary);
+  --mdc-dialog-supporting-text-size: var(--nx-text-body-size);
+  --mat-dialog-container-max-width: var(--nx-layout-dialog-max);
+  --mat-menu-container-shape: var(--nx-radius-md);
+  --mat-menu-container-color: var(--nx-elevation-2-surface);
+  --mat-menu-item-label-text-size: var(--nx-text-body-size);
+  --mat-menu-item-icon-color: var(--nx-color-text-secondary);
+
+  /* Tabla compacta (n.º 20). */
+  --mat-table-background-color: transparent;
+  --mat-table-header-headline-color: var(--nx-color-text-secondary);
+  --mat-table-header-headline-size: var(--nx-text-heading-5-size);
+  --mat-table-header-headline-weight: var(--nx-font-weight-semibold);
+  --mat-table-header-headline-tracking: var(--nx-font-tracking-wide);
+  --mat-table-header-container-height: var(--nx-size-target-min);
+  --mat-table-row-item-container-height: var(--nx-space-12);
+  --mat-table-row-item-label-text-size: var(--nx-text-body-size);
+  --mat-table-row-item-label-text-tracking: var(--nx-font-tracking-normal);
+  --mat-table-row-item-outline-color: var(--nx-color-border-default);
+  --mat-paginator-container-text-color: var(--nx-color-text-secondary);
+  --mat-paginator-container-background-color: transparent;
+  --mat-paginator-container-text-size: var(--nx-text-small-size);
+
+  /* Barra de progreso (n.º 19): space-1, sin mover el layout. */
+  --mdc-linear-progress-track-height: var(--nx-space-1);
+  --mdc-linear-progress-active-indicator-height: var(--nx-space-1);
+  --mdc-linear-progress-active-indicator-color: var(--nx-color-action-primary);
+  --mdc-linear-progress-track-color: var(--nx-color-action-primary-subtle);
+
+  /* Chips de filtro, toggles, tooltip, snackbar (n.º 17). */
+  --mat-standard-button-toggle-shape: var(--nx-radius-md);
+  --mat-standard-button-toggle-selected-state-background-color: var(--nx-color-action-primary-subtle);
+  --mat-standard-button-toggle-selected-state-text-color: var(--nx-color-action-primary);
+  --mat-standard-button-toggle-divider-color: var(--nx-color-border-input);
+  --mat-standard-button-toggle-height: var(--nx-size-target-min);
+  --mdc-plain-tooltip-container-shape: var(--nx-radius-sm);
+  --mdc-plain-tooltip-supporting-text-size: var(--nx-text-small-size);
+  --mdc-snackbar-container-shape: var(--nx-radius-md);
+  --mdc-snackbar-container-color: var(--nx-color-text-primary);
+  --mdc-snackbar-supporting-text-color: var(--nx-color-text-inverse);
+  --mat-snack-bar-button-color: var(--nx-color-action-primary-subtle);
+
+  /* Navegación lateral (n.º 25): ancho y velo. */
+  --mat-sidenav-container-width: var(--nx-layout-sidenav-expanded);
+  --mat-sidenav-container-shape: var(--nx-radius-none);
+  --mat-sidenav-container-background-color: var(--nx-color-nav-bg);
+  --mat-sidenav-container-text-color: var(--nx-color-nav-text);
+  --mat-sidenav-scrim-color: var(--nx-color-overlay-scrim);
+  --mat-sidenav-content-background-color: var(--nx-color-bg-app);
+  --mat-sidenav-content-text-color: var(--nx-color-text-primary);
+}
+
+/* Botón en tono error (S01 · confirmar acción destructiva). */
+.mat-mdc-unelevated-button.mat-warn {
+  --mdc-filled-button-container-color: var(--nx-color-status-error-fg);
+  --mdc-filled-button-label-text-color: var(--nx-color-text-inverse);
+}
+.mat-mdc-unelevated-button:not(:disabled):hover { background-color: var(--nx-color-action-primary-hover); }
+.mat-mdc-unelevated-button.mat-warn:not(:disabled):hover { background-color: var(--nx-color-status-error-fg); }
+.mat-mdc-button-base { transition: background-color var(--nx-motion-duration-fast) var(--nx-motion-easing-standard); }
+
+/* Panel (mat-card). */
+.mat-mdc-card {
+  background: var(--nx-color-surface-default);
+  border: var(--nx-border-width-default) solid var(--nx-color-border-default);
+  box-shadow: var(--nx-shadow-1);
+}
+.mat-mdc-card-header { padding: var(--nx-space-inset-card) var(--nx-space-inset-card) var(--nx-space-0); }
+.mat-mdc-card-content { padding: var(--nx-space-inset-card); }
+.mat-mdc-card-title {
+  font-size: var(--nx-text-heading-3-size);
+  font-weight: var(--nx-font-weight-semibold);
+  line-height: var(--nx-font-line-height-135);
+}
+
+/* Tabla compacta. */
+.mat-mdc-table { width: 100%; }
+.mat-mdc-header-row { background: var(--nx-color-surface-subtle); }
+.mat-mdc-header-cell { text-transform: uppercase; white-space: nowrap; }
+.mat-mdc-header-cell,
+.mat-mdc-cell {
+  padding: var(--nx-space-inset-cell-y) var(--nx-space-inset-cell-x);
+  border-bottom-color: var(--nx-color-border-default);
+}
+.mat-mdc-row { transition: background-color var(--nx-motion-duration-fast) var(--nx-motion-easing-standard); }
+.mat-mdc-row:hover { background: var(--nx-color-surface-hover); }
+.mat-mdc-row:last-child .mat-mdc-cell { border-bottom: 0; }
+.table-wrap {
+  overflow-x: auto;
+  background: var(--nx-color-surface-default);
+  border: var(--nx-border-width-default) solid var(--nx-color-border-default);
+  border-radius: var(--nx-radius-md);
+}
+
+/* Diálogo: velo del sistema. */
+.cdk-overlay-dark-backdrop { background: var(--nx-color-overlay-scrim); }
+.mat-mdc-dialog-container .mat-mdc-dialog-title { padding-top: var(--nx-space-6); }
+
+/* Toolbar: alto space-16, superficie elevada; la sombra aparece al desplazar (clase is-raised). */
+.mat-toolbar {
+  --mat-toolbar-container-background-color: var(--nx-elevation-2-surface);
+  --mat-toolbar-container-text-color: var(--nx-color-text-primary);
+  --mat-toolbar-standard-height: var(--nx-space-16);
+  --mat-toolbar-mobile-height: var(--nx-space-16);
+  border-bottom: var(--nx-border-width-default) solid var(--nx-color-border-default);
+  transition: box-shadow var(--nx-motion-duration-fast) var(--nx-motion-easing-standard);
+}
+.mat-toolbar.is-raised { box-shadow: var(--nx-shadow-2); }
