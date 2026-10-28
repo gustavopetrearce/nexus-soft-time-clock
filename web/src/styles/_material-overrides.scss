@@ -198,3 +198,8 @@ body {
   .nx-filtros > .nx-flt-sec--grupo { display: contents; }
   .nx-flt-sec--grupo > mat-form-field { flex: 0 0 calc(2 * var(--col) + var(--nx-space-gap-related)); }
 }
+
+/* Título de diálogo dentro de .nx-capa__enc: conserva el aria-labelledby de mat-dialog-title sin su
+   relleno propio (la cabecera ya lo trae). */
+.nx-capa__enc .mat-mdc-dialog-title { padding: var(--nx-space-0); margin: var(--nx-space-0); }
+.nx-capa__enc .mat-mdc-dialog-title::before { display: none; }

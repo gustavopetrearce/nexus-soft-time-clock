@@ -1,10 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
+import { AppNumberPipe } from '../../../core/i18n/app-number.pipe';
+import { AlertComponent } from '../../../core/ui/alert.component';
+import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
+import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
 import { NotificationService } from '../../../core/ui/notification.service';
 import { localizedProblem } from '../../../core/ui/problem-detail';
 import { Company, TenantCapacity } from './company.models';
@@ -17,150 +20,82 @@ export interface CapacityDialogData {
 }
 
 /**
- * Cupo de colaboradores activos de una empresa (RF-29, HU-27).
+ * P24 · Cupo de colaboradores activos de una empresa (RF-29, HU-27).
  *
  * Solo el SUPER_ADMIN llega aquí (`company:capacity`). Se edita el **total** de bloques, no un
  * incremento, y la pantalla muestra el límite resultante antes de guardar para que nadie tenga que
  * multiplicar de cabeza. La reducción por debajo del uso la rechaza el backend (RN-34/D-09): aquí
- * se avisa antes para no gastar un viaje, pero el mensaje que manda es el suyo.
+ * se avisa antes para no gastar un viaje, pero el mensaje que manda es el suyo. Subir bloques guarda
+ * directo; quitarlos se confirma (S01).
  */
 @Component({
   selector: 'app-capacity-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslocoPipe],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, TranslocoPipe, AppNumberPipe, AlertComponent, LoadingBarComponent],
+  styles: [`h2, dl, dd, p { margin: var(--nx-space-0); }`],
   template: `
-    <h2 mat-dialog-title>{{ 'capacity.title' | transloco: { name: data.company.name } }}</h2>
+    <div class="nx-capa__enc">
+      <h2 class="nx-text-heading-3" mat-dialog-title>{{ 'capacity.title' | transloco: { name: data.company.name } }}</h2>
+    </div>
 
-    <mat-dialog-content>
-      @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
-      }
+    <div class="nx-capa__cuerpo" aria-live="polite">
+      <app-loading-bar [active]="loading() || saving()" />
       @if (!loading() && !capacity()) {
-        <p class="error-text">{{ error() }}</p>
+        <app-alert tone="error">{{ error() }}</app-alert>
       }
       @if (capacity(); as c) {
-        <div class="usage">
-          <div class="usage-head">
-            <span class="big">{{ c.used }}</span>
-            <span class="of">{{ 'capacity.ofActive' | transloco: { limit: c.limit } }}</span>
+        @if (belowUsage()) {
+          <app-alert tone="error">
+            {{ 'capacity.belowUsage' | transloco: { limit: (proposedLimit() | appNumber), used: (c.used | appNumber), excess: (c.used - proposedLimit() | appNumber) } }}
+          </app-alert>
+        }
+        <dl class="nx-datos">
+          <div class="nx-dato">
+            <dt class="nx-text-heading-6">{{ 'capacity.currentLimit' | transloco }}</dt>
+            <dd class="nx-text-numeric">{{ c.limit | appNumber }}</dd>
           </div>
-          <div class="bar" [class.full]="c.available === 0">
-            <div class="fill" [style.width.%]="fillPercent()"></div>
+          <div class="nx-dato">
+            <dt class="nx-text-heading-6">{{ 'capacity.used' | transloco }}</dt>
+            <dd class="nx-text-numeric">{{ c.used | appNumber }}</dd>
           </div>
-          <p class="hint">
-            {{ 'capacity.summary' | transloco: { available: c.available, base: c.baseLimit, blocks: c.extraBlocks, size: c.blockSize } }}
-          </p>
-        </div>
+        </dl>
 
-        <div class="blocks">
-          <span class="label">{{ 'capacity.extraBlocks' | transloco }}</span>
-          <div class="stepper">
-            <button
-              mat-icon-button
-              type="button"
-              [attr.aria-label]="'capacity.removeBlock' | transloco"
-              [disabled]="blocks() === 0 || saving()"
-              (click)="step(-1)"
-            >
+        <div class="nx-numerico">
+          <span class="nx-campo__label" id="bloques-label">{{ 'capacity.extraBlocks' | transloco }}</span>
+          <div class="nx-numerico__ctrl" role="group" aria-labelledby="bloques-label">
+            <button mat-icon-button type="button" [attr.aria-label]="'capacity.removeBlock' | transloco" [disabled]="blocks() === 0 || saving()" (click)="step(-1)">
               <mat-icon>remove</mat-icon>
             </button>
-            <span class="count">{{ blocks() }}</span>
-            <button
-              mat-icon-button
-              type="button"
-              [attr.aria-label]="'capacity.addBlock' | transloco"
-              [disabled]="saving()"
-              (click)="step(1)"
-            >
+            <span class="nx-numerico__valor nx-text-numeric" aria-live="polite">{{ blocks() }}</span>
+            <button mat-icon-button type="button" [attr.aria-label]="'capacity.addBlock' | transloco" [disabled]="saving()" (click)="step(1)">
               <mat-icon>add</mat-icon>
             </button>
           </div>
-          <span class="result">
-            {{ 'capacity.resultingLimit' | transloco }} <strong>{{ proposedLimit() }}</strong>
-            @if (proposedLimit() !== c.limit) { <em>{{ 'capacity.current' | transloco: { limit: c.limit } }}</em> }
-          </span>
+          <span class="nx-campo__ayuda nx-text-small nx-sec">{{ 'capacity.formula' | transloco: { base: c.baseLimit, size: c.blockSize } }}</span>
         </div>
 
-        @if (belowUsage()) {
-          <p class="warn">
-            <mat-icon>warning</mat-icon>
-            {{ 'capacity.belowUsage' | transloco: { blocks: blocks(), limit: proposedLimit(), used: c.used, excess: c.used - proposedLimit() } }}
-          </p>
-        }
+        <dl class="nx-datos">
+          <div class="nx-dato">
+            <dt class="nx-text-heading-6">{{ 'capacity.resultingLimit' | transloco }}</dt>
+            <dd class="nx-text-numeric">{{ proposedLimit() | appNumber }}</dd>
+          </div>
+        </dl>
       }
-    </mat-dialog-content>
+    </div>
 
-    <mat-dialog-actions align="end">
-      <button mat-button [disabled]="saving()" (click)="close(false)">{{ 'common.cancel' | transloco }}</button>
-      <button
-        mat-flat-button
-        color="primary"
-        [disabled]="saving() || loading() || !dirty() || belowUsage()"
-        (click)="save()"
-      >
-        {{ 'capacity.save' | transloco }}
+    <div class="nx-capa__pie">
+      <button mat-button type="button" [disabled]="saving()" (click)="close(false)"><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
+      <button mat-flat-button type="button" [disabled]="saving() || loading() || !dirty() || belowUsage()" (click)="save()">
+        <mat-icon>save</mat-icon>{{ 'common.save' | transloco }}
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
-  styles: [
-    `
-      mat-dialog-content { min-width: min(460px, 80vw); }
-
-      .usage-head { display: flex; align-items: baseline; gap: 8px; }
-      .usage-head .big { font-size: 2rem; font-weight: var(--nx-font-weight-bold); letter-spacing: -0.02em; }
-      .usage-head .of { color: var(--nx-color-text-secondary); }
-
-      .bar {
-        margin: 10px 0 6px;
-        height: 8px;
-        border-radius: var(--nx-radius-full);
-        background: var(--nx-color-surface-subtle);
-        overflow: hidden;
-      }
-      .bar .fill { height: 100%; background: var(--nx-color-action-primary); transition: width 0.2s var(--nx-motion-easing-standard); }
-      .bar.full .fill { background: var(--nx-color-status-warning-fg); }
-
-      .hint { margin: 0; color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
-
-      .blocks {
-        margin-top: 20px;
-        padding-top: 16px;
-        border-top: 1px solid var(--nx-color-border-default);
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 12px;
-      }
-      .blocks .label { font-weight: var(--nx-font-weight-semibold); }
-      .stepper { display: flex; align-items: center; gap: 4px; }
-      .stepper .count {
-        min-width: 2.5ch;
-        text-align: center;
-        font-variant-numeric: tabular-nums;
-        font-weight: var(--nx-font-weight-bold);
-        font-size: 1.1rem;
-      }
-      .blocks .result { color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
-
-      .warn {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        margin: 16px 0 0;
-        padding: 10px 12px;
-        border-radius: 10px;
-        background: var(--nx-color-status-warning-bg);
-        color: var(--nx-color-status-warning-fg);
-        font-size: var(--nx-text-small-size);
-      }
-      .warn mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    `,
-  ],
 })
 export class CapacityDialogComponent {
   private readonly service = inject(CompanyService);
   private readonly notify = inject(NotificationService);
   private readonly transloco = inject(TranslocoService);
+  private readonly dialog = inject(MatDialog);
   private readonly dialogRef = inject(MatDialogRef<CapacityDialogComponent, boolean>);
   protected readonly data = inject<CapacityDialogData>(MAT_DIALOG_DATA);
 
@@ -180,14 +115,6 @@ export class CapacityDialogComponent {
   protected readonly belowUsage = computed(() => {
     const c = this.capacity();
     return !!c && c.used > this.proposedLimit();
-  });
-
-  protected readonly fillPercent = computed(() => {
-    const c = this.capacity();
-    if (!c || c.limit === 0) {
-      return 0;
-    }
-    return Math.min(100, Math.round((c.used / c.limit) * 100));
   });
 
   constructor() {
@@ -215,6 +142,27 @@ export class CapacityDialogComponent {
   }
 
   protected save(): void {
+    const current = this.capacity()?.extraBlocks ?? 0;
+    if (this.blocks() >= current) {
+      this.persist();
+      return;
+    }
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        data: {
+          title: this.transloco.translate('capacity.reduceTitle', { name: this.data.company.name }),
+          message: this.transloco.translate('capacity.reduceMessage', { limit: this.proposedLimit() }),
+          confirmText: this.transloco.translate('capacity.reduce'),
+          color: 'warn',
+        },
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (confirmed) this.persist();
+      });
+  }
+
+  private persist(): void {
     this.saving.set(true);
     this.service.setExtraBlocks(this.data.company.id, this.blocks()).subscribe({
       next: (capacity) => {

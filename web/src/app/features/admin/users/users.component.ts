@@ -1,280 +1,227 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTableModule } from '@angular/material/table';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { merge } from 'rxjs';
 
+import { AppNumberPipe } from '../../../core/i18n/app-number.pipe';
+import { PAGE_SIZE_OPTIONS, debouncedSearch, pageSizePreference } from '../../../core/ui/catalog';
+import { openDrawer } from '../../../core/ui/drawer';
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
+import { FiltersButtonComponent } from '../../../core/ui/filters-button.component';
+import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
+import { ScrollDirective } from '../../../core/ui/scroll.directive';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { TenantCapacity } from '../companies/company.models';
 import { CompanyService } from '../companies/company.service';
-import { ROLE_CODES, Role, roleLabel } from '../roles/role.models';
+import { Role, roleLabel } from '../roles/role.models';
 import { RoleService } from '../roles/role.service';
-import { UserEditDialogComponent } from './user-edit-dialog.component';
-import { UserFormDialogComponent } from './user-form-dialog.component';
+import { UserEditData, UserEditDialogComponent } from './user-edit-dialog.component';
+import { UserFormData, UserFormDialogComponent } from './user-form-dialog.component';
 import { USER_STATUSES, User, UserStatus } from './user.models';
 import { UserService } from './user.service';
 
-/** Administración de usuarios del tenant (RF-06, RF-22): alta/edición en modal, roles traducidos y filtros por columna. */
+/**
+ * P20 · Usuarios (RF-06, RF-22): chip de cupo (error si no queda), «Nuevo usuario», buscador de
+ * nombre, apellidos o correo y filtros de código, rol y estado, todo en el servidor con espera de
+ * 400 ms. Orden por correo; «Editar» abre P21 en un drawer.
+ */
 @Component({
   selector: 'app-users',
   standalone: true,
   imports: [
+    NgTemplateOutlet,
     ReactiveFormsModule,
-    MatCardModule,
-    MatTableModule,
-    MatPaginatorModule,
     MatButtonModule,
-    MatIconModule,
-    MatDialogModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule,
-    MatProgressBarModule,
+    MatPaginatorModule,
+    MatSelectModule,
     MatTooltipModule,
-    PageHeaderComponent,
-    StatusChipComponent,
-    EmptyStateComponent,
     TranslocoPipe,
+    AppNumberPipe,
+    EmptyStateComponent,
+    FiltersButtonComponent,
+    LoadingBarComponent,
+    PageHeaderComponent,
+    ScrollDirective,
+    StatusChipComponent,
+  ],
+  styles: [
+    `
+      mat-form-field { width: 100%; }
+      td { white-space: nowrap; }
+    `,
   ],
   template: `
-    <app-page-header [title]="'users.title' | transloco" [subtitle]="'users.subtitle' | transloco">
-      @if (capacity(); as cap) {
-        <span class="cap-chip" [class.cap-chip-full]="cap.available === 0" [matTooltip]="capacityTooltip(cap)">
-          <mat-icon>groups</mat-icon>
-          {{ 'users.capacityChip' | transloco: { used: cap.used, limit: cap.limit } }}
-        </span>
-      }
-      <button mat-flat-button color="primary" (click)="openCreate()">
-        <mat-icon>person_add</mat-icon> {{ 'users.new' | transloco }}
-      </button>
-    </app-page-header>
+    <app-loading-bar [active]="loading()" />
+    <app-page-header [title]="'users.title' | transloco" />
 
-    @if (capacity()?.available === 0) {
-      <p class="cap-banner">
-        <mat-icon>info</mat-icon>
-        {{ 'users.capacityFull' | transloco: { limit: capacity()?.limit, size: capacity()?.blockSize } }}
-      </p>
-    }
+    <ng-template #secundarios>
+      <ng-container [formGroup]="filters">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'common.code' | transloco }}</mat-label>
+          <input matInput formControlName="employeeCode" placeholder="EMP-0000" autocomplete="off" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'users.role' | transloco }}</mat-label>
+          <mat-select formControlName="role">
+            <mat-option value="">{{ 'common.all' | transloco }}</mat-option>
+            @for (r of assignableRoles(); track r.code) { <mat-option [value]="r.code">{{ label(r.code) }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'common.status' | transloco }}</mat-label>
+          <mat-select formControlName="status">
+            <mat-option value="">{{ 'common.all' | transloco }}</mat-option>
+            @for (s of statuses; track s) { <mat-option [value]="s">{{ statusLabel(s) }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+      </ng-container>
+    </ng-template>
 
-    <mat-card>
-      <mat-card-content>
-        <div class="filter-bar">
-          <mat-form-field appearance="outline" class="search">
+    @if (error()) {
+      <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco">
+        <button mat-stroked-button type="button" (click)="reload()">{{ 'common.retry' | transloco }}</button>
+      </app-empty-state>
+    } @else {
+      <section class="nx-panel nx-panel--listado">
+        <div class="nx-panel__barra">
+          <div class="nx-panel__chip">
+            @if (capacity(); as cap) {
+              <span class="nx-chip nx-chip--{{ cap.available === 0 ? 'error' : 'informativo' }}" [matTooltip]="capacityTooltip(cap)">
+                {{ 'users.capacityChip' | transloco: { used: (cap.used | appNumber), limit: (cap.limit | appNumber) } }}
+              </span>
+            }
+          </div>
+          <div class="nx-panel__acciones">
+            <button mat-flat-button type="button" (click)="openCreate()"><mat-icon>add</mat-icon>{{ 'users.new' | transloco }}</button>
+          </div>
+        </div>
+
+        <div class="nx-filtros" [formGroup]="filters">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-buscador">
             <mat-icon matPrefix>search</mat-icon>
             <mat-label>{{ 'users.search' | transloco }}</mat-label>
-            <input matInput [formControl]="searchControl" (keyup.enter)="applySearch()" />
+            <input matInput type="search" formControlName="search" autocomplete="off" />
           </mat-form-field>
-          <button mat-stroked-button type="button" (click)="applySearch()">{{ 'common.search' | transloco }}</button>
-          @if (hasColumnFilters()) {
-            <button mat-button type="button" (click)="clearColumnFilters()"><mat-icon>filter_alt_off</mat-icon> {{ 'common.clearFilters' | transloco }}</button>
+          <div class="nx-flt-sec nx-flt-sec--grupo"><ng-container [ngTemplateOutlet]="secundarios" /></div>
+          <app-filters-button [filters]="secundarios" />
+        </div>
+
+        @if (!loading() && users().length === 0) {
+          @if (hasFilters()) {
+            <app-empty-state icon="search" [message]="'common.noResults' | transloco">
+              <button mat-button type="button" (click)="filters.reset()">{{ 'common.clearFilters' | transloco }}</button>
+            </app-empty-state>
+          } @else {
+            <app-empty-state icon="group" [message]="'users.empty' | transloco" />
           }
-        </div>
-
-        @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-        @if (error()) { <p class="error-text">{{ error() }}</p> }
-
-        <div class="table-wrap">
-          <table mat-table [dataSource]="filtered()" class="users-table" style="width:100%">
-            <!-- Colaborador: avatar + nombre + correo -->
-            <ng-container matColumnDef="user">
-              <th mat-header-cell *matHeaderCellDef>{{ 'users.employee' | transloco }}</th>
-              <td mat-cell *matCellDef="let u">
-                <div class="u-cell">
-                  <div class="av" [style.background]="avatarColor(u).bg" [style.color]="avatarColor(u).fg">{{ initials(u) }}</div>
-                  <div class="u-txt">
-                    <div class="nm">{{ u.firstName }} {{ u.lastName }}</div>
-                    <div class="sub">{{ u.email }}</div>
-                  </div>
-                </div>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="employeeCode">
-              <th mat-header-cell *matHeaderCellDef>{{ 'common.code' | transloco }}</th>
-              <td mat-cell *matCellDef="let u"><span class="code">{{ u.employeeCode || '—' }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | transloco }}</th>
-              <td mat-cell *matCellDef="let u"><app-status-chip [status]="u.status" /></td>
-            </ng-container>
-            <ng-container matColumnDef="roles">
-              <th mat-header-cell *matHeaderCellDef>{{ 'users.roles' | transloco }}</th>
-              <td mat-cell *matCellDef="let u">
-                @if (u.roles.length) {
-                  <span class="role-tags">
-                    @for (r of u.roles; track r) { <span class="role-tag">{{ label(r) }}</span> }
-                  </span>
-                } @else { — }
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let u" style="text-align:right;white-space:nowrap">
-                <button mat-stroked-button (click)="openEdit(u); $event.stopPropagation()"><mat-icon>edit</mat-icon> {{ 'common.edit' | transloco }}</button>
-              </td>
-            </ng-container>
-
-            <!-- Fila de filtros por columna (estilo Excel) -->
-            <ng-container matColumnDef="user-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell">
-                <input class="col-filter" [placeholder]="'users.filterUser' | transloco" [value]="fUser()" (input)="fUser.set(asValue($event))" />
-              </th>
-            </ng-container>
-            <ng-container matColumnDef="employeeCode-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell">
-                <input class="col-filter" [placeholder]="'common.filter' | transloco" [value]="fCode()" (input)="fCode.set(asValue($event))" />
-              </th>
-            </ng-container>
-            <ng-container matColumnDef="status-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell">
-                <select class="col-filter" [value]="fStatus()" (change)="fStatus.set(asValue($event))">
-                  <option value="">{{ 'common.all' | transloco }}</option>
-                  @for (s of statuses; track s) { <option [value]="s">{{ statusLabel(s) }}</option> }
-                </select>
-              </th>
-            </ng-container>
-            <ng-container matColumnDef="roles-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell">
-                <select class="col-filter" [value]="fRole()" (change)="fRole.set(asValue($event))">
-                  <option value="">{{ 'common.all' | transloco }}</option>
-                  @for (r of roleCodes; track r) { <option [value]="r">{{ label(r) }}</option> }
-                </select>
-              </th>
-            </ng-container>
-            <ng-container matColumnDef="actions-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell"></th>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="columns"></tr>
-            <tr mat-header-row *matHeaderRowDef="filterColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: columns" (click)="openEdit(row)" class="urow"></tr>
-          </table>
-        </div>
-
-        @if (!loading() && filtered().length === 0) {
-          <app-empty-state icon="group" [message]="'users.empty' | transloco" />
+        } @else {
+          <div class="nx-tabla">
+            <div class="nx-tabla__scroll nx-scroll" nxScroll>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{{ 'common.name' | transloco }}</th>
+                    <th scope="col">{{ 'users.form.email' | transloco }}</th>
+                    <th scope="col" class="nx-col-sec">{{ 'common.code' | transloco }}</th>
+                    <th scope="col">{{ 'users.roles' | transloco }}</th>
+                    <th scope="col">{{ 'common.status' | transloco }}</th>
+                    <th scope="col" class="nx-col-acciones">{{ 'common.actions' | transloco }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (u of users(); track u.id) {
+                    <tr>
+                      <td><span class="nx-trunc">{{ u.firstName }} {{ u.lastName }}</span></td>
+                      <td><span class="nx-trunc">{{ u.email }}</span></td>
+                      <td class="nx-col-sec nx-text-code">{{ u.employeeCode || '—' }}</td>
+                      <td><span class="nx-trunc">{{ rolesText(u) }}</span></td>
+                      <td><app-status-chip [status]="u.status" [label]="statusLabel(u.status)" /></td>
+                      <td class="nx-col-acciones">
+                        <span class="nx-acciones-fila">
+                          <button mat-stroked-button type="button" (click)="openEdit(u)"><mat-icon>edit</mat-icon>{{ 'common.edit' | transloco }}</button>
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
         }
 
         <mat-paginator
           [length]="total()"
           [pageSize]="size()"
           [pageIndex]="page()"
-          [pageSizeOptions]="[10, 20, 50]"
+          [pageSizeOptions]="pageSizeOptions"
           (page)="onPage($event)"
         />
-      </mat-card-content>
-    </mat-card>
+      </section>
+    }
   `,
-  styles: [
-    `
-      .users-table { border-collapse: separate; }
-      .urow { cursor: pointer; transition: background 0.12s var(--nx-motion-easing-standard); }
-      .urow:hover { background: var(--nx-color-surface-subtle); }
-      .users-table td.mat-mdc-cell { padding-top: 10px; padding-bottom: 10px; }
-
-      .u-cell { display: flex; align-items: center; gap: 12px; }
-      .u-cell .av {
-        width: 38px; height: 38px; border-radius: var(--nx-radius-full); flex: none;
-        display: grid; place-items: center; font-weight: var(--nx-font-weight-bold); font-size: 0.78rem;
-        background: var(--nx-color-action-primary-subtle); color: var(--nx-color-action-primary); border: none;
-      }
-      .u-cell .u-txt { min-width: 0; }
-      .u-cell .nm { font-weight: var(--nx-font-weight-semibold); color: var(--nx-color-text-primary); line-height: 1.2; }
-      .u-cell .sub { font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); line-height: 1.3; }
-
-      .code { font-variant-numeric: tabular-nums; color: var(--nx-color-text-secondary); font-weight: var(--nx-font-weight-semibold); }
-
-      .role-tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
-      .role-tag { background: var(--nx-color-action-primary-subtle); border: 1px solid var(--nx-color-border-brand); color: var(--nx-color-action-primary); border-radius: var(--nx-radius-full); padding: 2px 10px; font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); white-space: nowrap; }
-
-      .cap-chip {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 6px 12px; border-radius: var(--nx-radius-full);
-        background: var(--nx-color-action-primary-subtle); border: 1px solid var(--nx-color-border-brand); color: var(--nx-color-action-primary);
-        font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); font-variant-numeric: tabular-nums;
-      }
-      .cap-chip mat-icon { font-size: 18px; width: 18px; height: 18px; }
-      .cap-chip-full { background: var(--nx-color-status-warning-bg); border-color: var(--nx-color-status-warning-fg); color: var(--nx-color-status-warning-fg); }
-
-      .cap-banner {
-        display: flex; align-items: flex-start; gap: 8px;
-        margin: 0 0 16px; padding: 10px 14px; border-radius: 10px;
-        background: var(--nx-color-status-warning-bg); color: var(--nx-color-status-warning-fg); font-size: var(--nx-text-small-size);
-      }
-      .cap-banner mat-icon { font-size: 18px; width: 18px; height: 18px; flex: none; }
-
-      .fcell { padding-top: 6px !important; padding-bottom: 6px !important; background: var(--nx-color-surface-subtle); }
-      .col-filter { width: 100%; min-width: 90px; padding: 7px 9px; border: 1px solid var(--nx-color-border-strong); border-radius: 8px; background: var(--nx-color-surface-default); color: var(--nx-color-text-primary); font: inherit; font-size: var(--nx-text-small-size); }
-      .col-filter:focus { outline: none; border-color: var(--nx-color-action-primary); box-shadow: 0 0 0 3px var(--nx-color-action-primary-subtle); }
-      select.col-filter { cursor: pointer; }
-    `,
-  ],
 })
 export class UsersComponent {
-  private readonly fb = inject(FormBuilder);
   private readonly service = inject(UserService);
   private readonly roleService = inject(RoleService);
   private readonly companyService = inject(CompanyService);
   private readonly dialog = inject(MatDialog);
   private readonly transloco = inject(TranslocoService);
 
-  protected readonly columns = ['user', 'employeeCode', 'status', 'roles', 'actions'];
-  protected readonly filterColumns = ['user-f', 'employeeCode-f', 'status-f', 'roles-f', 'actions-f'];
   protected readonly statuses = USER_STATUSES;
-  protected readonly roleCodes = ROLE_CODES;
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
   protected readonly users = signal<User[]>([]);
   protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal(false);
 
   protected readonly page = signal(0);
-  protected readonly size = signal(20);
+  protected readonly size = pageSizePreference('users');
   protected readonly total = signal(0);
 
   protected readonly assignableRoles = signal<Role[]>([]);
   /** Cupo de la propia empresa, en modo lectura (RF-29): explica los rechazos por límite. */
   protected readonly capacity = signal<TenantCapacity | null>(null);
-  protected readonly searchControl = this.fb.nonNullable.control('');
 
-  // Filtros por columna (sobre la página cargada)
-  protected readonly fUser = signal('');
-  protected readonly fCode = signal('');
-  protected readonly fStatus = signal<string>('');
-  protected readonly fRole = signal<string>('');
-
-  protected readonly hasColumnFilters = computed(
-    () => !!(this.fUser() || this.fCode() || this.fStatus() || this.fRole()),
-  );
-
-  protected readonly filtered = computed(() => {
-    const user = this.fUser().trim().toLowerCase();
-    const code = this.fCode().trim().toLowerCase();
-    const status = this.fStatus();
-    const role = this.fRole();
-    return this.users().filter(
-      (u) =>
-        (!user || `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(user)) &&
-        (!code || (u.employeeCode ?? '').toLowerCase().includes(code)) &&
-        (!status || u.status === status) &&
-        (!role || u.roles.includes(role)),
-    );
+  protected readonly filters = inject(FormBuilder).nonNullable.group({
+    search: '',
+    employeeCode: '',
+    role: '',
+    status: '' as UserStatus | '',
   });
 
   constructor() {
+    const { search, employeeCode, role, status } = this.filters.controls;
+    // Texto con espera; los selectores recargan al momento. Todo vuelve a la página 1.
+    merge(debouncedSearch(search.valueChanges), debouncedSearch(employeeCode.valueChanges), role.valueChanges, status.valueChanges)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        this.page.set(0);
+        this.reload();
+      });
     this.roleService.list().subscribe({
       next: (roles) => this.assignableRoles.set(roles),
       error: () => void 0,
     });
     this.reloadCapacity();
     this.reload();
+  }
+
+  protected hasFilters(): boolean {
+    return Object.values(this.filters.getRawValue()).some((v) => !!v?.trim());
   }
 
   /** El cupo cambia con cada alta o baja, así que se relee tras cada cambio del listado. */
@@ -287,70 +234,38 @@ export class UsersComponent {
 
   protected capacityTooltip(cap: TenantCapacity): string {
     const params = { base: cap.baseLimit, blocks: cap.extraBlocks, size: cap.blockSize, available: cap.available };
-    return this.transloco.translate(
-      cap.available === 0 ? 'users.capacityTooltipFull' : 'users.capacityTooltip',
-      params,
-    );
-  }
-
-  protected initials(u: User): string {
-    const a = u.firstName?.[0] ?? '';
-    const b = u.lastName?.[0] ?? '';
-    return (a + b).toUpperCase() || (u.email?.[0] ?? '?').toUpperCase();
-  }
-
-  /** Paleta sobria (fondos suaves + texto) para los avatares, asignada de forma estable por usuario. */
-  private readonly avatarPalette = [
-    { bg: 'var(--nx-color-action-primary-subtle)', fg: 'var(--nx-color-action-primary)' },
-    { bg: 'var(--nx-color-status-info-bg)', fg: 'var(--nx-color-status-info-fg)' },
-    { bg: 'var(--nx-color-status-success-bg)', fg: 'var(--nx-color-status-success-fg)' },
-    { bg: 'var(--nx-color-status-warning-bg)', fg: 'var(--nx-color-status-warning-fg)' },
-    { bg: 'var(--nx-color-status-neutral-bg)', fg: 'var(--nx-color-status-neutral-fg)' },
-  ];
-
-  protected avatarColor(u: User): { bg: string; fg: string } {
-    const key = u.id || u.email || `${u.firstName}${u.lastName}`;
-    let h = 0;
-    for (let i = 0; i < key.length; i++) {
-      h = (h * 31 + key.charCodeAt(i)) >>> 0;
-    }
-    return this.avatarPalette[h % this.avatarPalette.length];
+    return this.transloco.translate(cap.available === 0 ? 'users.capacityTooltipFull' : 'users.capacityTooltip', params);
   }
 
   protected label(code: string): string {
     return roleLabel(code);
   }
 
+  protected rolesText(u: User): string {
+    return u.roles.length ? u.roles.map(roleLabel).join(' · ') : '—';
+  }
+
   protected statusLabel(code: string): string {
     return this.transloco.translate(`status.${code}`);
   }
 
-  protected asValue(event: Event): string {
-    return (event.target as HTMLInputElement | HTMLSelectElement).value;
-  }
-
-  protected clearColumnFilters(): void {
-    this.fUser.set('');
-    this.fCode.set('');
-    this.fStatus.set('');
-    this.fRole.set('');
-  }
-
   protected reload(): void {
     this.loading.set(true);
-    this.error.set(null);
-    const search = this.searchControl.value.trim() || undefined;
-    this.service.list(this.page(), this.size(), search).subscribe({
-      next: (result) => {
-        this.users.set(result.content);
-        this.total.set(result.totalElements);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set(this.transloco.translate('users.loadError'));
-        this.loading.set(false);
-      },
-    });
+    this.error.set(false);
+    const { search, employeeCode, role, status } = this.filters.getRawValue();
+    this.service
+      .list(this.page(), this.size(), search.trim() || undefined, { employeeCode: employeeCode.trim(), role, status })
+      .subscribe({
+        next: (result) => {
+          this.users.set(result.content);
+          this.total.set(result.totalElements);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
+      });
   }
 
   protected onPage(event: PageEvent): void {
@@ -359,17 +274,10 @@ export class UsersComponent {
     this.reload();
   }
 
-  protected applySearch(): void {
-    this.page.set(0);
-    this.reload();
-  }
-
   protected openCreate(): void {
-    const ref = this.dialog.open(UserFormDialogComponent, {
-      width: '760px',
-      maxWidth: '96vw',
-      autoFocus: false,
+    const ref = openDrawer<UserFormDialogComponent, UserFormData, boolean>(this.dialog, UserFormDialogComponent, {
       data: { assignableRoles: this.assignableRoles() },
+      ariaLabel: this.transloco.translate('users.new'),
     });
     ref.afterClosed().subscribe((created) => {
       if (created) {
@@ -380,11 +288,9 @@ export class UsersComponent {
   }
 
   protected openEdit(user: User): void {
-    const ref = this.dialog.open(UserEditDialogComponent, {
-      width: '720px',
-      maxWidth: '96vw',
-      autoFocus: false,
+    const ref = openDrawer<UserEditDialogComponent, UserEditData, boolean>(this.dialog, UserEditDialogComponent, {
       data: { user, assignableRoles: this.assignableRoles() },
+      ariaLabel: this.transloco.translate('users.edit.title'),
     });
     ref.afterClosed().subscribe((changed) => {
       if (changed) {

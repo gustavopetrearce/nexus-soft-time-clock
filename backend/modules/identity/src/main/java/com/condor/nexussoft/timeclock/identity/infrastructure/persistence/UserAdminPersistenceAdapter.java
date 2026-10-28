@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.identity.infrastructure.persistence;
 
+import com.condor.nexussoft.timeclock.identity.domain.port.in.UserListFilter;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.UserView;
 import com.condor.nexussoft.timeclock.identity.domain.port.out.UserAdminRepositoryPort;
 import com.condor.nexussoft.timeclock.shared.domain.Paged;
@@ -58,11 +59,9 @@ public class UserAdminPersistenceAdapter implements UserAdminRepositoryPort {
     }
 
     @Override
-    public Paged<UserView> findAllByTenant(UUID tenantId, int page, int size, String search) {
+    public Paged<UserView> findAllByTenant(UUID tenantId, int page, int size, UserListFilter filter) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("email").ascending());
-        Page<UserJpaEntity> result = (search == null || search.isBlank())
-                ? users.findByTenantId(tenantId, pageable)
-                : users.findByTenantIdAndEmailContainingIgnoreCase(tenantId, search, pageable);
+        Page<UserJpaEntity> result = users.findAll(UserSpecifications.matching(tenantId, filter), pageable);
         return new Paged<>(result.map(this::toView).getContent(),
                 result.getNumber(), result.getSize(), result.getTotalElements());
     }

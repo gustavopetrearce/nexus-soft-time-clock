@@ -2,13 +2,13 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AuthStore } from '../../../core/auth/auth.store';
+import { AlertComponent } from '../../../core/ui/alert.component';
+import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
 import { NotificationService } from '../../../core/ui/notification.service';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
 import { CompanyPolicy } from './company-policy.models';
@@ -27,31 +27,28 @@ import { VacationPolicyService } from './vacation-policy.service';
   standalone: true,
   imports: [
     FormsModule,
-    MatCardModule,
     MatButtonModule,
     MatButtonToggleModule,
     MatIconModule,
     MatSlideToggleModule,
-    MatProgressBarModule,
     PageHeaderComponent,
     CompanyQrCardComponent,
     TranslocoPipe,
+    AlertComponent,
+    LoadingBarComponent,
   ],
   template: `
-    <app-page-header [title]="'layout.nav.settings' | transloco" [subtitle]="'settings.subtitle' | transloco" />
-    @if (error()) { <p class="error-text">{{ error() }}</p> }
-    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+    <app-page-header [title]="'layout.nav.settings' | transloco" />
+    <app-loading-bar [active]="loading() || loadingPolicy()" />
+    @if (error()) { <app-alert tone="error">{{ error() }}</app-alert> }
 
     @if (canEditPolicy()) {
-      <mat-card class="policy-card">
-        <mat-card-content>
-          <div class="card-head"><mat-icon>verified_user</mat-icon><h3>{{ 'settings.policy.title' | transloco }}</h3></div>
-          <p class="muted sub">{{ 'settings.policy.text' | transloco }}</p>
-          @if (policyError()) { <p class="error-text">{{ policyError() }}</p> }
-          @if (loadingPolicy()) { <mat-progress-bar mode="indeterminate" /> }
+      <section class="nx-panel">
+          <h2 class="nx-text-heading-3">{{ 'settings.policy.title' | transloco }}</h2>
+          <p class="nx-text-small nx-sec">{{ 'settings.policy.text' | transloco }}</p>
+          @if (policyError()) { <app-alert tone="error">{{ policyError() }}</app-alert> }
 
           <div class="cfg-item">
-            <div class="ci-ic"><mat-icon>photo_camera</mat-icon></div>
             <div class="ci-txt">
               <h4>{{ 'settings.policy.photo' | transloco }}</h4>
               <p>{{ 'settings.policy.photoText' | transloco }}</p>
@@ -60,7 +57,6 @@ import { VacationPolicyService } from './vacation-policy.service';
           </div>
 
           <div class="cfg-item">
-            <div class="ci-ic"><mat-icon>fingerprint</mat-icon></div>
             <div class="ci-txt">
               <h4>{{ 'settings.policy.biometric' | transloco }}</h4>
               <p>{{ 'settings.policy.biometricText' | transloco }}</p>
@@ -69,7 +65,6 @@ import { VacationPolicyService } from './vacation-policy.service';
           </div>
 
           <div class="cfg-item">
-            <div class="ci-ic"><mat-icon>smartphone</mat-icon></div>
             <div class="ci-txt">
               <h4>{{ 'settings.policy.device' | transloco }}</h4>
               <p>{{ 'settings.policy.deviceText' | transloco }}</p>
@@ -79,7 +74,6 @@ import { VacationPolicyService } from './vacation-policy.service';
 
           @if (policy.deviceBindingEnabled) {
             <div class="cfg-item">
-              <div class="ci-ic"><mat-icon>gpp_maybe</mat-icon></div>
               <div class="ci-txt">
                 <h4>{{ 'settings.policy.unknownDevice' | transloco }}</h4>
                 <p>{{ 'settings.policy.unknownDeviceText' | transloco }}</p>
@@ -92,16 +86,14 @@ import { VacationPolicyService } from './vacation-policy.service';
           }
 
           <div class="cfg-item">
-            <div class="ci-ic"><mat-icon>my_location</mat-icon></div>
             <div class="ci-txt">
               <h4>{{ 'settings.policy.gps' | transloco }}</h4>
               <p>{{ 'settings.policy.gpsText' | transloco }}</p>
             </div>
-            <input class="inline-num" type="number" min="5" max="500" [(ngModel)]="policy.defaultGpsAccuracyMaxM" />
+            <input class="inline-num nx-campo__caja nx-text-numeric" type="number" min="5" max="500" [(ngModel)]="policy.defaultGpsAccuracyMaxM" [attr.aria-label]="'settings.policy.gps' | transloco" />
           </div>
 
           <div class="cfg-item">
-            <div class="ci-ic"><mat-icon>travel_explore</mat-icon></div>
             <div class="ci-txt">
               <h4>{{ 'settings.policy.siteless' | transloco }}</h4>
               <p [innerHTML]="'settings.policy.sitelessText' | transloco"></p>
@@ -115,8 +107,7 @@ import { VacationPolicyService } from './vacation-policy.service';
               <mat-icon>save</mat-icon> {{ 'settings.policy.save' | transloco }}
             </button>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </section>
 
       <!-- El QR solo tiene sentido con la política ya guardada: el backend rechaza emitirlo si no. -->
       @if (savedSitelessEnabled()) {
@@ -124,11 +115,10 @@ import { VacationPolicyService } from './vacation-policy.service';
       }
     }
 
-    <div class="cfg-grid">
-      <mat-card>
-        <mat-card-content>
-          <div class="card-head"><mat-icon>beach_access</mat-icon><h3>{{ 'layout.nav.vacations' | transloco }}</h3></div>
-          <p class="muted sub">{{ 'settings.vacation.text' | transloco }}</p>
+    <div class="nx-g-8-4">
+      <section class="nx-panel">
+          <h2 class="nx-text-heading-3">{{ 'layout.nav.vacations' | transloco }}</h2>
+          <p class="nx-text-small nx-sec">{{ 'settings.vacation.text' | transloco }}</p>
 
           <!-- Escalera editable -->
           <div class="tier-head">
@@ -136,8 +126,8 @@ import { VacationPolicyService } from './vacation-policy.service';
           </div>
           @for (t of model.tiers; track $index) {
             <div class="tier-row">
-              <div class="num"><input type="number" min="1" max="100" [(ngModel)]="t.year" /></div>
-              <div class="num"><input type="number" min="0" max="366" [(ngModel)]="t.days" /></div>
+              <div class="num"><input class="nx-campo__caja nx-text-numeric" type="number" min="1" max="100" [(ngModel)]="t.year" [attr.aria-label]="'settings.vacation.year' | transloco" /></div>
+              <div class="num"><input class="nx-campo__caja nx-text-numeric" type="number" min="0" max="366" [(ngModel)]="t.days" [attr.aria-label]="'settings.vacation.days' | transloco" /></div>
               <button mat-icon-button type="button" (click)="removeTier($index)" [disabled]="model.tiers.length <= 1" [attr.aria-label]="'common.remove' | transloco">
                 <mat-icon>close</mat-icon>
               </button>
@@ -158,16 +148,15 @@ import { VacationPolicyService } from './vacation-policy.service';
             @if (model.beyondMode === 'INCREMENT') {
               <div class="inc">
                 {{ 'settings.vacation.add' | transloco }}
-                <input type="number" min="0" max="366" [(ngModel)]="model.beyondIncrementDays" class="inline-num" />
+                <input type="number" min="0" max="366" [(ngModel)]="model.beyondIncrementDays" class="inline-num nx-campo__caja nx-text-numeric" />
                 {{ 'settings.vacation.daysEvery' | transloco }}
-                <input type="number" min="1" max="20" [(ngModel)]="model.beyondEveryYears" class="inline-num" />
+                <input type="number" min="1" max="20" [(ngModel)]="model.beyondEveryYears" class="inline-num nx-campo__caja nx-text-numeric" />
                 {{ (model.beyondEveryYears === 1 ? 'settings.vacation.yearUnit' : 'settings.vacation.yearsUnit') | transloco }}.
               </div>
             }
           </div>
 
           <div class="cfg-item">
-            <div class="ci-ic"><mat-icon>verified_user</mat-icon></div>
             <div class="ci-txt">
               <h4>{{ 'settings.vacation.approval' | transloco }}</h4>
               <p>{{ 'settings.vacation.approvalText' | transloco }}</p>
@@ -175,7 +164,6 @@ import { VacationPolicyService } from './vacation-policy.service';
             <mat-slide-toggle [(ngModel)]="model.requireApproval" color="primary" />
           </div>
           <div class="cfg-item">
-            <div class="ci-ic"><mat-icon>calendar_month</mat-icon></div>
             <div class="ci-txt">
               <h4>{{ 'settings.vacation.businessDays' | transloco }}</h4>
               <p>{{ 'settings.vacation.businessDaysText' | transloco }}</p>
@@ -189,13 +177,11 @@ import { VacationPolicyService } from './vacation-policy.service';
               <mat-icon>save</mat-icon> {{ 'common.saveChanges' | transloco }}
             </button>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </section>
 
-      <mat-card>
-        <mat-card-content>
+      <section class="nx-panel">
           <div class="info-box">
-            <mat-icon>info</mat-icon>
+            <mat-icon aria-hidden="true">info</mat-icon>
             <div [innerHTML]="'settings.vacation.info' | transloco"></div>
           </div>
           <div class="preview">
@@ -204,40 +190,31 @@ import { VacationPolicyService } from './vacation-policy.service';
               <div class="preview-row"><span>{{ (y === 1 ? 'people.yearOne' : 'people.yearMany') | transloco: { n: y } }}</span><b>{{ 'settings.vacation.nDays' | transloco: { n: entitlement(y) } }}</b></div>
             }
           </div>
-        </mat-card-content>
-      </mat-card>
+        </section>
     </div>
   `,
   styles: [
     `
-      .cfg-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--nx-space-4); align-items: start; }
-      @media (max-width: 1000px) { .cfg-grid { grid-template-columns: 1fr; } }
-      .card-head { display: flex; align-items: center; gap: 10px; }
-      .card-head mat-icon { color: var(--nx-color-action-primary); }
-      .card-head h3 { margin: 0; font-size: 1.05rem; font-weight: var(--nx-font-weight-bold); }
-      .sub { margin: 4px 0 12px; font-size: var(--nx-text-small-size); }
-      .tier-head, .tier-row { display: grid; grid-template-columns: 1fr 1fr 44px; gap: var(--nx-space-3); align-items: center; }
-      .tier-head { font-size: var(--nx-text-caption-size); font-weight: var(--nx-font-weight-bold); text-transform: uppercase; letter-spacing: .04em; color: var(--nx-color-text-secondary); padding: 0 4px 6px; }
-      .tier-row { padding: 4px 0; }
-      .num input, .inline-num { border: 1px solid var(--nx-color-border-strong); border-radius: 8px; background: var(--nx-color-surface-default); color: var(--nx-color-text-primary); font: inherit; padding: 9px 10px; width: 100%; text-align: center; font-weight: var(--nx-font-weight-semibold); }
-      .num input:focus, .inline-num:focus { outline: none; border-color: var(--nx-color-action-primary); box-shadow: 0 0 0 3px var(--nx-color-action-primary-subtle); }
-      .add { margin-top: var(--nx-space-2); }
-      .beyond { margin: var(--nx-space-4) 0; padding: var(--nx-space-4); border: 1px solid var(--nx-color-border-default); border-radius: var(--nx-radius-md); background: var(--nx-color-surface-subtle); }
-      .beyond-title { font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); margin-bottom: var(--nx-space-2); }
-      .inc { margin-top: var(--nx-space-3); font-size: var(--nx-text-body-size); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-      .inline-num { width: 64px; }
-      .policy-card { margin-bottom: var(--nx-space-4); }
-      .cfg-item { display: flex; align-items: center; gap: var(--nx-space-4); padding: var(--nx-space-4) 0; border-top: 1px solid var(--nx-color-border-default); }
-      .ci-ic { width: 40px; height: 40px; border-radius: 11px; background: var(--nx-color-action-primary-subtle); border: 1px solid var(--nx-color-border-brand); color: var(--nx-color-action-primary); display: grid; place-items: center; flex: none; }
+      h2, p { margin: var(--nx-space-0); }
+      .nx-pila, .nx-panel + .nx-panel { margin-top: var(--nx-space-gap-section); }
+      .tier-head, .tier-row { display: grid; grid-template-columns: 1fr 1fr var(--nx-size-target-min); gap: var(--nx-space-gap-related); align-items: center; }
+      .tier-head { font-size: var(--nx-text-heading-5-size); font-weight: var(--nx-font-weight-semibold); text-transform: uppercase; letter-spacing: var(--nx-font-tracking-wide); color: var(--nx-color-text-secondary); }
+      .num input, .inline-num { width: 100%; background: var(--nx-color-surface-default); font: inherit; text-align: center; }
+      .inline-num { width: calc(var(--nx-space-16) + var(--nx-space-2)); }
+      .add { align-self: flex-start; }
+      .beyond { display: flex; flex-direction: column; gap: var(--nx-space-gap-related); padding: var(--nx-space-inset-card); border: var(--nx-border-width-default) solid var(--nx-color-border-default); border-radius: var(--nx-radius-md); background: var(--nx-color-surface-subtle); }
+      .beyond-title { font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); }
+      .inc { display: flex; align-items: center; gap: var(--nx-space-gap-inline); flex-wrap: wrap; }
+      .cfg-item { display: flex; align-items: center; gap: var(--nx-space-gap-group); padding-top: var(--nx-space-gap-related); border-top: var(--nx-border-width-default) solid var(--nx-color-border-default); }
       .ci-txt { flex: 1; }
-      .ci-txt h4 { margin: 0; font-size: var(--nx-text-body-size); font-weight: var(--nx-font-weight-semibold); }
-      .ci-txt p { margin: 3px 0 0; font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); }
-      .actions { margin-top: var(--nx-space-4); display: flex; justify-content: flex-end; gap: var(--nx-space-2); }
-      .info-box { display: flex; gap: 11px; padding: 4px; color: var(--nx-color-text-primary); font-size: var(--nx-text-small-size); line-height: 1.5; }
+      .ci-txt h4 { margin: var(--nx-space-0); font-size: var(--nx-text-body-size); font-weight: var(--nx-font-weight-semibold); }
+      .ci-txt p { font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); }
+      .actions { display: flex; justify-content: flex-end; gap: var(--nx-space-gap-inline); }
+      .info-box { display: flex; gap: var(--nx-space-gap-related); font-size: var(--nx-text-small-size); line-height: var(--nx-font-line-height-150); }
       .info-box mat-icon { color: var(--nx-color-status-info-fg); flex: none; }
-      .preview { margin-top: var(--nx-space-4); border-top: 1px solid var(--nx-color-border-default); padding-top: var(--nx-space-3); }
-      .preview-title { font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-bold); text-transform: uppercase; letter-spacing: .04em; color: var(--nx-color-text-secondary); margin-bottom: var(--nx-space-2); }
-      .preview-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: var(--nx-text-body-size); }
+      .preview { display: flex; flex-direction: column; gap: var(--nx-space-1); padding-top: var(--nx-space-gap-related); border-top: var(--nx-border-width-default) solid var(--nx-color-border-default); }
+      .preview-title { font-size: var(--nx-text-heading-5-size); font-weight: var(--nx-font-weight-semibold); text-transform: uppercase; letter-spacing: var(--nx-font-tracking-wide); color: var(--nx-color-text-secondary); }
+      .preview-row { display: flex; justify-content: space-between; }
     `,
   ],
 })
