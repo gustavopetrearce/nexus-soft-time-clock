@@ -179,3 +179,22 @@ body {
   transition: box-shadow var(--nx-motion-duration-fast) var(--nx-motion-easing-standard);
 }
 .mat-toolbar.is-raised { box-shadow: var(--nx-shadow-2); }
+
+/* Drawer (n.º 28) sobre MatDialog: ancho completo, 70 % desde breakpoint-sm y layout-drawer-max
+   desde breakpoint-md; sin radio y con entrada deslizante. El contenido usa .nx-capa__enc/cuerpo/pie. */
+.nx-drawer-panel {
+  width: 100%;
+  animation: nx-drawer var(--nx-motion-duration-medium) var(--nx-motion-easing-enter);
+  --mdc-dialog-container-shape: var(--nx-radius-none);
+}
+.nx-drawer-panel .mat-mdc-dialog-surface { display: flex; flex-direction: column; }
+.nx-drawer-panel .mat-mdc-dialog-surface > * { display: flex; flex-direction: column; flex: 1; min-height: var(--nx-space-0); }
+@media (min-width: 700px) { .nx-drawer-panel { width: 70%; } }
+@media (min-width: 1100px) { .nx-drawer-panel { width: var(--nx-layout-drawer-max); } }
+
+/* Filtros secundarios proyectados desde una plantilla (los comparte el diálogo de «Filtros»): el
+   envoltorio no ocupa columna y cada campo toma las 2 de un filtro secundario (DS/10, patrón E1). */
+@media (min-width: 1100px) {
+  .nx-filtros > .nx-flt-sec--grupo { display: contents; }
+  .nx-flt-sec--grupo > mat-form-field { flex: 0 0 calc(2 * var(--col) + var(--nx-space-gap-related)); }
+}

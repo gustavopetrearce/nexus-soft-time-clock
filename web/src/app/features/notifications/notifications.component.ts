@@ -1,95 +1,85 @@
 import { Component, inject, signal } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 
+import { PAGE_SIZE_OPTIONS, pageSizePreference } from '../../core/ui/catalog';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
+import { LoadingBarComponent } from '../../core/ui/loading-bar.component';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
 import { AppNotification } from './notification.models';
 import { NotificationsService } from './notifications.service';
 
-/** Centro de notificaciones del usuario (RF-27). Listado; las preferencias se abordan luego. */
+/** Ícono por tipo de notificación; los tipos que no se reconocen usan la campana. */
+const ICON_BY_TYPE: readonly [RegExp, string][] = [
+  [/REJECT/, 'report_problem'],
+  [/VACATION/, 'beach_access'],
+  [/INCIDENT/, 'check_circle'],
+];
+
+/**
+ * P33 · Notificaciones (RF-27): lista del usuario, la más reciente primero y sin acciones. Las no
+ * leídas llevan el título en text-small-strong.
+ */
 @Component({
   selector: 'app-notifications',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatPaginatorModule, MatProgressBarModule, PageHeaderComponent, EmptyStateComponent, TranslocoPipe],
+  imports: [MatButtonModule, MatIconModule, MatPaginatorModule, TranslocoPipe, EmptyStateComponent, LoadingBarComponent, PageHeaderComponent],
+  styles: [
+    `
+      .nx-lista { margin: var(--nx-space-0); }
+      .nx-lista__fila { align-items: flex-start; }
+      .nx-lista__lead { flex: none; }
+    `,
+  ],
   template: `
-    <app-page-header [title]="'layout.nav.notifications' | transloco" [subtitle]="'notifications.subtitle' | transloco" />
-    <mat-card>
-      <mat-card-content>
-        @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-        @if (error()) { <p class="error-text">{{ error() }}</p> }
+    <app-loading-bar [active]="loading()" />
+    <app-page-header [title]="'layout.nav.notifications' | transloco" />
 
-        @if (!loading() && notifications().length === 0) {
-          <app-empty-state icon="notifications_none" [message]="'notifications.empty' | transloco" />
-        }
-
-        <div class="list">
+    @if (error()) {
+      <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco">
+        <button mat-stroked-button type="button" (click)="reload()">{{ 'common.retry' | transloco }}</button>
+      </app-empty-state>
+    } @else if (!loading() && notifications().length === 0) {
+      <app-empty-state icon="notifications" [message]="'notifications.empty' | transloco" />
+    } @else {
+      <section class="nx-panel nx-panel--listado">
+        <ul class="nx-lista">
           @for (n of notifications(); track n.id) {
-            <div class="item" [class.unread]="n.status !== 'READ'">
-              <mat-icon class="item-icon">{{ n.status === 'READ' ? 'mark_email_read' : 'mark_email_unread' }}</mat-icon>
-              <div class="item-body">
-                <div class="item-title">{{ n.title }}</div>
-                <div class="item-text muted">{{ n.body }}</div>
+            <li class="nx-lista__fila">
+              <mat-icon class="nx-lista__lead" aria-hidden="true">{{ icon(n) }}</mat-icon>
+              <div class="nx-lista__texto">
+                <span [class.nx-text-small-strong]="n.status !== 'READ'">
+                  {{ n.title }}
+                  @if (n.status !== 'READ') { <span class="nx-sr-only">· {{ 'notifications.unread' | transloco }}</span> }
+                </span>
+                <span class="nx-lista__secundario">{{ n.body }}</span>
               </div>
-              <span class="item-channel">{{ n.channel }}</span>
-            </div>
+            </li>
           }
-        </div>
-
+        </ul>
         <mat-paginator
           [length]="total()"
           [pageSize]="size()"
           [pageIndex]="page()"
-          [pageSizeOptions]="[10, 20, 50]"
+          [pageSizeOptions]="pageSizeOptions"
           (page)="onPage($event)"
         />
-      </mat-card-content>
-    </mat-card>
+      </section>
+    }
   `,
-  styles: [
-    `
-      .list { display: flex; flex-direction: column; }
-      .item {
-        display: flex;
-        align-items: flex-start;
-        gap: var(--nx-space-3);
-        padding: var(--nx-space-4) 0;
-        border-bottom: 1px solid var(--nx-color-border-default);
-      }
-      .item:last-child { border-bottom: none; }
-      .item-icon { color: var(--nx-color-text-disabled); flex: 0 0 auto; margin-top: 2px; }
-      .item.unread .item-icon { color: var(--nx-color-action-primary); }
-      .item-body { flex: 1 1 auto; min-width: 0; }
-      .item-title { font-weight: var(--nx-font-weight-semibold); font-size: var(--nx-text-body-size); }
-      .item.unread .item-title { font-weight: var(--nx-font-weight-bold); }
-      .item-text { font-size: var(--nx-text-body-size); margin-top: 2px; }
-      .item-channel {
-        flex: 0 0 auto;
-        font-size: var(--nx-text-caption-size);
-        font-weight: var(--nx-font-weight-semibold);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--nx-color-text-secondary);
-        background: var(--nx-color-surface-subtle);
-        padding: 3px 8px;
-        border-radius: var(--nx-radius-full);
-      }
-    `,
-  ],
 })
 export class NotificationsComponent {
   private readonly service = inject(NotificationsService);
-  private readonly transloco = inject(TranslocoService);
 
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   protected readonly notifications = signal<AppNotification[]>([]);
   protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal(false);
 
   protected readonly page = signal(0);
-  protected readonly size = signal(20);
+  protected readonly size = pageSizePreference('notifications');
   protected readonly total = signal(0);
 
   constructor() {
@@ -98,7 +88,7 @@ export class NotificationsComponent {
 
   protected reload(): void {
     this.loading.set(true);
-    this.error.set(null);
+    this.error.set(false);
     this.service.mine(this.page(), this.size()).subscribe({
       next: (result) => {
         this.notifications.set(result.content);
@@ -106,10 +96,14 @@ export class NotificationsComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set(this.transloco.translate('notifications.loadError'));
+        this.error.set(true);
         this.loading.set(false);
       },
     });
+  }
+
+  protected icon(n: AppNotification): string {
+    return ICON_BY_TYPE.find(([pattern]) => pattern.test(n.type ?? ''))?.[1] ?? 'notifications';
   }
 
   protected onPage(event: PageEvent): void {

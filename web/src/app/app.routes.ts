@@ -170,6 +170,10 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/settings/settings.component').then((m) => m.SettingsComponent),
       },
+      {
+        path: 'forbidden',
+        loadComponent: () => import('./features/support/forbidden.component').then((m) => m.ForbiddenComponent),
+      },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],
   },

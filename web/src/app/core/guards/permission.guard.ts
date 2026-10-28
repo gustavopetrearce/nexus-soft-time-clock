@@ -10,7 +10,7 @@ import { AuthStore } from '../auth/auth.store';
  * Uso: `canActivate: [authGuard, requirePermission('user:manage')]`.
  *
  * Si la identidad (/me) aún no está cargada (p. ej. recarga directa sobre una ruta
- * profunda), la resuelve antes de decidir. Sin el permiso redirige al dashboard.
+ * profunda), la resuelve antes de decidir. Sin el permiso redirige a «Acceso denegado» (S02).
  */
 export function requirePermission(permission: string): CanActivateFn {
   return () => {
@@ -19,7 +19,7 @@ export function requirePermission(permission: string): CanActivateFn {
     const router = inject(Router);
 
     const decide = () =>
-      store.hasPermission(permission) ? true : router.createUrlTree(['/dashboard']);
+      store.hasPermission(permission) ? true : router.createUrlTree(['/forbidden']);
 
     if (store.user()) {
       return decide();

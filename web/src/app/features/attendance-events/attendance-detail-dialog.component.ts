@@ -1,103 +1,118 @@
 import { Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 
-import { LanguageService } from '../../core/i18n/language.service';
+import { AppDatePipe } from '../../core/i18n/app-date.pipe';
+import { AppNumberPipe } from '../../core/i18n/app-number.pipe';
+import { AlertComponent } from '../../core/ui/alert.component';
+import { LoadingBarComponent } from '../../core/ui/loading-bar.component';
+import { ScrollDirective } from '../../core/ui/scroll.directive';
 import { AttendanceEvent, eventLabel, recordStatusLabel, rejectionLabel } from './attendance-events.models';
 import { AttendanceEventsService } from './attendance-events.service';
 
 /**
- * Detalle de una marcación con su evidencia fotográfica (RF-18, HU-13).
- *
- * <p>La imagen se carga desde una URL prefirmada de vida corta que se pide al abrir el diálogo:
- * incluirla en el listado no serviría de nada porque caducaría antes de que nadie la use.
+ * P41 · Detalle del registro (RF-18, HU-13): datos de la marcación y su evidencia fotográfica.
+ * La imagen sale de una URL prefirmada de vida corta que se pide al abrir el diálogo: incluirla en
+ * el listado no serviría porque caducaría antes de que nadie la use.
  */
 @Component({
   selector: 'app-attendance-detail-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslocoPipe],
+  imports: [MatDialogModule, MatButtonModule, TranslocoPipe, AppDatePipe, AppNumberPipe, AlertComponent, LoadingBarComponent, ScrollDirective],
+  styles: [
+    `
+      :host { display: flex; flex-direction: column; max-height: inherit; }
+      h2, h3, dl, dd, p { margin: var(--nx-space-0); }
+      .nx-foto img { display: block; width: 100%; height: auto; }
+      .nx-foto:has(img) { min-height: var(--nx-space-0); }
+    `,
+  ],
   template: `
-    <h2 mat-dialog-title>{{ eventLabel(data.eventType) }}</h2>
-    <mat-dialog-content>
-      <div class="meta">
-        <div class="row"><span class="k">{{ 'users.employee' | transloco }}</span><span class="v">{{ data.employeeName || '—' }}</span></div>
-        <div class="row"><span class="k">{{ 'attendanceEvents.detail.employeeNo' | transloco }}</span><span class="v">{{ data.employeeCode || '—' }}</span></div>
-        <div class="row">
-          <span class="k">{{ 'scheduling.site' | transloco }}</span>
-          <span class="v">
+    <div class="nx-capa__enc">
+      <h2 class="nx-text-heading-3" id="detalle-registro">{{ eventLabel(data.eventType) }}</h2>
+    </div>
+
+    <div class="nx-capa__cuerpo nx-scroll" nxScroll>
+      <dl class="nx-datos">
+        <div class="nx-dato">
+          <dt class="nx-text-heading-6">{{ 'attendanceEvents.col.collaborator' | transloco }}</dt>
+          <dd>{{ data.employeeName || '—' }}</dd>
+        </div>
+        <div class="nx-dato">
+          <dt class="nx-text-heading-6">{{ 'attendanceEvents.detail.employeeNo' | transloco }}</dt>
+          <dd class="nx-text-code">{{ data.employeeCode || '—' }}</dd>
+        </div>
+        <div class="nx-dato">
+          <dt class="nx-text-heading-6">{{ 'attendanceEvents.detail.site' | transloco }}</dt>
+          <dd>
             @if (data.siteless) {
-              {{ 'attendanceEvents.siteless' | transloco }} <em>· {{ 'attendanceEvents.detail.noGeofence' | transloco }}</em>
+              {{ 'attendanceEvents.siteless' | transloco }} · {{ 'attendanceEvents.detail.noGeofence' | transloco }}
             } @else {
               {{ data.workSite || '—' }}
             }
-          </span>
+          </dd>
         </div>
-        <div class="row"><span class="k">{{ 'attendanceEvents.col.date' | transloco }}</span><span class="v mono">{{ fmt(data.serverTime) }}</span></div>
-        <div class="row">
-          <span class="k">{{ 'common.status' | transloco }}</span>
-          <span class="v">
+        <div class="nx-dato">
+          <dt class="nx-text-heading-6">{{ 'attendanceEvents.col.date' | transloco }}</dt>
+          <dd><span class="nx-text-numeric">{{ data.serverTime | appDate: 'dd/MM/yyyy HH:mm:ss' }}</span></dd>
+        </div>
+        <div class="nx-dato">
+          <dt class="nx-text-heading-6">{{ 'common.status' | transloco }}</dt>
+          <dd>
             {{ statusLabel(data.status) }}
-            @if (data.rejectionReason) { <em>· {{ rejectionLabel(data.rejectionReason) }}</em> }
-          </span>
+            @if (data.rejectionReason) { · {{ rejectionLabel(data.rejectionReason) }} }
+          </dd>
         </div>
         @if (data.gpsAccuracyM != null) {
-          <div class="row"><span class="k">{{ 'workSites.form.gpsAccuracy' | transloco }}</span><span class="v">±{{ data.gpsAccuracyM }} m</span></div>
-        }
-        @if (data.distanceToSiteM != null) {
-          <div class="row"><span class="k">{{ 'attendanceEvents.detail.distance' | transloco }}</span><span class="v">{{ data.distanceToSiteM }} m</span></div>
-        }
-        <div class="row">
-          <span class="k">{{ 'workSites.form.biometrics' | transloco }}</span>
-          <span class="v">{{ (data.biometricVerified ? 'attendanceEvents.detail.verified' : 'attendanceEvents.detail.notVerified') | transloco }}</span>
-        </div>
-        @if (data.source) {
-          <div class="row">
-            <span class="k">{{ 'attendanceEvents.detail.source' | transloco }}</span>
-            <span class="v">{{ (data.source === 'OFFLINE_SYNC' ? 'attendanceEvents.detail.offline' : 'attendanceEvents.detail.online') | transloco }}</span>
+          <div class="nx-dato">
+            <dt class="nx-text-heading-6">{{ 'workSites.form.gpsAccuracy' | transloco }}</dt>
+            <dd>±<span class="nx-text-numeric">{{ data.gpsAccuracyM | appNumber }}</span> m</dd>
           </div>
         }
-      </div>
+        @if (data.distanceToSiteM != null) {
+          <div class="nx-dato">
+            <dt class="nx-text-heading-6">{{ 'attendanceEvents.detail.distance' | transloco }}</dt>
+            <dd><span class="nx-text-numeric">{{ data.distanceToSiteM | appNumber }}</span> m</dd>
+          </div>
+        }
+        <div class="nx-dato">
+          <dt class="nx-text-heading-6">{{ 'workSites.form.biometrics' | transloco }}</dt>
+          <dd>{{ (data.biometricVerified ? 'attendanceEvents.detail.verified' : 'attendanceEvents.detail.notVerified') | transloco }}</dd>
+        </div>
+        @if (data.source) {
+          <div class="nx-dato">
+            <dt class="nx-text-heading-6">{{ 'attendanceEvents.detail.source' | transloco }}</dt>
+            <dd>{{ (data.source === 'OFFLINE_SYNC' ? 'attendanceEvents.detail.offline' : 'attendanceEvents.detail.online') | transloco }}</dd>
+          </div>
+        }
+      </dl>
 
-      <h3 class="ph-title">{{ 'attendanceEvents.detail.evidence' | transloco }}</h3>
+      <h3 class="nx-text-heading-4">{{ 'attendanceEvents.detail.evidence' | transloco }}</h3>
       @if (!data.hasEvidence) {
-        <p class="ph-empty"><mat-icon>no_photography</mat-icon> {{ 'attendanceEvents.detail.noPhoto' | transloco }}</p>
-      } @else if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <p class="nx-text-small nx-sec">{{ 'attendanceEvents.detail.noPhoto' | transloco }}</p>
       } @else if (error()) {
-        <p class="ph-empty error-text"><mat-icon>error_outline</mat-icon> {{ error() }}</p>
-      } @else if (url()) {
-        <img class="evidence" [src]="url()" [alt]="'attendanceEvents.detail.evidenceAlt' | transloco" />
+        <app-alert tone="error">{{ 'attendanceEvents.detail.evidenceError' | transloco }}</app-alert>
+      } @else {
+        <app-loading-bar [active]="loading()" />
+        @if (url(); as src) {
+          <div class="nx-foto"><img [src]="src" [alt]="'attendanceEvents.detail.evidenceAlt' | transloco" /></div>
+        }
       }
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>{{ 'common.close' | transloco }}</button>
-    </mat-dialog-actions>
+    </div>
+
+    <div class="nx-capa__pie">
+      <button mat-button type="button" mat-dialog-close cdkFocusInitial>{{ 'common.close' | transloco }}</button>
+    </div>
   `,
-  styles: [
-    `
-      .meta { display: grid; gap: 2px; margin-bottom: var(--nx-space-4); min-width: 320px; }
-      .row { display: flex; justify-content: space-between; gap: var(--nx-space-4); padding: 5px 0; font-size: var(--nx-text-small-size); }
-      .k { color: var(--nx-color-text-secondary); }
-      .v { font-weight: var(--nx-font-weight-semibold); text-align: right; }
-      .mono { font-variant-numeric: tabular-nums; }
-      .ph-title { margin: 0 0 var(--nx-space-2); font-size: var(--nx-text-body-size); font-weight: var(--nx-font-weight-bold); }
-      .ph-empty { display: flex; align-items: center; gap: 8px; color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
-      .evidence { display: block; width: 100%; max-width: 420px; border-radius: 10px; border: 1px solid var(--nx-color-border-default); }
-    `,
-  ],
 })
 export class AttendanceDetailDialogComponent {
   protected readonly data = inject<AttendanceEvent>(MAT_DIALOG_DATA);
   private readonly service = inject(AttendanceEventsService);
-  private readonly language = inject(LanguageService);
-  private readonly transloco = inject(TranslocoService);
 
   protected readonly url = signal<string | null>(null);
   protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal(false);
 
   constructor() {
     if (this.data.hasEvidence) {
@@ -113,7 +128,7 @@ export class AttendanceDetailDialogComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set(this.transloco.translate('attendanceEvents.detail.evidenceError'));
+        this.error.set(true);
         this.loading.set(false);
       },
     });
@@ -129,9 +144,5 @@ export class AttendanceDetailDialogComponent {
 
   protected rejectionLabel(code: string): string {
     return rejectionLabel(code);
-  }
-
-  protected fmt(iso: string): string {
-    return new Date(iso).toLocaleString(this.language.intlLocale());
   }
 }

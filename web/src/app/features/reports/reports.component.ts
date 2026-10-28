@@ -2,20 +2,20 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { AppNumberPipe } from '../../core/i18n/app-number.pipe';
+import { PAGE_SIZE_OPTIONS, SEARCH_DEBOUNCE_MS, pageSizePreference } from '../../core/ui/catalog';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
-import { NotificationService } from '../../core/ui/notification.service';
+import { LoadingBarComponent } from '../../core/ui/loading-bar.component';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
-import { exportToExcel, exportToPdf } from './report-export.util';
-import { generateMockReport } from './report.mock';
+import { exportToCsv, exportToExcel, exportToPdf } from './report-export.util';
 import {
   AttendanceReport,
   NumericColumn,
@@ -28,16 +28,17 @@ import {
 import { ReportService } from './report.service';
 import { ReportTableComponent } from './reports-table.component';
 
+type ExportKind = 'excel' | 'pdf' | 'csv';
+
 const NUMERIC_COLUMNS: readonly NumericColumn[] = [
   'expectedDays', 'attendedDays', 'justifiedAbsences', 'unjustifiedAbsences',
   'lateArrivals', 'workedHours', 'overtimeHours', 'totalHours', 'compliancePercentage',
 ];
 
 /**
- * Reporte de asistencia por colaborador (RF-11). Carga el agregado del backend para un rango de
- * fechas y aplica búsqueda, filtros por columna (embudo estilo Excel en cada encabezado),
- * ordenamiento y paginación en el cliente. Exporta a Excel/PDF respetando los filtros activos.
- * Si el backend no responde, muestra datos de demostración.
+ * P16 · Reporte de asistencia por colaborador (RF-11). El rango Desde/Hasta recarga del servidor
+ * (espera de 400 ms); la búsqueda, la fila de filtros por columna, el orden (nombre ascendente) y la
+ * paginación se aplican sobre lo cargado. «Exportar» (Excel · PDF · CSV) respeta los filtros.
  */
 @Component({
   selector: 'app-reports',
@@ -45,229 +46,122 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
-    MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
-    MatProgressBarModule,
+    MatMenuModule,
     MatPaginatorModule,
-    PageHeaderComponent,
-    EmptyStateComponent,
-    ReportTableComponent,
     TranslocoPipe,
+    AppNumberPipe,
+    EmptyStateComponent,
+    LoadingBarComponent,
+    PageHeaderComponent,
+    ReportTableComponent,
   ],
-  template: `
-    <app-page-header [title]="'reports.title' | transloco" [subtitle]="'reports.subtitle' | transloco" />
-
-    <div class="split-layout">
-      <div class="split-main">
-        <mat-card>
-          <mat-card-content>
-            <!-- Barra superior de acciones -->
-            <div class="toolbar" [formGroup]="form">
-              <mat-form-field appearance="outline" class="search">
-                <mat-icon matPrefix>search</mat-icon>
-                <mat-label>{{ 'reports.search' | transloco }}</mat-label>
-                <input matInput formControlName="search" autocomplete="off" />
-              </mat-form-field>
-
-              <div class="dates">
-                <mat-form-field appearance="outline" class="date">
-                  <mat-label>{{ 'scheduling.from' | transloco }}</mat-label>
-                  <input matInput type="date" formControlName="from" />
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="date">
-                  <mat-label>{{ 'period.to' | transloco }}</mat-label>
-                  <input matInput type="date" formControlName="to" />
-                </mat-form-field>
-              </div>
-
-              <span class="spacer"></span>
-
-              <div class="toolbar-actions">
-                <button mat-stroked-button type="button" (click)="clearFilters()" [disabled]="activeFilters() === 0">
-                  <mat-icon>filter_alt_off</mat-icon> {{ 'common.clearFilters' | transloco }}
-                  @if (activeFilters() > 0) { <span class="filter-badge">{{ activeFilters() }}</span> }
-                </button>
-                <button mat-stroked-button type="button" (click)="export('excel')" [disabled]="filtered().length === 0">
-                  <mat-icon>grid_on</mat-icon> Excel
-                </button>
-                <button mat-stroked-button type="button" (click)="export('pdf')" [disabled]="filtered().length === 0">
-                  <mat-icon>picture_as_pdf</mat-icon> PDF
-                </button>
-              </div>
-            </div>
-
-            <!-- Indicadores -->
-            <div class="indicators">
-              <span class="count">
-                <strong>{{ filtered().length }}</strong>
-                @if (filtered().length !== total()) { <span class="muted">{{ 'reports.ofTotal' | transloco: { total: total() } }}</span> }
-                {{ (filtered().length === 1 ? 'reports.recordOne' : 'reports.recordMany') | transloco }}
-              </span>
-              @if (activeFilters() > 0) {
-                <span class="hint-inline">
-                  <mat-icon>filter_alt</mat-icon>
-                  {{ 'reports.filterHint' | transloco }}
-                </span>
-              }
-              @if (demo()) {
-                <span class="demo-badge" [title]="'reports.demoTooltip' | transloco">
-                  <mat-icon>science</mat-icon> {{ 'reports.demo' | transloco }}
-                </span>
-              }
-            </div>
-
-            @if (loading()) { <mat-progress-bar mode="indeterminate" class="loader-bar" /> }
-
-            <!-- Estados: carga (skeleton), error, vacío, o tabla -->
-            @if (loading()) {
-              <div class="skeleton">
-                @for (r of skeletonRows; track r) {
-                  <div class="skeleton-row"></div>
-                }
-              </div>
-            } @else if (error()) {
-              <div class="error-block">
-                <mat-icon>cloud_off</mat-icon>
-                <p>{{ error() }}</p>
-                <button mat-flat-button color="primary" (click)="reload()">
-                  <mat-icon>refresh</mat-icon> {{ 'common.retry' | transloco }}
-                </button>
-              </div>
-            } @else if (filtered().length === 0) {
-              <app-empty-state
-                icon="search_off"
-                [message]="(total() === 0 ? 'reports.emptyPeriod' : 'reports.emptyFilters') | transloco"
-              />
-            } @else {
-              <app-report-table [rows]="paged()" [sort]="sort()" [filters]="filtersForm" (sortChange)="onSort($event)" />
-              <mat-paginator
-                [length]="filtered().length"
-                [pageSize]="pageSize()"
-                [pageIndex]="pageIndex()"
-                [pageSizeOptions]="[25, 50, 100]"
-                (page)="onPage($event)"
-              />
-            }
-          </mat-card-content>
-        </mat-card>
-      </div>
-    </div>
-  `,
   styles: [
     `
-      .toolbar {
-        display: flex;
-        gap: var(--nx-space-3);
-        align-items: flex-start;
-        flex-wrap: wrap;
-        margin-bottom: var(--nx-space-2);
-      }
-      .toolbar .search { flex: 1 1 320px; }
-      .dates { display: flex; gap: var(--nx-space-2); }
-      .date { width: 160px; }
-      .toolbar-actions { display: flex; gap: var(--nx-space-2); flex-wrap: wrap; }
-      .spacer { flex: 1 1 auto; }
-
-      .indicators {
-        display: flex;
-        align-items: center;
-        gap: var(--nx-space-4);
-        margin: var(--nx-space-2) 0 var(--nx-space-3);
-        flex-wrap: wrap;
-      }
-      .count { font-size: 0.9rem; }
-      .count strong { font-size: 1.05rem; color: var(--nx-color-action-primary); }
-      .hint-inline {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.8rem;
-        color: var(--nx-color-text-disabled);
-      }
-      .hint-inline mat-icon { font-size: 16px; width: 16px; height: 16px; }
-      .demo-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.8rem;
-        font-weight: var(--nx-font-weight-semibold);
-        padding: 3px 10px;
-        border-radius: var(--nx-radius-full);
-        color: var(--nx-color-status-warning-fg);
-        background: var(--nx-color-status-warning-bg);
-      }
-      .demo-badge mat-icon { font-size: 16px; width: 16px; height: 16px; }
-      .filter-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 18px;
-        height: 18px;
-        padding: 0 5px;
-        margin-left: 6px;
-        border-radius: var(--nx-radius-full);
-        background: var(--nx-color-action-primary);
-        color: var(--nx-color-on-action-primary);
-        font-size: 0.7rem;
-        font-weight: var(--nx-font-weight-bold);
-      }
-      .loader-bar { margin: var(--nx-space-2) 0; }
-
-      .skeleton { display: flex; flex-direction: column; gap: 10px; padding: var(--nx-space-4) 0; }
-      .skeleton-row {
-        height: 40px;
-        border-radius: var(--nx-radius-sm);
-        background: linear-gradient(90deg, var(--nx-color-surface-subtle) 25%, var(--nx-color-border-default) 37%, var(--nx-color-surface-subtle) 63%);
-        background-size: 400% 100%;
-        animation: shimmer 1.4s var(--nx-motion-easing-standard) infinite;
-      }
-      @keyframes shimmer {
-        0% { background-position: 100% 50%; }
-        100% { background-position: 0 50%; }
-      }
-
-      .error-block {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: var(--nx-space-3);
-        padding: 48px 16px;
-        color: var(--nx-color-text-secondary);
-        text-align: center;
-      }
-      .error-block mat-icon { font-size: 44px; width: 44px; height: 44px; opacity: 0.6; }
-      .error-block p { margin: 0; max-width: 420px; }
-
-      mat-paginator { background: transparent; margin-top: var(--nx-space-2); }
+      p { margin: var(--nx-space-0); }
+      mat-form-field { width: 100%; }
+      .exportar .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
     `,
   ],
+  template: `
+    <app-loading-bar [active]="loading()" />
+    <app-page-header [title]="'reports.title' | transloco" />
+
+    @if (error()) {
+      <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco">
+        <button mat-stroked-button type="button" (click)="reload()">{{ 'common.retry' | transloco }}</button>
+      </app-empty-state>
+    } @else {
+      <section class="nx-panel nx-panel--listado">
+        <div class="nx-filtros nx-filtros--reporte" [formGroup]="form">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-buscador">
+            <mat-icon matPrefix>search</mat-icon>
+            <mat-label>{{ 'reports.search' | transloco }}</mat-label>
+            <input matInput type="search" formControlName="search" autocomplete="off" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-campo--fecha">
+            <mat-label>{{ 'period.from' | transloco }}</mat-label>
+            <input matInput type="date" formControlName="from" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-campo--fecha">
+            <mat-label>{{ 'period.to' | transloco }}</mat-label>
+            <input matInput type="date" formControlName="to" />
+          </mat-form-field>
+
+          <div class="nx-filtros__acciones">
+            <button mat-button type="button" (click)="clearFilters()" [disabled]="activeFilters() === 0">
+              <mat-icon>filter_alt_off</mat-icon>
+              {{ 'common.clearFilters' | transloco }}
+              @if (activeFilters() > 0) { <span class="nx-text-numeric">({{ activeFilters() }})</span> }
+            </button>
+            <button
+              mat-flat-button
+              type="button"
+              class="exportar"
+              [matMenuTriggerFor]="formatos"
+              [disabled]="filtered().length === 0 || exporting()"
+              [attr.aria-busy]="exporting()"
+            >
+              @if (exporting()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>download</mat-icon> }
+              {{ 'common.export' | transloco }}
+              <mat-icon iconPositionEnd>expand_more</mat-icon>
+            </button>
+            <mat-menu #formatos="matMenu" xPosition="before" [attr.aria-label]="'reports.exportFormat' | transloco">
+              <button mat-menu-item type="button" (click)="export('excel')"><mat-icon>download</mat-icon><span>Excel</span></button>
+              <button mat-menu-item type="button" (click)="export('pdf')"><mat-icon>download</mat-icon><span>PDF</span></button>
+              <button mat-menu-item type="button" (click)="export('csv')"><mat-icon>download</mat-icon><span>CSV</span></button>
+            </mat-menu>
+          </div>
+        </div>
+
+        @if (!loading() && total() === 0) {
+          <app-empty-state icon="bar_chart" [message]="'reports.emptyPeriod' | transloco" />
+        } @else {
+          <p class="nx-contador">
+            <b class="nx-text-numeric">{{ filtered().length | appNumber }}</b>
+            {{ (filtered().length === 1 ? 'reports.recordOne' : 'reports.recordMany') | transloco }}
+          </p>
+          @if (!loading() && filtered().length === 0) {
+            <app-empty-state icon="search" [message]="'reports.emptyFilters' | transloco">
+              <button mat-button type="button" (click)="clearFilters()">{{ 'common.clearFilters' | transloco }}</button>
+            </app-empty-state>
+          }
+          <!-- La tabla se queda aunque no haya filas: su fila de filtros es la que se está usando. -->
+          <app-report-table [rows]="paged()" [sort]="sort()" [filters]="form" (sortChange)="onSort($event)" />
+          <mat-paginator
+            [length]="filtered().length"
+            [pageSize]="pageSize()"
+            [pageIndex]="pageIndex()"
+            [pageSizeOptions]="pageSizeOptions"
+            (page)="onPage($event)"
+          />
+        }
+      </section>
+    }
+  `,
 })
 export class ReportsComponent {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(ReportService);
-  private readonly notify = inject(NotificationService);
-  private readonly transloco = inject(TranslocoService);
 
-  protected readonly skeletonRows = Array.from({ length: 8 }, (_, i) => i);
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
-  /** FormGroup con todo el estado de filtros (fuente de verdad, persiste mientras viva el componente). */
+  /** FormGroup con todo el estado de filtros; la tabla lo usa para su fila de filtros. */
   protected readonly form: FormGroup = this.buildForm();
-  /** Mismo FormGroup, pasado a la tabla para los embudos de encabezado. */
-  protected readonly filtersForm = this.form;
 
   // --- Estado de datos ---
   private readonly rawRows = signal<AttendanceReport[]>([]);
   protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
-  protected readonly demo = signal(false);
+  protected readonly error = signal(false);
+  protected readonly exporting = signal(false);
 
   // --- Ordenamiento y paginación (cliente) ---
   protected readonly sort = signal<SortState>({ column: 'employeeName', direction: 'asc' });
   protected readonly pageIndex = signal(0);
-  protected readonly pageSize = signal(25);
+  protected readonly pageSize = pageSizePreference('reports');
 
   /** Valor reactivo del formulario (para alimentar los pipelines de filtrado). */
   private readonly formValue = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
@@ -301,11 +195,11 @@ export class ReportsComponent {
   });
 
   constructor() {
-    // Recarga desde el backend cuando cambia el rango de fechas (debounced).
+    // Recarga desde el backend cuando cambia el rango de fechas.
     const from$ = this.form.get('from')!.valueChanges;
     const to$ = this.form.get('to')!.valueChanges;
-    from$.pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
-    to$.pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
+    from$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
+    to$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
 
     // Vuelve a la primera página cuando cambian los filtros (evita quedar en una página vacía).
     this.form.valueChanges.pipe(debounceTime(150), takeUntilDestroyed()).subscribe(() => this.pageIndex.set(0));
@@ -317,19 +211,15 @@ export class ReportsComponent {
   protected reload(): void {
     const { from, to } = this.form.getRawValue() as ReportFilters;
     this.loading.set(true);
-    this.error.set(null);
+    this.error.set(false);
     this.service.summary(from, to).subscribe({
       next: (rows) => {
         this.rawRows.set(rows);
-        this.demo.set(false);
         this.loading.set(false);
       },
       error: () => {
-        // Modo demostración: sin backend, se usan datos mock para poder evaluar la pantalla.
-        this.rawRows.set(generateMockReport());
-        this.demo.set(true);
+        this.error.set(true);
         this.loading.set(false);
-        this.notify.error(this.transloco.translate('reports.loadErrorDemo'));
       },
     });
   }
@@ -356,17 +246,23 @@ export class ReportsComponent {
     this.pageIndex.set(0);
   }
 
-  protected export(kind: 'excel' | 'pdf'): void {
+  protected export(kind: ExportKind): void {
     const rows = this.sorted();
     if (rows.length === 0) {
       return;
     }
     const { from, to } = this.form.getRawValue() as ReportFilters;
-    if (kind === 'excel') {
-      exportToExcel(rows);
-    } else {
-      exportToPdf(rows, { from, to });
-    }
+    this.exporting.set(true);
+    // Un tick para que el botón pinte su estado de carga antes de generar el archivo.
+    setTimeout(() => {
+      try {
+        if (kind === 'excel') exportToExcel(rows);
+        else if (kind === 'pdf') exportToPdf(rows, { from, to });
+        else exportToCsv(rows);
+      } finally {
+        this.exporting.set(false);
+      }
+    });
   }
 
   // --- Lógica de filtrado / orden ---

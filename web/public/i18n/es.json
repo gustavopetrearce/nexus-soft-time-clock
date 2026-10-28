@@ -47,7 +47,14 @@
       "first": "Primera página",
       "last": "Última página",
       "range": "{{from}}–{{to}} de {{total}}"
-    }
+    },
+    "loadError": "No se pudo cargar la información.",
+    "loadErrorHint": "Inténtalo de nuevo en un momento.",
+    "actions": "Acciones",
+    "review": "Revisar",
+    "filters": "Filtros",
+    "noResults": "No hay resultados con estos filtros.",
+    "export": "Exportar"
   },
   "language": {
     "change": "Cambiar idioma"
@@ -121,36 +128,15 @@
     "CANCELLED": "Cancelada"
   },
   "login": {
-    "heroTitle1": "Control de asistencia",
-    "heroTitle2": "sin fricción.",
-    "heroLead": "Un panel para administrar la asistencia, los turnos y las incidencias de toda tu operación.",
-    "features": {
-      "geofence": {
-        "title": "Geocercas y validación GPS",
-        "text": "Fichaje por QR con antifraude y radio configurable por centro."
-      },
-      "realtime": {
-        "title": "Visibilidad en tiempo real",
-        "text": "Mapa en vivo, incidencias y reportes exportables al instante."
-      },
-      "multiCompany": {
-        "title": "Multi-empresa por diseño",
-        "text": "Un panel para administrar todos los centros de tu organización."
-      }
-    },
-    "footer": "© Nexus Soft — Plataforma de asistencia empresarial",
-    "welcome": "Bienvenido de regreso",
-    "subtitle": "Inicia sesión para continuar",
-    "email": "Correo electrónico",
+    "email": "Correo",
     "password": "Contraseña",
     "showPassword": "Mostrar contraseña",
     "hidePassword": "Ocultar contraseña",
     "companyCode": "Código de empresa (opcional)",
-    "companyCodePlaceholder": "Ej. ACME",
-    "companyCodeHint": "Solo necesario si tu correo pertenece a más de una empresa",
     "submit": "Iniciar sesión",
-    "secure": "Conexión segura",
-    "invalidCredentials": "Usuario o contraseña incorrectos."
+    "invalidCredentials": "Correo o contraseña incorrectos.",
+    "locked": "Tu cuenta está bloqueada por varios intentos fallidos. Inténtalo más tarde.",
+    "tagline": "Cada jornada cuenta."
   },
   "password": {
     "title": "Cambiar contraseña",
@@ -168,32 +154,16 @@
   },
   "dashboard": {
     "platformTitle": "Panel de plataforma",
-    "platformSubtitle": "Administración global de empresas",
     "companies": "Empresas",
     "companiesText": "Gestiona las empresas (tenants) de la plataforma y aprovisiona el administrador inicial de cada una.",
-    "goToCompanies": "Ir a Empresas",
+    "companiesLink": "Empresas: ver empresas",
     "title": "Panel",
-    "subtitle": "Resumen operativo de tu empresa",
-    "attendanceToday": "Asistencia de hoy",
-    "accepted": "Aceptados",
-    "rejected": "Rechazados",
+    "acceptedToday": "Aceptadas hoy",
+    "rejectedToday": "Rechazadas hoy",
     "openIncidents": "Incidencias abiertas",
-    "needsReview": "Requieren revisión del supervisor",
-    "viewIncidents": "Ver incidencias",
-    "activeOperation": "Operación activa",
+    "openIncidentsLink": "Incidencias abiertas: ver incidencias",
     "activeUsers": "Usuarios activos",
-    "activeSites": "Centros activos",
-    "quickLinks": "Accesos rápidos",
-    "loading": "Cargando indicadores…",
-    "loadError": "No se pudieron cargar los indicadores (¿permiso dashboard:read?).",
-    "links": {
-      "newIncident": "Nueva incidencia",
-      "newReport": "Generar reporte",
-      "users": "Usuarios",
-      "workSites": "Centros de trabajo",
-      "map": "Ver mapa en vivo",
-      "scheduling": "Horarios y turnos"
-    }
+    "activeSites": "Centros activos"
   },
   "errors": {
     "generic": "Ocurrió un error inesperado.",
@@ -373,7 +343,6 @@
   },
   "people": {
     "title": "Personas",
-    "subtitle": "Reporte del personal: todos los datos, columnas a tu medida, filtros, gráficas y exportación",
     "columns": "Columnas",
     "exportExcel": "Exportar Excel",
     "kpi": {
@@ -381,9 +350,6 @@
       "birthdays": "Cumpleaños hoy",
       "anniversaries": "Aniversarios hoy"
     },
-    "distribution": "Distribución",
-    "noChartData": "Sin datos para graficar.",
-    "countOf": "{{shown}} de {{total}}",
     "col": {
       "person": "Colaborador",
       "employeeCode": "Código",
@@ -406,20 +372,10 @@
     "anniversaryTooltip": "Aniversario en la empresa",
     "onlyWith": "Solo con",
     "empty": "No hay personas que coincidan.",
-    "dim": {
-      "roles": "Rol"
-    },
-    "noRole": "Sin rol",
-    "loadError": "No se pudo cargar el reporte de personas.",
     "yearOne": "{{n}} año",
     "yearMany": "{{n}} años",
-    "tenure": {
-      "none": "Sin dato",
-      "lt1": "Menos de 1 año",
-      "y1to2": "1–2 años",
-      "y3to5": "3–5 años",
-      "gt5": "Más de 5 años"
-    }
+    "refresh": "Actualizar",
+    "visibleColumns": "Columnas visibles"
   },
   "workSites": {
     "title": "Centros de trabajo",
@@ -658,7 +614,9 @@
     "fortnight": "Quincena",
     "month": "Mes",
     "range": "Rango",
-    "to": "Hasta"
+    "to": "Hasta",
+    "from": "Desde",
+    "label": "Periodo"
   },
   "attendance": {
     "event": {
@@ -692,21 +650,19 @@
     }
   },
   "attendanceEvents": {
-    "subtitle": "Registros individuales de asistencia: a qué hora ficha cada persona",
-    "count": "{{n}} registros",
     "col": {
       "date": "Fecha y hora",
       "event": "Evento",
       "site": "Centro de trabajo",
       "photo": "Foto",
-      "rejection": "Motivo de rechazo"
+      "rejection": "Motivo de rechazo",
+      "collaborator": "Colaborador"
     },
     "siteless": "Sin centro",
     "sitelessTooltip": "Registro sin centro: no se validó geocerca",
     "nameOrCode": "Nombre o código",
     "viewPhoto": "Ver evidencia fotográfica",
-    "empty": "No hay registros de asistencia en este periodo.",
-    "loadError": "No se pudo cargar el reporte (¿permiso report:export?).",
+    "empty": "No hay registros en este periodo.",
     "detail": {
       "employeeNo": "N.º de empleado",
       "noGeofence": "registro sin validación de geocerca",
@@ -719,22 +675,20 @@
       "evidence": "Evidencia fotográfica",
       "noPhoto": "Este registro no tiene foto asociada.",
       "evidenceAlt": "Evidencia fotográfica del registro",
-      "evidenceError": "No se pudo cargar la evidencia."
-    }
+      "evidenceError": "No se pudo cargar la foto.",
+      "title": "Detalle del registro",
+      "site": "Centro"
+    },
+    "openDetail": "Ver el detalle del registro de {{name}}",
+    "count": "{{n}} registros"
   },
   "reports": {
     "title": "Reporte de asistencia",
-    "subtitle": "Resumen por colaborador con filtros y exportación",
     "search": "Buscar (nombre, número o centro)",
-    "ofTotal": "de {{total}}",
     "recordOne": "registro",
     "recordMany": "registros",
-    "filterHint": "Filtra en la fila que está bajo cada encabezado",
-    "demo": "Datos de demostración",
-    "demoTooltip": "Sin conexión al backend: se muestran datos de demostración.",
     "emptyPeriod": "No hay datos para el periodo seleccionado.",
     "emptyFilters": "Ningún colaborador coincide con los filtros aplicados.",
-    "loadErrorDemo": "No se pudo cargar el reporte; se muestran datos de demostración.",
     "sheet": "Asistencia",
     "fileName": "reporte-asistencia",
     "pdfTitle": "Reporte de asistencia por colaborador",
@@ -779,12 +733,6 @@
       "totalHours": "Trabajadas + extra",
       "compliancePercentage": "Cumplimiento vs. días esperados"
     },
-    "filters": {
-      "employee": "Datos del colaborador",
-      "active": "Activos",
-      "inactive": "Inactivos",
-      "ranges": "Rangos numéricos"
-    },
     "tip": {
       "noJustified": "Sin faltas justificadas",
       "justified": "{{n}} falta(s) justificada(s)",
@@ -794,15 +742,14 @@
       "noLate": "Sin retardos",
       "late": "{{n}} retardo(s)",
       "lateOver": "{{n}} retardos (supera el umbral de {{threshold}})"
-    }
+    },
+    "exportFormat": "Formato de exportación"
   },
   "records": {
     "title": "Registros de asistencia",
-    "subtitle": "Marcaciones individuales por empleado (entrada, salida y eventos intermedios)",
     "eventType": "Tipo de evento",
     "emptyPeriod": "No hay registros para el periodo seleccionado.",
     "emptyFilters": "Ningún registro coincide con los filtros aplicados.",
-    "loadError": "No se pudo cargar el reporte de registros de asistencia.",
     "event": {
       "ENTRADA": "Entrada",
       "SALIDA": "Salida",
@@ -812,26 +759,20 @@
     }
   },
   "incidents": {
-    "subtitle": "Revisa y resuelve fichajes rechazados",
-    "openOne": "{{n}} incidencia abierta",
-    "openMany": "{{n}} incidencias abiertas",
-    "search": "Buscar por colaborador, tipo, motivo o ID",
+    "search": "Buscar colaborador",
     "priority": "Prioridad",
     "filter": {
-      "open": "Abiertas",
-      "resolved": "Resueltas"
+      "allPriorities": "Todas",
+      "OPEN": "Abiertas",
+      "APPROVED": "Aprobadas",
+      "REJECTED": "Rechazadas",
+      "RESOLVED": "Resueltas"
     },
     "date": "Fecha",
     "type": "Tipo",
     "empty": "No hay incidencias para mostrar.",
-    "titleOf": "Incidencia · {{type}}",
-    "info": "Información",
-    "relatedRecord": "Fichaje relacionado",
-    "resolvedAt": "Resuelto el",
-    "result": "Resultado",
-    "resolutionNote": "Nota de resolución",
+    "resolvedAt": "Resuelta el",
     "saveAndNext": "Guardar y abrir siguiente",
-    "loadError": "No se pudo cargar la bandeja (¿permiso incident:approve?).",
     "resolved": "Incidencia resuelta.",
     "resolveError": "No se pudo resolver la incidencia.",
     "types": {
@@ -848,65 +789,68 @@
       "LOW": "Baja",
       "MEDIUM": "Media",
       "HIGH": "Alta"
-    }
+    },
+    "collaborator": "Colaborador",
+    "description": "Descripción",
+    "resolveTitle": "Resolver incidencia",
+    "decision": "Decisión",
+    "decisions": {
+      "APPROVED": "Aprobar",
+      "REJECTED": "Rechazar",
+      "RESOLVED": "Resolver"
+    },
+    "note": "Nota",
+    "notePlaceholder": "Agrega una nota",
+    "notOpen": "Esta incidencia ya no está abierta. Abre la siguiente.",
+    "nextOpened": "Siguiente incidencia: {{type}} de {{name}}."
   },
   "audit": {
-    "subtitle": "Consulta los registros de actividad del sistema",
     "action": "Acción",
     "resource": "Recurso",
     "empty": "No hay registros de auditoría.",
-    "resourceId": "ID del recurso",
+    "resourceId": "Id",
     "browser": "Navegador",
     "device": "Dispositivo",
-    "oldValues": "Valores anteriores",
-    "newValues": "Valores nuevos",
-    "loadError": "No se pudo cargar la bitácora (¿permiso audit:read?).",
-    "system": "Sistema"
+    "oldValues": "Antes",
+    "newValues": "Después",
+    "system": "Sistema",
+    "detail": "Detalle",
+    "detailLabel": "Detalle de auditoría",
+    "date": "Fecha",
+    "actor": "Actor",
+    "allActions": "Todas",
+    "searchActor": "Buscar actor",
+    "openDetail": "Ver el detalle de {{action}}"
   },
   "notifications": {
-    "subtitle": "Consulta las notificaciones enviadas por el sistema",
     "empty": "No tienes notificaciones.",
-    "loadError": "No se pudieron cargar las notificaciones."
+    "unread": "no leída"
   },
   "map": {
-    "subtitle": "Visualiza los fichajes de tu operación a medida que ocurren",
-    "connected": "Conectado en tiempo real",
     "reconnecting": "Reconectando…",
     "recent": "Eventos recientes",
     "accepted": "{{n}} aceptados",
     "rejected": "{{n}} rechazados",
-    "waiting": "Esperando eventos de asistencia…",
     "record": "Registro",
-    "rejection": "Rechazo"
+    "rejection": "Registro rechazado",
+    "live": "En vivo",
+    "updated": "actualizado",
+    "search": "Buscar centro",
+    "mapLabel": "Mapa: registros aceptados de la última hora por centro de trabajo",
+    "empty": "Aún no hay registros hoy."
   },
   "vacations": {
-    "subtitle": "Revisa las solicitudes de tu equipo y apruébalas o recházalas",
-    "pendingCount": "{{n}} pendientes",
     "newRequest": "Nueva solicitud",
-    "search": "Buscar por colaborador o motivo",
+    "search": "Buscar colaborador",
     "filter": {
       "pending": "Pendientes",
       "approved": "Aprobadas",
       "rejected": "Rechazadas",
       "all": "Todas"
     },
-    "period": "Periodo",
-    "review": "Revisar",
-    "view": "Ver",
     "empty": "No hay solicitudes para mostrar.",
-    "request": "Solicitud de vacaciones",
-    "detail": "Detalle",
-    "requestedDays": "Días solicitados",
     "reason": "Motivo",
-    "requestedOn": "Solicitado el",
-    "currentStatus": "Estado actual",
-    "resolvedBy": "Resuelto por",
-    "note": "Nota",
-    "resolution": "Resolución",
-    "noteForEmployee": "Nota para el colaborador",
-    "notePlaceholder": "Opcional — se muestra al colaborador al notificar la decisión.",
     "reject": "Rechazar",
-    "loadError": "No se pudo cargar la bandeja (¿permiso vacation:approve?).",
     "approved": "Solicitud aprobada.",
     "rejected": "Solicitud rechazada.",
     "resolveError": "No se pudo resolver la solicitud.",
@@ -917,6 +861,28 @@
       "endBeforeStart": "La fecha fin no puede ser anterior al inicio.",
       "created": "Solicitud registrada.",
       "createError": "No se pudo registrar la solicitud (revisa traslapes o permisos)."
+    },
+    "collaborator": "Colaborador",
+    "start": "Inicio",
+    "end": "Fin",
+    "days": "Días",
+    "approve": "Aprobar",
+    "alreadyResolved": "La solicitud ya fue resuelta.",
+    "status": {
+      "PENDING": "Pendiente",
+      "APPROVED": "Aprobada",
+      "REJECTED": "Rechazada",
+      "CANCELLED": "Cancelada"
+    }
+  },
+  "support": {
+    "forbidden": {
+      "title": "No tienes acceso a esta sección.",
+      "action": "Ir al inicio"
+    },
+    "connection": {
+      "title": "No se pudo conectar con el servidor.",
+      "description": "Revisa tu conexión e inténtalo de nuevo."
     }
   }
 }

@@ -1,207 +1,264 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatCardModule } from '@angular/material/card';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTableModule } from '@angular/material/table';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { Subject, debounceTime } from 'rxjs';
 import * as XLSX from 'xlsx';
 
-import { LanguageService } from '../../core/i18n/language.service';
+import { AppDatePipe } from '../../core/i18n/app-date.pipe';
+import { AppNumberPipe } from '../../core/i18n/app-number.pipe';
+import { PAGE_SIZE_OPTIONS, SEARCH_DEBOUNCE_MS, pageSizePreference } from '../../core/ui/catalog';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
+import { LoadingBarComponent } from '../../core/ui/loading-bar.component';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
+import { ScrollDirective } from '../../core/ui/scroll.directive';
+import { StatusChipComponent } from '../../core/ui/status-chip.component';
 import { AttendanceDetailDialogComponent } from './attendance-detail-dialog.component';
 import { AttendanceEvent, EVENT_CODES, eventLabel, recordStatusLabel, rejectionLabel } from './attendance-events.models';
 import { AttendanceEventsService } from './attendance-events.service';
 
 type Period = 'week' | 'fortnight' | 'month' | 'range';
+type FilterKey = 'date' | 'user' | 'event' | 'site' | 'status';
+
+const PERIODS: readonly Period[] = ['week', 'fortnight', 'month', 'range'];
+const STATUS_CODES = ['ACCEPTED', 'REJECTED', 'PENDING_REVIEW'] as const;
+const DATE_TIME = 'dd/MM/yyyy HH:mm:ss';
 
 /**
- * Reporte de entradas y salidas: cada registro de asistencia con fecha/hora, colaborador,
- * evento (entrada/salida/comida) y sitio. Presets semana/quincena/mes + rango, filtros por
- * columna (Excel) y exportación. Requiere {@code report:export}.
+ * P39 · Entradas y salidas (RF-11): cada registro con fecha y hora, colaborador, evento, centro,
+ * estado y si tiene foto. «Periodo» (semana · quincena · mes · rango) y Desde/Hasta recargan del
+ * servidor con espera de 400 ms; la fila de filtros, el orden (fecha y hora descendente) y la
+ * paginación se aplican sobre lo cargado. La fila abre P41. Requiere {@code report:export}.
  */
 @Component({
   selector: 'app-attendance-events',
   standalone: true,
   imports: [
-    MatCardModule, MatTableModule, MatButtonModule, MatButtonToggleModule, MatDialogModule,
-    MatIconModule, MatProgressBarModule, MatTooltipModule, PageHeaderComponent, EmptyStateComponent,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatPaginatorModule,
+    MatSelectModule,
+    MatTooltipModule,
     TranslocoPipe,
+    AppDatePipe,
+    AppNumberPipe,
+    EmptyStateComponent,
+    LoadingBarComponent,
+    PageHeaderComponent,
+    ScrollDirective,
+    StatusChipComponent,
   ],
-  template: `
-    <app-page-header [title]="'layout.nav.attendanceEvents' | transloco" [subtitle]="'attendanceEvents.subtitle' | transloco">
-      <button mat-flat-button color="primary" (click)="exportExcel()"><mat-icon>download</mat-icon> {{ 'people.exportExcel' | transloco }}</button>
-    </app-page-header>
-
-    <mat-card>
-      <mat-card-content>
-        <!-- Presets de periodo -->
-        <div class="period-bar">
-          <mat-button-toggle-group [value]="period()" (change)="setPeriod($event.value)" hideSingleSelectionIndicator>
-            <mat-button-toggle value="week">{{ 'period.week' | transloco }}</mat-button-toggle>
-            <mat-button-toggle value="fortnight">{{ 'period.fortnight' | transloco }}</mat-button-toggle>
-            <mat-button-toggle value="month">{{ 'period.month' | transloco }}</mat-button-toggle>
-            <mat-button-toggle value="range">{{ 'period.range' | transloco }}</mat-button-toggle>
-          </mat-button-toggle-group>
-
-          <div class="dates">
-            <label>{{ 'scheduling.from' | transloco }} <input type="date" [value]="from()" (change)="onDate('from', $event)" /></label>
-            <label>{{ 'period.to' | transloco }} <input type="date" [value]="to()" (change)="onDate('to', $event)" /></label>
-          </div>
-          <span class="spacer"></span>
-          @if (hasColumnFilters()) {
-            <button mat-button (click)="clearFilters()"><mat-icon>filter_alt_off</mat-icon> {{ 'common.clear' | transloco }}</button>
-          }
-          <span class="muted">{{ 'attendanceEvents.count' | transloco: { n: filtered().length } }}</span>
-        </div>
-
-        @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-        @if (error()) { <p class="error-text">{{ error() }}</p> }
-
-        <div class="table-wrap">
-          <table mat-table [dataSource]="filtered()" style="width:100%">
-            <ng-container matColumnDef="date">
-              <th mat-header-cell *matHeaderCellDef>{{ 'attendanceEvents.col.date' | transloco }}</th>
-              <td mat-cell *matCellDef="let e"><span class="mono">{{ fmt(e.serverTime) }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="user">
-              <th mat-header-cell *matHeaderCellDef>{{ 'users.employee' | transloco }}</th>
-              <td mat-cell *matCellDef="let e">
-                <div class="nm">{{ e.employeeName || e.userId }}</div>
-                <div class="sub">{{ e.employeeCode || '—' }}</div>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="event">
-              <th mat-header-cell *matHeaderCellDef>{{ 'attendanceEvents.col.event' | transloco }}</th>
-              <td mat-cell *matCellDef="let e"><span class="chip" [class.in]="e.eventType === 'ENTRADA' || e.eventType === 'FIN_DESCANSO'" [class.out]="e.eventType === 'SALIDA' || e.eventType === 'INICIO_DESCANSO'">{{ eventLabel(e.eventType) }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="site">
-              <th mat-header-cell *matHeaderCellDef>{{ 'attendanceEvents.col.site' | transloco }}</th>
-              <td mat-cell *matCellDef="let e">
-                @if (e.siteless) {
-                  <span class="siteless" [title]="'attendanceEvents.sitelessTooltip' | transloco">{{ 'attendanceEvents.siteless' | transloco }}</span>
-                } @else {
-                  {{ e.workSite || '—' }}
-                }
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | transloco }}</th>
-              <td mat-cell *matCellDef="let e"><span class="chip" [class.ok]="e.status === 'ACCEPTED'" [class.bad]="e.status === 'REJECTED'" [matTooltip]="rejectionTooltip(e)" [matTooltipDisabled]="!rejectionTooltip(e)">{{ statusLabel(e.status) }}</span></td>
-            </ng-container>
-
-            <!-- Fila de filtros (Excel) -->
-            <ng-container matColumnDef="date-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell"><input class="cf" [placeholder]="'common.filter' | transloco" (input)="setF('date', $event)" /></th>
-            </ng-container>
-            <ng-container matColumnDef="user-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell"><input class="cf" [placeholder]="'attendanceEvents.nameOrCode' | transloco" (input)="setF('user', $event)" /></th>
-            </ng-container>
-            <ng-container matColumnDef="event-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell">
-                <select class="cf" (change)="setF('event', $event)"><option value="">{{ 'common.all' | transloco }}</option>@for (o of eventCodes; track o) { <option [value]="o">{{ eventLabel(o) }}</option> }</select>
-              </th>
-            </ng-container>
-            <ng-container matColumnDef="site-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell"><input class="cf" [placeholder]="'common.filter' | transloco" (input)="setF('site', $event)" /></th>
-            </ng-container>
-            <ng-container matColumnDef="status-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell">
-                <select class="cf" (change)="setF('status', $event)"><option value="">{{ 'common.all' | transloco }}</option>@for (s of statusCodes; track s) { <option [value]="s">{{ statusLabel(s) }}</option> }</select>
-              </th>
-            </ng-container>
-            <ng-container matColumnDef="evidence">
-              <th mat-header-cell *matHeaderCellDef class="ecell">{{ 'attendanceEvents.col.photo' | transloco }}</th>
-              <td mat-cell *matCellDef="let e" class="ecell">
-                @if (e.hasEvidence) {
-                  <mat-icon class="has-photo" [matTooltip]="'attendanceEvents.viewPhoto' | transloco">photo_camera</mat-icon>
-                } @else {
-                  <span class="muted">—</span>
-                }
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="evidence-f">
-              <th mat-header-cell *matHeaderCellDef class="fcell"></th>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="columns"></tr>
-            <tr mat-header-row *matHeaderRowDef="filterColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: columns" class="clickable" (click)="openDetail(row)"></tr>
-          </table>
-        </div>
-
-        @if (!loading() && filtered().length === 0) {
-          <app-empty-state icon="fact_check" [message]="'attendanceEvents.empty' | transloco" />
-        }
-      </mat-card-content>
-    </mat-card>
-  `,
   styles: [
     `
-      .period-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: var(--nx-space-4); }
-      .dates { display: flex; gap: 12px; }
-      .dates label { font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); display: flex; flex-direction: column; gap: 4px; }
-      .dates input { border: 1px solid var(--nx-color-border-strong); border-radius: 8px; padding: 8px 10px; background: var(--nx-color-surface-default); color: var(--nx-color-text-primary); font: inherit; }
-      .spacer { flex: 1; }
-      .mono { font-variant-numeric: tabular-nums; }
-      .nm { font-weight: var(--nx-font-weight-semibold); }
-      .sub { font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); }
-      td.mat-mdc-cell { white-space: nowrap; }
-      .chip { display: inline-block; padding: 2px 10px; border-radius: var(--nx-radius-full); font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); background: var(--nx-color-status-neutral-bg); color: var(--nx-color-status-neutral-fg); }
-      .chip.in { background: var(--nx-color-status-success-bg); color: var(--nx-color-status-success-fg); }
-      .chip.out { background: var(--nx-color-status-warning-bg); color: var(--nx-color-status-warning-fg); }
-      .chip.ok { background: var(--nx-color-status-success-bg); color: var(--nx-color-status-success-fg); }
-      .chip.bad { background: var(--nx-color-status-error-bg); color: var(--nx-color-status-error-fg); }
-      .fcell { padding-top: 6px !important; padding-bottom: 6px !important; background: var(--nx-color-surface-subtle); }
-      .ecell { width: 64px; text-align: center; }
-      .has-photo { color: var(--nx-color-action-primary); vertical-align: middle; }
-      tr.clickable { cursor: pointer; }
-      tr.clickable:hover { background: var(--nx-color-surface-subtle); }
-      .cf { width: 100%; min-width: 110px; padding: 7px 9px; border: 1px solid var(--nx-color-border-strong); border-radius: 8px; background: var(--nx-color-surface-default); color: var(--nx-color-text-primary); font: inherit; font-size: var(--nx-text-small-size); }
-      .cf:focus { outline: none; border-color: var(--nx-color-action-primary); box-shadow: 0 0 0 3px var(--nx-color-action-primary-subtle); }
-      select.cf { cursor: pointer; }
-      .siteless { display: inline-block; padding: 2px 10px; border-radius: var(--nx-radius-full); font-size: var(--nx-text-small-size); font-weight: var(--nx-font-weight-semibold); background: var(--nx-color-status-warning-bg); color: var(--nx-color-status-warning-fg); }
+      p { margin: var(--nx-space-0); }
+      mat-form-field { width: 100%; }
+      .exportar .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
+      .nx-fila-filtros th { padding-block: var(--nx-space-1); }
+      input.nx-mini, select.nx-mini { width: 100%; background: var(--nx-color-surface-default); font-family: inherit; text-transform: none; letter-spacing: var(--nx-font-tracking-normal); }
+      input.nx-mini::placeholder { color: var(--nx-color-text-placeholder); }
+      .nx-fila-link { padding: var(--nx-space-0); border: 0; background: transparent; font: inherit; color: var(--nx-color-action-primary); cursor: pointer; text-align: left; }
+      tbody tr { cursor: pointer; }
+      td { white-space: nowrap; }
+      .foto { color: var(--nx-color-action-primary); }
     `,
   ],
+  template: `
+    <app-loading-bar [active]="loading()" />
+    <app-page-header [title]="'layout.nav.attendanceEvents' | transloco" />
+
+    @if (error()) {
+      <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco">
+        <button mat-stroked-button type="button" (click)="reload()">{{ 'common.retry' | transloco }}</button>
+      </app-empty-state>
+    } @else {
+      <section class="nx-panel nx-panel--listado">
+        <div class="nx-filtros nx-filtros--reporte nx-filtros--periodo">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-campo--fecha2">
+            <mat-label>{{ 'period.label' | transloco }}</mat-label>
+            <mat-select [value]="period()" (selectionChange)="setPeriod($event.value)">
+              @for (p of periods; track p) { <mat-option [value]="p">{{ 'period.' + p | transloco }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-campo--fecha">
+            <mat-label>{{ 'period.from' | transloco }}</mat-label>
+            <input matInput type="date" [value]="from()" (change)="onDate('from', $event)" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-campo--fecha">
+            <mat-label>{{ 'period.to' | transloco }}</mat-label>
+            <input matInput type="date" [value]="to()" (change)="onDate('to', $event)" />
+          </mat-form-field>
+
+          <div class="nx-filtros__acciones">
+            @if (activeFilters() > 0) {
+              <button mat-button type="button" (click)="clearFilters()">
+                <mat-icon>filter_alt_off</mat-icon>{{ 'common.clear' | transloco }}
+                <span class="nx-text-numeric">({{ activeFilters() }})</span>
+              </button>
+            }
+            <button mat-flat-button type="button" class="exportar" (click)="exportExcel()"
+                    [disabled]="filtered().length === 0 || exporting()" [attr.aria-busy]="exporting()">
+              @if (exporting()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>download</mat-icon> }
+              {{ 'people.exportExcel' | transloco }}
+            </button>
+          </div>
+        </div>
+
+        @if (!loading() && events().length === 0) {
+          <app-empty-state icon="history" [message]="'attendanceEvents.empty' | transloco" />
+        } @else {
+          <p class="nx-contador">
+            <b class="nx-text-numeric">{{ filtered().length | appNumber }}</b>
+            {{ (filtered().length === 1 ? 'reports.recordOne' : 'reports.recordMany') | transloco }}
+          </p>
+
+          <div class="nx-tabla">
+            <div class="nx-tabla__scroll nx-scroll" nxScroll>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{{ 'attendanceEvents.col.date' | transloco }}</th>
+                    <th scope="col">{{ 'attendanceEvents.col.collaborator' | transloco }}</th>
+                    <th scope="col">{{ 'attendanceEvents.col.event' | transloco }}</th>
+                    <th scope="col">{{ 'attendanceEvents.col.site' | transloco }}</th>
+                    <th scope="col">{{ 'common.status' | transloco }}</th>
+                    <th scope="col">{{ 'attendanceEvents.col.photo' | transloco }}</th>
+                  </tr>
+                  <tr class="nx-fila-filtros">
+                    <th><input class="nx-campo__caja nx-mini" [placeholder]="'common.filter' | transloco" [attr.aria-label]="'attendanceEvents.col.date' | transloco" [value]="filters()['date'] ?? ''" (input)="setF('date', $event)" /></th>
+                    <th><input class="nx-campo__caja nx-mini" [placeholder]="'common.filter' | transloco" [attr.aria-label]="'attendanceEvents.nameOrCode' | transloco" [value]="filters()['user'] ?? ''" (input)="setF('user', $event)" /></th>
+                    <th>
+                      <select class="nx-campo__caja nx-mini" [attr.aria-label]="'attendanceEvents.col.event' | transloco" [value]="filters()['event'] ?? ''" (change)="setF('event', $event)">
+                        <option value="">{{ 'common.all' | transloco }}</option>
+                        @for (o of eventCodes; track o) { <option [value]="o">{{ eventLabel(o) }}</option> }
+                      </select>
+                    </th>
+                    <th><input class="nx-campo__caja nx-mini" [placeholder]="'common.filter' | transloco" [attr.aria-label]="'attendanceEvents.col.site' | transloco" [value]="filters()['site'] ?? ''" (input)="setF('site', $event)" /></th>
+                    <th>
+                      <select class="nx-campo__caja nx-mini" [attr.aria-label]="'common.status' | transloco" [value]="filters()['status'] ?? ''" (change)="setF('status', $event)">
+                        <option value="">{{ 'common.all' | transloco }}</option>
+                        @for (s of statusCodes; track s) { <option [value]="s">{{ statusLabel(s) }}</option> }
+                      </select>
+                    </th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (e of paged(); track e.recordId) {
+                    <tr (click)="openDetail(e)">
+                      <td class="nx-text-code">
+                        <button type="button" class="nx-fila-link nx-text-numeric" (click)="openDetail(e); $event.stopPropagation()"
+                                [attr.aria-label]="'attendanceEvents.openDetail' | transloco: { name: e.employeeName || e.userId }">
+                          {{ e.serverTime | appDate: dateTime }}
+                        </button>
+                      </td>
+                      <td>
+                        {{ e.employeeName || e.userId }}
+                        @if (e.employeeCode) { <br /><span class="nx-text-small nx-sec">{{ e.employeeCode }}</span> }
+                      </td>
+                      <td><span class="nx-chip nx-chip--{{ isInOut(e.eventType) ? 'info' : 'neutral' }}">{{ eventLabel(e.eventType) }}</span></td>
+                      <td>
+                        @if (e.siteless) {
+                          <span class="nx-chip nx-chip--neutral" [matTooltip]="'attendanceEvents.sitelessTooltip' | transloco">{{ 'attendanceEvents.siteless' | transloco }}</span>
+                        } @else {
+                          <span class="nx-trunc">{{ e.workSite || '—' }}</span>
+                        }
+                      </td>
+                      <td>
+                        <app-status-chip [status]="e.status" [label]="statusLabel(e.status)"
+                          [matTooltip]="rejectionTooltip(e)" [matTooltipDisabled]="!rejectionTooltip(e)" />
+                      </td>
+                      <td>
+                        @if (e.hasEvidence) {
+                          <mat-icon class="foto" [attr.aria-label]="'attendanceEvents.viewPhoto' | transloco">photo_camera</mat-icon>
+                        } @else {
+                          <span aria-hidden="true">—</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          @if (!loading() && filtered().length === 0) {
+            <app-empty-state icon="search" [message]="'common.noResults' | transloco">
+              <button mat-button type="button" (click)="clearFilters()">{{ 'common.clearFilters' | transloco }}</button>
+            </app-empty-state>
+          }
+
+          <mat-paginator
+            [length]="filtered().length"
+            [pageSize]="pageSize()"
+            [pageIndex]="pageIndex()"
+            [pageSizeOptions]="pageSizeOptions"
+            (page)="onPage($event)"
+          />
+        }
+      </section>
+    }
+  `,
 })
 export class AttendanceEventsComponent {
   private readonly service = inject(AttendanceEventsService);
   private readonly dialog = inject(MatDialog);
-  private readonly language = inject(LanguageService);
   private readonly transloco = inject(TranslocoService);
+  private readonly datePipe = new AppDatePipe();
 
-  protected readonly columns = ['date', 'user', 'event', 'site', 'status', 'evidence'];
-  protected readonly filterColumns = ['date-f', 'user-f', 'event-f', 'site-f', 'status-f', 'evidence-f'];
+  protected readonly periods = PERIODS;
   protected readonly eventCodes = EVENT_CODES;
-  protected readonly statusCodes = ['ACCEPTED', 'REJECTED', 'PENDING_REVIEW'];
+  protected readonly statusCodes = STATUS_CODES;
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  protected readonly dateTime = DATE_TIME;
 
   protected readonly events = signal<AttendanceEvent[]>([]);
   protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal(false);
+  protected readonly exporting = signal(false);
   protected readonly period = signal<Period>('fortnight');
   protected readonly from = signal('');
   protected readonly to = signal('');
-  protected readonly filters = signal<Record<string, string>>({});
+  protected readonly filters = signal<Partial<Record<FilterKey, string>>>({});
+  protected readonly pageIndex = signal(0);
+  protected readonly pageSize = pageSizePreference('attendance-events');
 
-  protected readonly hasColumnFilters = computed(() => Object.values(this.filters()).some((v) => !!v));
+  /** Cambios de rango: recargan con la espera de la búsqueda en el servidor. */
+  private readonly range$ = new Subject<void>();
+
+  protected readonly activeFilters = computed(() => Object.values(this.filters()).filter((v) => !!v).length);
 
   protected readonly filtered = computed(() => {
     const f = this.filters();
-    return this.events().filter((e) => {
-      if (f['date'] && !this.fmt(e.serverTime).toLowerCase().includes(f['date'].toLowerCase())) return false;
-      if (f['user'] && !`${e.employeeName ?? ''} ${e.employeeCode ?? ''}`.toLowerCase().includes(f['user'].toLowerCase())) return false;
-      if (f['event'] && e.eventType !== f['event']) return false;
-      if (f['site'] && !(e.siteless ? this.transloco.translate('attendanceEvents.siteless') : (e.workSite ?? '')).toLowerCase().includes(f['site'].toLowerCase())) return false;
-      if (f['status'] && e.status !== f['status']) return false;
-      return true;
-    });
+    const has = (value: string, term?: string) => !term || value.toLowerCase().includes(term.toLowerCase());
+    return this.events()
+      .filter((e) => {
+        if (!has(this.fmt(e.serverTime), f.date)) return false;
+        if (!has(`${e.employeeName ?? ''} ${e.employeeCode ?? ''}`, f.user)) return false;
+        if (f.event && e.eventType !== f.event) return false;
+        const site = e.siteless ? this.transloco.translate('attendanceEvents.siteless') : (e.workSite ?? '');
+        if (!has(site, f.site)) return false;
+        return !f.status || e.status === f.status;
+      })
+      .sort((a, b) => b.serverTime.localeCompare(a.serverTime));
+  });
+
+  protected readonly paged = computed(() => {
+    const size = this.pageSize();
+    const start = this.pageIndex() * size;
+    return this.filtered().slice(start < this.filtered().length ? start : 0).slice(0, size);
   });
 
   constructor() {
+    this.range$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed()).subscribe(() => this.reload());
     this.setPeriod('fortnight');
   }
 
@@ -217,56 +274,88 @@ export class AttendanceEventsComponent {
 
   protected onDate(which: 'from' | 'to', event: Event): void {
     const v = (event.target as HTMLInputElement).value;
-    if (which === 'from') this.from.set(v); else this.to.set(v);
+    if (which === 'from') this.from.set(v);
+    else this.to.set(v);
     this.period.set('range');
-    if (this.from() && this.to()) this.reload();
+    if (this.from() && this.to()) this.range$.next();
   }
 
-  protected setF(key: string, event: Event): void {
+  protected setF(key: FilterKey, event: Event): void {
     const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
     this.filters.update((f) => ({ ...f, [key]: value }));
+    this.pageIndex.set(0);
   }
 
   protected clearFilters(): void {
     this.filters.set({});
+    this.pageIndex.set(0);
+  }
+
+  protected onPage(event: PageEvent): void {
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
   }
 
   protected reload(): void {
     if (!this.from() || !this.to()) return;
     this.loading.set(true);
-    this.error.set(null);
+    this.error.set(false);
     this.service.list(this.from(), this.to()).subscribe({
-      next: (rows) => { this.events.set(rows); this.loading.set(false); },
-      error: () => { this.error.set(this.transloco.translate('attendanceEvents.loadError')); this.loading.set(false); },
+      next: (rows) => {
+        this.events.set(rows);
+        this.pageIndex.set(0);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set(true);
+        this.loading.set(false);
+      },
     });
   }
 
-  /** Abre el detalle de la marcación, con su evidencia fotográfica si la tiene (HU-13). */
+  /** Abre el detalle de la marcación, con su evidencia fotográfica si la tiene (P41, HU-13). */
   protected openDetail(event: AttendanceEvent): void {
-    this.dialog.open(AttendanceDetailDialogComponent, { data: event, autoFocus: false });
+    this.dialog.open(AttendanceDetailDialogComponent, {
+      data: event,
+      ariaLabel: this.transloco.translate('attendanceEvents.detail.title'),
+    });
   }
 
   // La evidencia no se incluye en la exportación: su URL caduca a los pocos minutos y dentro de
   // un Excel sería un enlace roto que aparenta ser la foto.
   protected exportExcel(): void {
-    const header = [
-      'attendanceEvents.col.date', 'users.employee', 'common.code', 'attendanceEvents.col.event',
-      'attendanceEvents.col.site', 'common.status', 'attendanceEvents.col.rejection',
-    ].map((k) => this.transloco.translate(k));
-    const rows = this.filtered().map((e) => [
-      this.fmt(e.serverTime), e.employeeName ?? e.userId, e.employeeCode ?? '',
-      this.eventLabel(e.eventType), e.siteless ? this.transloco.translate('attendanceEvents.siteless') : (e.workSite ?? ''),
-      this.statusLabel(e.status), this.rejectionTooltip(e),
-    ]);
-    const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    const book = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(book, sheet, this.transloco.translate('layout.nav.attendanceEvents'));
-    XLSX.writeFile(book, `entradas-salidas-${this.from()}_a_${this.to()}.xlsx`);
+    const rowsToExport = this.filtered();
+    if (rowsToExport.length === 0) return;
+    this.exporting.set(true);
+    setTimeout(() => {
+      try {
+        const header = [
+          'attendanceEvents.col.date', 'attendanceEvents.col.collaborator', 'common.code', 'attendanceEvents.col.event',
+          'attendanceEvents.col.site', 'common.status', 'attendanceEvents.col.rejection',
+        ].map((k) => this.transloco.translate(k));
+        const rows = rowsToExport.map((e) => [
+          this.fmt(e.serverTime), e.employeeName ?? e.userId, e.employeeCode ?? '',
+          this.eventLabel(e.eventType), e.siteless ? this.transloco.translate('attendanceEvents.siteless') : (e.workSite ?? ''),
+          this.statusLabel(e.status), this.rejectionTooltip(e),
+        ]);
+        const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+        const book = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(book, sheet, this.transloco.translate('layout.nav.attendanceEvents'));
+        XLSX.writeFile(book, `entradas-salidas-${this.from()}_a_${this.to()}.xlsx`);
+      } finally {
+        this.exporting.set(false);
+      }
+    });
   }
 
   // ---- helpers ----
   protected eventLabel(code: string): string { return eventLabel(code); }
   protected statusLabel(code: string): string { return recordStatusLabel(code); }
+
+  /** Entrada y salida van en tono informativo; descansos y cambio de sitio, en neutral. */
+  protected isInOut(code: string): boolean {
+    return code === 'ENTRADA' || code === 'SALIDA';
+  }
 
   /** Motivo de rechazo legible para el tooltip del estado (vacío si no aplica). */
   protected rejectionTooltip(e: AttendanceEvent): string {
@@ -274,10 +363,8 @@ export class AttendanceEventsComponent {
     return rejectionLabel(e.rejectionReason);
   }
 
-  protected fmt(iso: string): string {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleString(this.language.intlLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  private fmt(iso: string): string {
+    return this.datePipe.transform(iso, DATE_TIME);
   }
 
   /** [from, to] en yyyy-MM-dd para el preset dado (semana lun–dom, quincena 1–15/16–fin, mes completo). */
