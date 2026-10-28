@@ -1,24 +1,30 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
-import { BreadcrumbComponent } from '../../../core/ui/breadcrumb.component';
-import { NotificationService } from '../../../core/ui/notification.service';
-import { PageHeaderComponent } from '../../../core/ui/page-header.component';
-import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { browserTimeZone, timezoneOptions } from '../../../core/models/timezones';
-import { SCHEDULE_STATUSES, Schedule } from './scheduling.models';
+import { AlertComponent } from '../../../core/ui/alert.component';
+import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
+import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
+import { NotificationService } from '../../../core/ui/notification.service';
+import { localizedProblem } from '../../../core/ui/problem-detail';
+import { ScrollDirective } from '../../../core/ui/scroll.directive';
+import { SCHEDULE_STATUSES, Schedule, Shift } from './scheduling.models';
 import { SchedulingService } from './scheduling.service';
+import { ShiftDialogComponent, ShiftDialogData } from './shift-dialog.component';
 
-/** Alta / edición de horario en página completa (con breadcrumb). Turnos y asignaciones se gestionan desde el listado. */
+/**
+ * P29 · Nuevo o editar horario (página, patrón Formulario): código y nombre obligatorios, zona horaria
+ * (precargada del navegador) y estado; debajo, la tabla de turnos con «Agregar turno». Al crear se
+ * pasa a la edición del horario recién guardado para poder darle turnos.
+ */
 @Component({
   selector: 'app-schedule-form',
   standalone: true,
@@ -29,110 +35,123 @@ import { SchedulingService } from './scheduling.service';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatProgressBarModule,
     MatSelectModule,
-    BreadcrumbComponent,
-    PageHeaderComponent,
-    StatusChipComponent,
     TranslocoPipe,
+    AlertComponent,
+    EmptyStateComponent,
+    LoadingBarComponent,
+    ScrollDirective,
+  ],
+  styles: [
+    `
+      h1, h2 { margin: var(--nx-space-0); }
+      mat-form-field { width: 100%; }
+      td { white-space: nowrap; }
+      .encabezado { display: flex; align-items: center; justify-content: space-between; gap: var(--nx-space-gap-related); }
+      .nx-form__acciones .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
+    `,
   ],
   template: `
-    <app-breadcrumb
-      [items]="[
-        { label: ('layout.group.planning' | transloco), route: '/scheduling' },
-        { label: ('layout.nav.scheduling' | transloco), route: '/scheduling' },
-        { label: isEdit() ? (schedule()?.name ?? '') : ('scheduling.new' | transloco) },
-      ]"
-    />
-    <app-page-header [title]="(isEdit() ? 'scheduling.edit' : 'scheduling.new') | transloco" />
+    <div class="nx-regresar">
+      <a mat-button routerLink="/scheduling"><mat-icon>arrow_back</mat-icon>{{ 'common.back' | transloco }}</a>
+    </div>
+    <app-loading-bar [active]="loading()" />
 
-    @if (loading()) { <mat-progress-bar mode="indeterminate" style="margin-bottom:16px" /> }
-    @if (error()) { <p class="error-text">{{ error() }}</p> }
+    @if (error()) {
+      <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco" />
+    } @else {
+      <form class="nx-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <h1 class="nx-text-heading-1">{{ (isEdit() ? 'scheduling.edit' : 'scheduling.new') | transloco }}</h1>
+        @if (problem()) { <app-alert tone="error">{{ problem() }}</app-alert> }
 
-    <div class="form-page-layout">
-      <div class="form-page-main">
-        <h3 class="form-section-title">{{ 'scheduling.form.info' | transloco }}</h3>
-        <form [formGroup]="form">
-          <div class="form-grid-2">
-            <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>{{ 'common.code' | transloco }}</mat-label>
-              <input matInput formControlName="code" />
-              <mat-hint>{{ 'scheduling.form.codeHint' | transloco }}</mat-hint>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>{{ 'common.name' | transloco }}</mat-label>
-              <input matInput formControlName="name" />
-              <mat-hint>{{ 'scheduling.form.nameHint' | transloco }}</mat-hint>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>{{ 'companies.form.timezone' | transloco }}</mat-label>
-              <mat-select formControlName="timezone">
-                @for (tz of tzOptions(); track tz.value) {
-                  <mat-option [value]="tz.value">{{ tz.label }}</mat-option>
-                }
+        <div class="nx-form__grid">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'common.code' | transloco }}</mat-label>
+            <input matInput formControlName="code" required autocomplete="off" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'common.name' | transloco }}</mat-label>
+            <input matInput formControlName="name" required autocomplete="off" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ 'companies.form.timezone' | transloco }}</mat-label>
+            <mat-select formControlName="timezone" required>
+              @for (tz of tzOptions(); track tz.value) { <mat-option [value]="tz.value">{{ tz.label }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          @if (isEdit()) {
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'common.status' | transloco }}</mat-label>
+              <mat-select formControlName="status">
+                @for (s of statuses; track s) { <mat-option [value]="s">{{ 'status.' + s | transloco }}</mat-option> }
               </mat-select>
-              <mat-hint>{{ 'scheduling.form.timezoneHint' | transloco }}</mat-hint>
             </mat-form-field>
-            @if (isEdit()) {
-              <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>{{ 'common.status' | transloco }}</mat-label>
-                <mat-select formControlName="status">
-                  @for (s of statuses; track s) { <mat-option [value]="s">{{ 'status.' + s | transloco }}</mat-option> }
-                </mat-select>
-                <mat-hint>{{ 'scheduling.form.statusHint' | transloco }}</mat-hint>
-              </mat-form-field>
+          }
+        </div>
+
+        @if (isEdit()) {
+          <div class="encabezado">
+            <h2 class="nx-text-heading-3">{{ 'scheduling.shifts' | transloco }}</h2>
+            @if (shifts().length > 0) {
+              <button mat-stroked-button type="button" (click)="openShift()"><mat-icon>add</mat-icon>{{ 'scheduling.addShift' | transloco }}</button>
             }
           </div>
-        </form>
-
-        <div class="form-actions">
-          <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
-          <button mat-flat-button color="primary" [disabled]="!formValid() || saving()" (click)="save()">
-            <mat-icon>save</mat-icon> {{ (isEdit() ? 'common.saveChanges' : 'scheduling.form.save') | transloco }}
-          </button>
-        </div>
-      </div>
-
-      <div class="form-page-side">
-        <div class="info-card tip">
-          <h3 class="info-card-title">{{ 'companies.form.importantInfo' | transloco }}</h3>
-          <div class="icon-row">
-            <mat-icon>schedule</mat-icon>
-            <div>
-              <p class="row-title">{{ 'scheduling.form.whatIs' | transloco }}</p>
-              <p class="row-desc">{{ 'scheduling.form.whatIsText' | transloco }}</p>
-            </div>
-          </div>
-          <div class="icon-row">
-            <mat-icon>badge</mat-icon>
-            <div>
-              <p class="row-title">{{ 'companies.form.uniqueCode' | transloco }}</p>
-              <p class="row-desc">{{ 'scheduling.form.uniqueCodeText' | transloco }}</p>
-            </div>
-          </div>
-        </div>
-
-        @if (isEdit() && schedule(); as s) {
-          <div class="info-card">
-            <div class="entity-avatar-row">
-              <div class="entity-avatar"><mat-icon>calendar_month</mat-icon></div>
-              <div>
-                <p class="entity-avatar-name">{{ s.name }}</p>
-                <app-status-chip [status]="s.status" />
+          @if (shifts().length === 0) {
+            <app-empty-state icon="schedule" [message]="'scheduling.noShifts' | transloco">
+              <button mat-stroked-button type="button" (click)="openShift()"><mat-icon>add</mat-icon>{{ 'scheduling.addShift' | transloco }}</button>
+            </app-empty-state>
+          } @else {
+            <div class="nx-tabla">
+              <div class="nx-tabla__scroll nx-scroll" nxScroll>
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{{ 'common.name' | transloco }}</th>
+                      <th scope="col">{{ 'scheduling.start' | transloco }}</th>
+                      <th scope="col">{{ 'scheduling.end' | transloco }}</th>
+                      <th scope="col">{{ 'scheduling.crossesMidnight' | transloco }}</th>
+                      <th scope="col" class="num">{{ 'scheduling.break' | transloco }}</th>
+                      <th scope="col" class="num">{{ 'scheduling.tolerances' | transloco }}</th>
+                      <th scope="col" class="num">{{ 'scheduling.windows' | transloco }}</th>
+                      <th scope="col" class="nx-col-acciones">{{ 'common.actions' | transloco }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (s of shifts(); track s.id) {
+                      <tr>
+                        <td>{{ s.name }}</td>
+                        <td class="nx-text-numeric">{{ s.startTime.substring(0, 5) }}</td>
+                        <td class="nx-text-numeric">{{ s.endTime.substring(0, 5) }}</td>
+                        <td>
+                          @if (s.crossesMidnight) { <span class="nx-chip nx-chip--informativo">{{ 'common.yes' | transloco }}</span> }
+                          @else { {{ 'common.no' | transloco }} }
+                        </td>
+                        <td class="num nx-text-numeric">{{ s.breakMinutes }} min</td>
+                        <td class="num nx-text-numeric">{{ s.lateToleranceMin }} / {{ s.earlyToleranceMin }} min</td>
+                        <td class="num nx-text-numeric">{{ s.windowBeforeMin }} / {{ s.windowAfterMin }} min</td>
+                        <td class="nx-col-acciones">
+                          <button mat-icon-button type="button" (click)="openShift(s)" [attr.aria-label]="'scheduling.editShiftOf' | transloco: { name: s.name }">
+                            <mat-icon>edit</mat-icon>
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
               </div>
             </div>
-            <div class="info-row"><span class="k">{{ 'common.code' | transloco }}</span><span class="v">{{ s.code }}</span></div>
-          </div>
-          <div class="info-card">
-            <h3 class="info-card-title">{{ 'scheduling.form.shiftsTitle' | transloco }}</h3>
-            <p class="muted" style="margin:0 0 var(--nx-space-3)">{{ 'scheduling.form.shiftsText' | transloco }}</p>
-            <a mat-stroked-button [routerLink]="['/scheduling']">
-              <mat-icon>schedule</mat-icon> {{ 'scheduling.form.goToList' | transloco }}
-            </a>
-          </div>
+          }
         }
-      </div>
-    </div>
+
+        <div class="nx-form__acciones">
+          <button mat-button type="button" (click)="cancel()"><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
+          <button mat-flat-button type="submit" [disabled]="saving()" [attr.aria-busy]="saving()">
+            @if (saving()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>save</mat-icon> }
+            {{ 'common.save' | transloco }}
+          </button>
+        </div>
+      </form>
+    }
   `,
 })
 export class ScheduleFormComponent {
@@ -141,6 +160,7 @@ export class ScheduleFormComponent {
   private readonly router = inject(Router);
   private readonly service = inject(SchedulingService);
   private readonly notify = inject(NotificationService);
+  private readonly dialog = inject(MatDialog);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly statuses = SCHEDULE_STATUSES;
@@ -148,14 +168,14 @@ export class ScheduleFormComponent {
   protected readonly isEdit = computed(() => !!this.scheduleId);
 
   protected readonly schedule = signal<Schedule | null>(null);
+  protected readonly shifts = signal<Shift[]>([]);
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal(false);
+  protected readonly problem = signal<string | null>(null);
 
   /** La lista es curada; se añade la zona guardada —o la precargada del navegador— si no está en ella. */
-  protected readonly tzOptions = computed(() =>
-    timezoneOptions(this.schedule()?.timezone || browserTimeZone()),
-  );
+  protected readonly tzOptions = computed(() => timezoneOptions(this.schedule()?.timezone || browserTimeZone()));
 
   protected readonly form = this.fb.nonNullable.group({
     code: ['', [Validators.required]],
@@ -166,30 +186,44 @@ export class ScheduleFormComponent {
     status: ['ACTIVE'],
   });
 
-  private readonly formStatus = toSignal(this.form.statusChanges, { initialValue: this.form.status });
-  protected readonly formValid = computed(() => this.formStatus() === 'VALID');
-
   constructor() {
     if (this.scheduleId) {
       this.loading.set(true);
       this.service.getSchedule(this.scheduleId).subscribe({
         next: (s) => {
           this.schedule.set(s);
-          this.form.reset({
-            code: s.code,
-            name: s.name,
-            timezone: s.timezone || browserTimeZone(),
-            status: s.status,
-          });
+          this.form.reset({ code: s.code, name: s.name, timezone: s.timezone || browserTimeZone(), status: s.status });
           this.form.controls.code.disable();
           this.loading.set(false);
         },
         error: () => {
-          this.error.set(this.transloco.translate('scheduling.form.loadError'));
+          this.error.set(true);
           this.loading.set(false);
         },
       });
+      this.loadShifts();
     }
+  }
+
+  private loadShifts(): void {
+    if (!this.scheduleId) return;
+    this.service.listShifts(this.scheduleId).subscribe({
+      next: (list) => this.shifts.set([...list].sort((a, b) => a.name.localeCompare(b.name, 'es'))),
+      error: () => this.notify.error(this.transloco.translate('scheduling.shiftsError')),
+    });
+  }
+
+  protected openShift(shift?: Shift): void {
+    if (!this.scheduleId) return;
+    this.dialog
+      .open<ShiftDialogComponent, ShiftDialogData, boolean>(ShiftDialogComponent, { data: { scheduleId: this.scheduleId, shift } })
+      .afterClosed()
+      .subscribe((saved) => {
+        if (saved) {
+          this.notify.success(this.transloco.translate(shift ? 'scheduling.shiftUpdated' : 'scheduling.shiftAdded'));
+          this.loadShifts();
+        }
+      });
   }
 
   protected cancel(): void {
@@ -198,26 +232,35 @@ export class ScheduleFormComponent {
 
   protected save(): void {
     if (this.form.invalid) {
+      this.form.markAllAsTouched();
       return;
     }
     const raw = this.form.getRawValue();
     this.saving.set(true);
-    const request$ = this.scheduleId
-      ? this.service.updateSchedule(this.scheduleId, {
-          name: raw.name,
-          timezone: raw.timezone || undefined,
-          status: raw.status as Schedule['status'],
-        })
-      : this.service.createSchedule({ code: raw.code, name: raw.name, timezone: raw.timezone || undefined });
-    request$.subscribe({
-      next: () => {
-        this.notify.success(this.transloco.translate(this.scheduleId ? 'scheduling.form.updated' : 'scheduling.form.created'));
-        void this.router.navigate(['/scheduling']);
+    this.problem.set(null);
+    if (this.scheduleId) {
+      this.service
+        .updateSchedule(this.scheduleId, { name: raw.name, timezone: raw.timezone || undefined, status: raw.status as Schedule['status'] })
+        .subscribe({
+          next: () => {
+            this.notify.success(this.transloco.translate('scheduling.form.updated'));
+            void this.router.navigate(['/scheduling']);
+          },
+          error: (err) => this.fail(err),
+        });
+      return;
+    }
+    this.service.createSchedule({ code: raw.code, name: raw.name, timezone: raw.timezone || undefined }).subscribe({
+      next: (created) => {
+        this.notify.success(this.transloco.translate('scheduling.form.created'));
+        void this.router.navigate(['/scheduling', created.id, 'edit']);
       },
-      error: () => {
-        this.saving.set(false);
-        this.notify.error(this.transloco.translate('scheduling.form.saveError'));
-      },
+      error: (err) => this.fail(err),
     });
+  }
+
+  private fail(err: unknown): void {
+    this.saving.set(false);
+    this.problem.set(localizedProblem(this.transloco, err, 'scheduling.form.saveError'));
   }
 }

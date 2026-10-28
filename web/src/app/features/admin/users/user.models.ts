@@ -20,3 +20,10 @@ export interface CreateUser {
   password: string;
   roleCodes?: string[];
 }
+
+/** Filtros del listado que resuelve el servidor (además de la búsqueda). */
+export interface UserListFilters {
+  employeeCode?: string;
+  status?: UserStatus | '';
+  role?: string;
+}

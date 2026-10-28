@@ -2,7 +2,6 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -10,8 +9,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { catchError, map, of, switchMap } from 'rxjs';
 
+import { AlertComponent } from '../../../core/ui/alert.component';
 import { NotificationService } from '../../../core/ui/notification.service';
 import { localizedProblem } from '../../../core/ui/problem-detail';
+import { ScrollDirective } from '../../../core/ui/scroll.directive';
 import { Role, roleLabel } from '../roles/role.models';
 import { EmployeeProfile, GENDERS } from './employee-profile.models';
 import { EmployeeProfileService } from './employee-profile.service';
@@ -22,10 +23,9 @@ export interface UserFormData {
 }
 
 /**
- * Alta de usuario con perfil (RF-06 ampliado). Modal seccionado: datos personales →
- * datos de empresa → cuenta y acceso, con contacto de emergencia y dirección como
- * paneles opcionales (revelado progresivo). Crea el usuario y, si hay datos personales,
- * los guarda en su perfil (sub‑recurso), sin acoplarse al módulo identity.
+ * P21 · Nuevo usuario (drawer, RF-06 ampliado): datos de cuenta y perfil en una sola rejilla de dos
+ * columnas desde breakpoint-md. Crea el usuario y, si hay datos personales, los guarda en su perfil
+ * (sub-recurso). Los rechazos del backend (cupo agotado, correo duplicado) se avisan en el drawer.
  */
 @Component({
   selector: 'app-user-form-dialog',
@@ -38,164 +38,104 @@ export interface UserFormData {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    MatExpansionModule,
     TranslocoPipe,
+    AlertComponent,
+    ScrollDirective,
   ],
   template: `
-    <div class="m-head">
-      <div class="badge-ic"><mat-icon>person_add</mat-icon></div>
-      <div class="t">
-        <h2>{{ 'users.new' | transloco }}</h2>
-        <p>{{ 'users.form.subtitle' | transloco }}</p>
-      </div>
-      <button mat-icon-button (click)="close()" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+    <div class="nx-capa__enc">
+      <h2 class="nx-text-heading-3" mat-dialog-title>{{ 'users.new' | transloco }}</h2>
+      <button mat-icon-button type="button" (click)="close()" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
     </div>
 
-    <form [formGroup]="form" class="m-body">
-      <!-- 1) Datos personales -->
-      <section class="fs">
-        <div class="fs-head"><mat-icon>person</mat-icon><h4>{{ 'profile.personal' | transloco }}</h4><span class="opt">{{ 'users.form.optionalExceptRequired' | transloco }}</span></div>
-        <div class="grid2">
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'common.firstName' | transloco }} *</mat-label>
-            <input matInput formControlName="firstName" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'common.lastName' | transloco }} *</mat-label>
-            <input matInput formControlName="lastName" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'common.employeeCode' | transloco }}</mat-label>
-            <mat-icon matPrefix>badge</mat-icon>
-            <input matInput formControlName="employeeCode" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'profile.gender' | transloco }}</mat-label>
-            <mat-select formControlName="gender">
-              <mat-option [value]="''">{{ 'profile.unspecified' | transloco }}</mat-option>
-              @for (g of genders; track g) { <mat-option [value]="g">{{ 'gender.' + g | transloco }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'profile.birthDate' | transloco }}</mat-label>
-            <input matInput type="date" formControlName="birthDate" />
-            <mat-hint>{{ 'users.form.birthDateHint' | transloco }}</mat-hint>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'profile.phone' | transloco }}</mat-label>
-            <mat-icon matPrefix>call</mat-icon>
-            <input matInput type="tel" formControlName="phone" placeholder="+52 55 1234 5678" />
-          </mat-form-field>
-        </div>
+    <form [formGroup]="form" class="nx-capa__cuerpo nx-scroll" nxScroll id="nuevo-usuario" (ngSubmit)="submit()" aria-live="polite">
+      @if (problem()) { <app-alert tone="error">{{ problem() }}</app-alert> }
 
-        <mat-accordion class="opt-acc">
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              <mat-panel-title><mat-icon>call</mat-icon> {{ 'profile.emergency' | transloco }}</mat-panel-title>
-              <mat-panel-description>{{ 'users.form.emergencyHint' | transloco }}</mat-panel-description>
-            </mat-expansion-panel-header>
-            <div class="grid2">
-              <mat-form-field appearance="outline">
-                <mat-label>{{ 'profile.contactName' | transloco }}</mat-label>
-                <input matInput formControlName="emergencyContactName" />
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>{{ 'profile.contactPhone' | transloco }}</mat-label>
-                <mat-icon matPrefix>call</mat-icon>
-                <input matInput type="tel" formControlName="emergencyContactPhone" />
-              </mat-form-field>
-            </div>
-          </mat-expansion-panel>
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              <mat-panel-title><mat-icon>place</mat-icon> {{ 'profile.address' | transloco }}</mat-panel-title>
-              <mat-panel-description>{{ 'users.form.addressHint' | transloco }}</mat-panel-description>
-            </mat-expansion-panel-header>
-            <mat-form-field appearance="outline" class="full">
-              <mat-label>{{ 'profile.address' | transloco }}</mat-label>
-              <textarea matInput rows="2" formControlName="address" [placeholder]="'profile.addressPlaceholder' | transloco"></textarea>
-            </mat-form-field>
-          </mat-expansion-panel>
-        </mat-accordion>
-      </section>
+      <div class="nx-form__grid">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'common.firstName' | transloco }}</mat-label>
+          <input matInput formControlName="firstName" required autocomplete="off" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'users.form.lastNames' | transloco }}</mat-label>
+          <input matInput formControlName="lastName" required autocomplete="off" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'users.form.email' | transloco }}</mat-label>
+          <input matInput type="email" formControlName="email" required autocomplete="off" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'users.form.employeeCodeOptional' | transloco }}</mat-label>
+          <input matInput formControlName="employeeCode" autocomplete="off" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'users.form.password' | transloco }}</mat-label>
+          <input matInput [type]="showPw() ? 'text' : 'password'" formControlName="password" required autocomplete="new-password" />
+          <button mat-icon-button matSuffix type="button" (click)="showPw.set(!showPw())" [attr.aria-label]="(showPw() ? 'common.hide' : 'common.show') | transloco">
+            <mat-icon>{{ showPw() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <button mat-icon-button matSuffix type="button" (click)="generatePassword()" [attr.aria-label]="'password.generate' | transloco">
+            <mat-icon>autorenew</mat-icon>
+          </button>
+          <mat-hint>{{ 'password.minLength' | transloco }}</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'users.roles' | transloco }}</mat-label>
+          <mat-select formControlName="roleCodes" multiple>
+            @for (role of data.assignableRoles; track role.code) {
+              <mat-option [value]="role.code">{{ roleLabel(role.code) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'users.form.birth' | transloco }}</mat-label>
+          <input matInput type="date" formControlName="birthDate" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'users.form.hire' | transloco }}</mat-label>
+          <input matInput type="date" formControlName="hireDate" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'profile.gender' | transloco }}</mat-label>
+          <mat-select formControlName="gender" [placeholder]="'users.form.select' | transloco">
+            <mat-option [value]="''">{{ 'profile.unspecified' | transloco }}</mat-option>
+            @for (g of genders; track g) { <mat-option [value]="g">{{ 'gender.' + g | transloco }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'profile.phone' | transloco }}</mat-label>
+          <input matInput type="tel" formControlName="phone" autocomplete="off" />
+        </mat-form-field>
+      </div>
 
-      <!-- 2) Datos de empresa -->
-      <section class="fs">
-        <div class="fs-head"><mat-icon>apartment</mat-icon><h4>{{ 'profile.companyData' | transloco }}</h4><span class="opt">{{ 'users.form.optional' | transloco }}</span></div>
-        <div class="grid2">
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'profile.hireDate' | transloco }}</mat-label>
-            <input matInput type="date" formControlName="hireDate" />
-            <mat-hint>{{ 'profile.hireDateHint' | transloco }}</mat-hint>
-          </mat-form-field>
-        </div>
-      </section>
-
-      <!-- 3) Cuenta y acceso -->
-      <section class="fs">
-        <div class="fs-head"><mat-icon>lock</mat-icon><h4>{{ 'users.form.account' | transloco }}</h4></div>
-        <div class="grid2">
-          <mat-form-field appearance="outline" class="full">
-            <mat-label>{{ 'users.form.email' | transloco }} *</mat-label>
-            <mat-icon matPrefix>mail</mat-icon>
-            <input matInput type="email" formControlName="email" placeholder="nombre@empresa.mx" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'users.form.password' | transloco }} *</mat-label>
-            <mat-icon matPrefix>lock</mat-icon>
-            <input matInput [type]="showPw() ? 'text' : 'password'" formControlName="password" autocomplete="new-password" />
-            <button mat-icon-button matSuffix type="button" (click)="showPw.set(!showPw())" [attr.aria-label]="(showPw() ? 'common.hide' : 'common.show') | transloco">
-              <mat-icon>{{ showPw() ? 'visibility_off' : 'visibility' }}</mat-icon>
-            </button>
-            <mat-hint><a class="link" (click)="generatePassword()">{{ 'password.generate' | transloco }}</a> · {{ 'password.minLength' | transloco }}</mat-hint>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'users.roles' | transloco }}</mat-label>
-            <mat-select formControlName="roleCodes" multiple>
-              @for (role of data.assignableRoles; track role.code) {
-                <mat-option [value]="role.code">{{ roleLabel(role.code) }}</mat-option>
-              }
-            </mat-select>
-            <mat-hint>{{ 'users.form.rolesHint' | transloco }}</mat-hint>
-          </mat-form-field>
-        </div>
-      </section>
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'profile.address' | transloco }}</mat-label>
+        <textarea matInput rows="2" formControlName="address"></textarea>
+      </mat-form-field>
+      <div class="nx-form__grid">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'profile.emergency' | transloco }}</mat-label>
+          <input matInput formControlName="emergencyContactName" autocomplete="off" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'profile.contactPhone' | transloco }}</mat-label>
+          <input matInput type="tel" formControlName="emergencyContactPhone" autocomplete="off" />
+        </mat-form-field>
+      </div>
     </form>
 
-    <div class="m-foot">
-      <span class="note"><mat-icon>info</mat-icon> {{ 'users.form.requiredNote' | transloco }}</span>
-      <span class="fill"></span>
-      <button mat-button (click)="close()">{{ 'common.cancel' | transloco }}</button>
-      <button mat-flat-button color="primary" [disabled]="form.invalid || saving()" (click)="submit()">
-        <mat-icon>check</mat-icon> {{ 'users.form.create' | transloco }}
+    <div class="nx-capa__pie">
+      <button mat-button type="button" (click)="close()"><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
+      <button mat-flat-button type="submit" form="nuevo-usuario" [disabled]="saving()" [attr.aria-busy]="saving()">
+        @if (saving()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>save</mat-icon> }
+        {{ 'common.save' | transloco }}
       </button>
     </div>
   `,
   styles: [
     `
-      :host { display: block; }
-      .m-head { display: flex; align-items: center; gap: 14px; padding: 20px 28px 16px; border-bottom: 1px solid var(--nx-color-border-default); }
-      .m-head .badge-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--nx-color-action-primary-subtle); color: var(--nx-color-action-primary); display: grid; place-items: center; border: 1px solid var(--nx-color-border-brand); flex: none; }
-      .m-head .t { flex: 1; }
-      .m-head h2 { margin: 0; font-size: 1.15rem; font-weight: var(--nx-font-weight-bold); }
-      .m-head p { margin: 2px 0 0; color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
-      .m-body { padding: 8px 28px 12px; max-height: 62vh; overflow-y: auto; }
-      .fs { padding: 16px 0; }
-      .fs + .fs { border-top: 1px solid var(--nx-color-border-default); }
-      .fs-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
-      .fs-head mat-icon { color: var(--nx-color-action-primary); }
-      .fs-head h4 { margin: 0; font-size: var(--nx-text-body-size); font-weight: var(--nx-font-weight-bold); }
-      .fs-head .opt { margin-left: 4px; font-size: var(--nx-text-caption-size); font-weight: var(--nx-font-weight-bold); text-transform: uppercase; letter-spacing: .05em; color: var(--nx-color-text-disabled); border: 1px solid var(--nx-color-border-default); border-radius: var(--nx-radius-full); padding: 2px 8px; }
-      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--nx-space-4); }
-      .grid2 .full { grid-column: 1 / -1; }
       mat-form-field { width: 100%; }
-      .opt-acc { margin-top: 6px; display: block; }
-      .m-foot { display: flex; align-items: center; gap: 10px; padding: 14px 28px 18px; border-top: 1px solid var(--nx-color-border-default); }
-      .m-foot .note { display: inline-flex; align-items: center; gap: 6px; font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); }
-      .m-foot .note mat-icon { font-size: 18px; width: 18px; height: 18px; }
-      .m-foot .fill { flex: 1; }
-      .link { color: var(--nx-color-action-primary); cursor: pointer; font-weight: var(--nx-font-weight-semibold); }
-      @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+      .nx-capa__pie .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
     `,
   ],
 })
@@ -212,6 +152,8 @@ export class UserFormDialogComponent {
   protected readonly roleLabel = roleLabel;
   protected readonly showPw = signal(false);
   protected readonly saving = signal(false);
+  /** Motivo del rechazo del backend (CAPACITY_EXCEEDED, DUPLICATE_EMAIL…), visible en un aviso. */
+  protected readonly problem = signal<string | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
     // personales
@@ -247,9 +189,13 @@ export class UserFormDialogComponent {
   }
 
   protected submit(): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     const raw = this.form.getRawValue();
     this.saving.set(true);
+    this.problem.set(null);
 
     this.userService
       .create({
@@ -284,7 +230,7 @@ export class UserFormDialogComponent {
           this.saving.set(false);
           // El backend explica el motivo con números —cupo agotado, correo duplicado— y ese
           // mensaje es el útil: un "no se pudo crear" genérico deja a quien administra a ciegas.
-          this.notify.error(localizedProblem(this.transloco, err, 'users.form.createError'));
+          this.problem.set(localizedProblem(this.transloco, err, 'users.form.createError'));
         },
       });
   }

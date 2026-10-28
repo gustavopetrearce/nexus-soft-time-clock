@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.identity.domain.port.out;
 
+import com.condor.nexussoft.timeclock.identity.domain.port.in.UserListFilter;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.UserView;
 import com.condor.nexussoft.timeclock.shared.domain.Paged;
 
@@ -25,7 +26,7 @@ public interface UserAdminRepositoryPort {
 
     Optional<UserView> findByIdAndTenant(UUID id, UUID tenantId);
 
-    Paged<UserView> findAllByTenant(UUID tenantId, int page, int size, String search);
+    Paged<UserView> findAllByTenant(UUID tenantId, int page, int size, UserListFilter filter);
 
     Optional<UserView> updateStatus(UUID id, UUID tenantId, String status);
 

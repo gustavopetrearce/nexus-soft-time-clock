@@ -5,6 +5,7 @@ import com.condor.nexussoft.timeclock.identity.domain.model.Email;
 import com.condor.nexussoft.timeclock.identity.domain.model.RoleGrantPolicy;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.GranterAuthority;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.UserCommands;
+import com.condor.nexussoft.timeclock.identity.domain.port.in.UserListFilter;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.UserManagementUseCase;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.UserView;
 import com.condor.nexussoft.timeclock.identity.domain.port.out.PasswordHasherPort;
@@ -63,8 +64,8 @@ public class UserManagementService implements UserManagementUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public Paged<UserView> list(UUID tenantId, int page, int size, String search) {
-        return users.findAllByTenant(tenantId, page, size, search);
+    public Paged<UserView> list(UUID tenantId, int page, int size, UserListFilter filter) {
+        return users.findAllByTenant(tenantId, page, size, filter == null ? UserListFilter.none() : filter);
     }
 
     @Override

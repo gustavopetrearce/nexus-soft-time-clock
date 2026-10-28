@@ -1,6 +1,7 @@
 package com.condor.nexussoft.timeclock.identity.infrastructure.web;
 
 import com.condor.nexussoft.timeclock.identity.domain.port.in.UserCommands;
+import com.condor.nexussoft.timeclock.identity.domain.port.in.UserListFilter;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.UserManagementUseCase;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.UserView;
 import com.condor.nexussoft.timeclock.identity.infrastructure.web.dto.*;
@@ -40,8 +41,11 @@ public class UserAdminController {
     public PageResponse<UserResponse> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String search) {
-        Paged<UserView> result = users.list(tenant(), page, size, search);
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String employeeCode,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String role) {
+        Paged<UserView> result = users.list(tenant(), page, size, new UserListFilter(search, employeeCode, status, role));
         return PageResponse.of(result.items().stream().map(UserResponse::from).toList(),
                 result.page(), result.size(), result.total());
     }

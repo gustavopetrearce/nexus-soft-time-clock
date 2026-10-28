@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 
@@ -18,16 +19,19 @@ export interface ConfirmData {
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule, TranslocoPipe],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, TranslocoPipe],
+  styles: [`h2, p { margin: var(--nx-space-0); }`],
   template: `
-    <h2 mat-dialog-title>{{ data.title }}</h2>
-    <mat-dialog-content>{{ data.message }}</mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button cdkFocusInitial [mat-dialog-close]="false">{{ 'common.cancel' | transloco }}</button>
-      <button mat-flat-button [color]="data.color ?? 'primary'" [mat-dialog-close]="true">
+    <div class="nx-capa__enc"><h2 class="nx-text-heading-3" mat-dialog-title>{{ data.title }}</h2></div>
+    <div class="nx-capa__cuerpo"><p>{{ data.message }}</p></div>
+    <div class="nx-capa__pie">
+      <button mat-button type="button" cdkFocusInitial [mat-dialog-close]="false">
+        <mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}
+      </button>
+      <button mat-flat-button type="button" [color]="data.color ?? 'primary'" [mat-dialog-close]="true">
         {{ data.confirmText ?? ('common.confirm' | transloco) }}
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
 })
 export class ConfirmDialogComponent {

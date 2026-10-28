@@ -1,27 +1,32 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { Observable, of, switchMap } from 'rxjs';
 
-import { BreadcrumbComponent } from '../../../core/ui/breadcrumb.component';
+import { AuthStore } from '../../../core/auth/auth.store';
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
+import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
+import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
 import { NotificationService } from '../../../core/ui/notification.service';
-import { PageHeaderComponent } from '../../../core/ui/page-header.component';
-import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { localeOptions } from '../../../core/models/locales';
 import { browserTimeZone, timezoneOptions } from '../../../core/models/timezones';
-import { Company } from './company.models';
+import { CapacityDialogComponent } from './capacity-dialog.component';
+import { Company, CompanyStatus } from './company.models';
 import { CompanyService } from './company.service';
 
-/** Alta / edición de empresa en página completa (con breadcrumb), fiel al patrón "Formulario". */
+/**
+ * P23 · Nueva o editar empresa (página, patrón Formulario): código y nombre obligatorios, zona horaria,
+ * idioma y, al editar, estado (suspender se confirma, S01) y acceso al cupo (P24). Al crear se
+ * aprovisiona además el administrador inicial; al editar puede agregarse otro bajo demanda.
+ */
 @Component({
   selector: 'app-company-form',
   standalone: true,
@@ -32,208 +37,121 @@ import { CompanyService } from './company.service';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatProgressBarModule,
     MatSelectModule,
-    BreadcrumbComponent,
-    PageHeaderComponent,
-    StatusChipComponent,
+    RouterLink,
     TranslocoPipe,
+    EmptyStateComponent,
+    LoadingBarComponent,
+  ],
+  styles: [
+    `
+      h1, h2, p { margin: var(--nx-space-0); }
+      mat-form-field { width: 100%; }
+      .nx-regresar { align-self: flex-start; }
+      .pagina { display: flex; flex-direction: column; gap: var(--nx-space-gap-group); }
+      .nx-fila-botones { display: flex; justify-content: flex-end; gap: var(--nx-space-gap-inline); }
+      .nx-form__acciones .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
+    `,
   ],
   template: `
-    <app-breadcrumb
-      [items]="[
-        { label: ('layout.group.organization' | transloco), route: '/companies' },
-        { label: ('companies.title' | transloco), route: '/companies' },
-        { label: isEdit() ? (company()?.name ?? '') : ('companies.new' | transloco) },
-      ]"
-    />
-    <app-page-header [title]="(isEdit() ? 'companies.edit' : 'companies.new') | transloco" />
+    <div class="pagina">
+      <a mat-button class="nx-regresar" routerLink="/companies"><mat-icon>arrow_back</mat-icon>{{ 'common.back' | transloco }}</a>
+      <app-loading-bar [active]="loading()" />
 
-    @if (loading()) { <mat-progress-bar mode="indeterminate" style="margin-bottom:16px" /> }
-    @if (error()) { <p class="error-text">{{ error() }}</p> }
+      @if (error()) {
+        <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco" />
+      } @else {
+        <form class="nx-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+          <h1 class="nx-text-heading-1">{{ (isEdit() ? 'companies.edit' : 'companies.new') | transloco }}</h1>
 
-    <div class="form-page-layout">
-      <div class="form-page-main">
-        <h3 class="form-section-title">{{ 'companies.form.info' | transloco }}</h3>
-        <form [formGroup]="form">
-          <div class="form-grid-2">
-            <mat-form-field appearance="outline" class="drawer-field">
+          <div class="nx-form__grid">
+            <mat-form-field appearance="outline">
               <mat-label>{{ 'common.code' | transloco }}</mat-label>
-              <input matInput formControlName="code" />
-              <mat-hint>{{ 'companies.form.codeHint' | transloco }}</mat-hint>
+              <input matInput formControlName="code" required autocomplete="off" />
             </mat-form-field>
-            <mat-form-field appearance="outline" class="drawer-field">
-              <mat-label>{{ 'companies.form.tradeName' | transloco }}</mat-label>
-              <input matInput formControlName="name" />
-              <mat-hint>{{ 'companies.form.tradeNameHint' | transloco }}</mat-hint>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'common.name' | transloco }}</mat-label>
+              <input matInput formControlName="name" required autocomplete="off" />
             </mat-form-field>
-            <mat-form-field appearance="outline" class="drawer-field">
+            <mat-form-field appearance="outline">
               <mat-label>{{ 'companies.form.legalName' | transloco }}</mat-label>
-              <input matInput formControlName="legalName" />
-              <mat-hint>{{ 'companies.form.legalNameHint' | transloco }}</mat-hint>
+              <input matInput formControlName="legalName" autocomplete="off" />
             </mat-form-field>
-            <mat-form-field appearance="outline" class="drawer-field">
+            <mat-form-field appearance="outline">
               <mat-label>{{ 'companies.form.emailDomain' | transloco }}</mat-label>
-              <input matInput formControlName="emailDomain" placeholder="empresa.com" />
-              <mat-hint>{{ 'companies.form.emailDomainHint' | transloco }}</mat-hint>
+              <input matInput formControlName="emailDomain" placeholder="empresa.com" autocomplete="off" />
             </mat-form-field>
-            <mat-form-field appearance="outline" class="drawer-field">
+            <mat-form-field appearance="outline">
               <mat-label>{{ 'companies.form.timezone' | transloco }}</mat-label>
               <mat-select formControlName="timezone">
-                @for (tz of tzOptions(); track tz.value) {
-                  <mat-option [value]="tz.value">{{ tz.label }}</mat-option>
-                }
+                @for (tz of tzOptions(); track tz.value) { <mat-option [value]="tz.value">{{ tz.label }}</mat-option> }
               </mat-select>
-              <mat-hint>{{ 'companies.form.timezoneHint' | transloco }}</mat-hint>
             </mat-form-field>
-            <mat-form-field appearance="outline" class="drawer-field">
+            <mat-form-field appearance="outline">
               <mat-label>{{ 'companies.form.locale' | transloco }}</mat-label>
               <mat-select formControlName="locale">
-                @for (loc of localeOpts(); track loc.value) {
-                  <mat-option [value]="loc.value">{{ loc.label }}</mat-option>
-                }
+                @for (loc of localeOpts(); track loc.value) { <mat-option [value]="loc.value">{{ loc.label }}</mat-option> }
               </mat-select>
-              <mat-hint>{{ 'companies.form.localeHint' | transloco }}</mat-hint>
             </mat-form-field>
-          </div>
-        </form>
-
-        @if (!isEdit()) {
-          <h3 class="form-section-title" style="margin-top: var(--nx-space-8)">{{ 'companies.form.initialAdmin' | transloco }}</h3>
-          <p class="muted" style="margin: 0 0 var(--nx-space-4)">
-            {{ 'companies.form.initialAdminText' | transloco }}
-          </p>
-          <form [formGroup]="adminForm">
-            <div class="form-grid-2">
-              <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>{{ 'common.email' | transloco }}</mat-label>
-                <input matInput type="email" formControlName="email" placeholder="admin@empresa.com" />
-                <mat-hint>{{ 'companies.form.adminEmailHint' | transloco }}</mat-hint>
+            @if (isEdit()) {
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'common.status' | transloco }}</mat-label>
+                <mat-select [formControl]="statusControl">
+                  @for (s of statuses; track s) { <mat-option [value]="s">{{ 'companies.status.' + s | transloco }}</mat-option> }
+                </mat-select>
               </mat-form-field>
-              <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>{{ 'common.tempPassword' | transloco }}</mat-label>
-                <input matInput type="password" formControlName="password" />
-                <mat-hint>{{ 'companies.form.tempPasswordHint' | transloco }}</mat-hint>
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>{{ 'common.firstName' | transloco }}</mat-label>
-                <input matInput formControlName="firstName" />
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>{{ 'common.lastName' | transloco }}</mat-label>
-                <input matInput formControlName="lastName" />
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="drawer-field">
-                <mat-label>{{ 'common.employeeCode' | transloco }}</mat-label>
-                <input matInput formControlName="employeeCode" />
-                <mat-hint>{{ 'common.optional' | transloco }}</mat-hint>
-              </mat-form-field>
-            </div>
-          </form>
-        }
-
-        <div class="form-callout">
-          <mat-icon>info</mat-icon>
-          <div>
-            <p class="row-title">{{ 'companies.form.important' | transloco }}</p>
-            <p class="row-desc">{{ 'companies.form.importantText' | transloco }}</p>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | transloco }}</button>
-          <button mat-flat-button color="primary" [disabled]="!canSave() || saving()" (click)="save()">
-            <mat-icon>save</mat-icon> {{ (isEdit() ? 'common.saveChanges' : 'companies.form.save') | transloco }}
-          </button>
-        </div>
-      </div>
-
-      <div class="form-page-side">
-        <div class="info-card tip">
-          <h3 class="info-card-title">{{ 'companies.form.importantInfo' | transloco }}</h3>
-          <div class="icon-row">
-            <mat-icon>shield</mat-icon>
-            <div>
-              <p class="row-title">{{ 'companies.form.uniqueCode' | transloco }}</p>
-              <p class="row-desc">{{ 'companies.form.uniqueCodeText' | transloco }}</p>
-            </div>
-          </div>
-          <div class="icon-row">
-            <mat-icon>public</mat-icon>
-            <div>
-              <p class="row-title">{{ 'companies.form.tzLocale' | transloco }}</p>
-              <p class="row-desc">{{ 'companies.form.tzLocaleText' | transloco }}</p>
-            </div>
-          </div>
-          <div class="icon-row">
-            <mat-icon>check_circle</mat-icon>
-            <div>
-              <p class="row-title">{{ 'companies.form.activeOnly' | transloco }}</p>
-              <p class="row-desc">{{ 'companies.form.activeOnlyText' | transloco }}</p>
-            </div>
-          </div>
-        </div>
-
-        @if (isEdit() && company(); as c) {
-          <div class="info-card">
-            <div class="entity-avatar-row">
-              <div class="entity-avatar">{{ initials(c.name) }}</div>
-              <div>
-                <p class="entity-avatar-name">{{ c.name }}</p>
-                <app-status-chip [status]="c.status" />
-              </div>
-            </div>
-            <div class="info-row"><span class="k">{{ 'common.code' | transloco }}</span><span class="v">{{ c.code }}</span></div>
-          </div>
-          <div class="info-card">
-            <h3 class="info-card-title">{{ 'companies.form.statusTitle' | transloco }}</h3>
-            <p class="muted" style="margin:0 0 var(--nx-space-3)">
-              {{ (c.status === 'ACTIVE' ? 'companies.form.statusActiveText' : 'companies.form.statusInactiveText') | transloco }}
-            </p>
-            <button mat-stroked-button (click)="toggleStatus(c)">
-              {{ (c.status === 'ACTIVE' ? 'companies.suspend' : 'companies.activate') | transloco }}
-            </button>
-          </div>
-
-          <div class="info-card">
-            <h3 class="info-card-title">{{ 'companies.form.admin' | transloco }}</h3>
-            @if (!showAdminForm()) {
-              <p class="muted" style="margin:0 0 var(--nx-space-3)">
-                {{ 'companies.form.adminText' | transloco }}
-              </p>
-              <button mat-stroked-button (click)="showAdminForm.set(true)">
-                <mat-icon>person_add</mat-icon> {{ 'companies.form.addAdmin' | transloco }}
-              </button>
-            } @else {
-              <form [formGroup]="adminForm">
-                <mat-form-field appearance="outline" class="drawer-field" style="width:100%">
-                  <mat-label>{{ 'common.email' | transloco }}</mat-label>
-                  <input matInput type="email" formControlName="email" />
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="drawer-field" style="width:100%">
-                  <mat-label>{{ 'common.firstName' | transloco }}</mat-label>
-                  <input matInput formControlName="firstName" />
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="drawer-field" style="width:100%">
-                  <mat-label>{{ 'common.lastName' | transloco }}</mat-label>
-                  <input matInput formControlName="lastName" />
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="drawer-field" style="width:100%">
-                  <mat-label>{{ 'common.tempPassword' | transloco }}</mat-label>
-                  <input matInput type="password" formControlName="password" />
-                  <mat-hint>{{ 'common.minPassword' | transloco }}</mat-hint>
-                </mat-form-field>
-              </form>
-              <div style="display:flex; gap: var(--nx-space-2); margin-top: var(--nx-space-2)">
-                <button mat-flat-button color="primary" [disabled]="!adminValid() || provisioningAdmin()" (click)="provisionAdmin()">
-                  <mat-icon>save</mat-icon> {{ 'companies.form.saveAdmin' | transloco }}
-                </button>
-                <button mat-button (click)="showAdminForm.set(false)">{{ 'common.cancel' | transloco }}</button>
-              </div>
             }
           </div>
-        }
-      </div>
+
+          @if (isEdit() && canManageCapacity()) {
+            <button mat-stroked-button type="button" class="nx-regresar" (click)="openCapacity()">{{ 'capacity.title' | transloco }}</button>
+          }
+
+          <!-- Al crear se aprovisiona también el administrador inicial (COMPANY_ADMIN). -->
+          @if (!isEdit() || showAdminForm()) {
+            <h2 class="nx-text-heading-4">{{ 'companies.form.initialAdmin' | transloco }}</h2>
+            <div class="nx-form__grid" [formGroup]="adminForm">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'common.email' | transloco }}</mat-label>
+                <input matInput type="email" formControlName="email" required autocomplete="off" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'common.tempPassword' | transloco }}</mat-label>
+                <input matInput type="password" formControlName="password" required autocomplete="new-password" />
+                <mat-hint>{{ 'common.minPassword' | transloco }}</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'common.firstName' | transloco }}</mat-label>
+                <input matInput formControlName="firstName" required autocomplete="off" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'users.form.lastNames' | transloco }}</mat-label>
+                <input matInput formControlName="lastName" required autocomplete="off" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'users.form.employeeCodeOptional' | transloco }}</mat-label>
+                <input matInput formControlName="employeeCode" autocomplete="off" />
+              </mat-form-field>
+            </div>
+            @if (isEdit()) {
+              <div class="nx-fila-botones">
+                <button mat-button type="button" (click)="showAdminForm.set(false)">{{ 'common.cancel' | transloco }}</button>
+                <button mat-stroked-button type="button" [disabled]="!adminValid() || provisioningAdmin()" (click)="provisionAdmin()">{{ 'companies.form.saveAdmin' | transloco }}</button>
+              </div>
+            }
+          } @else {
+            <button mat-button type="button" class="nx-regresar" (click)="showAdminForm.set(true)"><mat-icon>person_add</mat-icon>{{ 'companies.form.addAdmin' | transloco }}</button>
+          }
+
+          <div class="nx-form__acciones">
+            <button mat-button type="button" (click)="cancel()"><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
+            <button mat-flat-button type="submit" [disabled]="saving()" [attr.aria-busy]="saving()">
+              @if (saving()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>save</mat-icon> }
+              {{ 'common.save' | transloco }}
+            </button>
+          </div>
+        </form>
+      }
     </div>
   `,
 })
@@ -245,6 +163,10 @@ export class CompanyFormComponent {
   private readonly notify = inject(NotificationService);
   private readonly dialog = inject(MatDialog);
   private readonly transloco = inject(TranslocoService);
+  private readonly auth = inject(AuthStore);
+
+  protected readonly statuses: CompanyStatus[] = ['ACTIVE', 'SUSPENDED'];
+  protected readonly statusControl = this.fb.nonNullable.control<CompanyStatus>('ACTIVE');
 
   protected readonly companyId = this.route.snapshot.paramMap.get('id');
   protected readonly isEdit = computed(() => !!this.companyId);
@@ -252,7 +174,7 @@ export class CompanyFormComponent {
   protected readonly company = signal<Company | null>(null);
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal(false);
 
   /** La lista es curada; si la empresa guarda una zona fuera de ella se añade para no perderla. */
   protected readonly tzOptions = computed(() => timezoneOptions(this.company()?.timezone));
@@ -305,19 +227,24 @@ export class CompanyFormComponent {
             locale: c.locale || 'es',
           });
           this.form.controls.code.disable();
+          this.statusControl.setValue(c.status);
           this.loading.set(false);
         },
         error: () => {
-          this.error.set(this.transloco.translate('companies.form.loadError'));
+          this.error.set(true);
           this.loading.set(false);
         },
       });
     }
   }
 
-  protected initials(name: string): string {
-    const parts = name.trim().split(/\s+/).slice(0, 2);
-    return parts.map((p) => p.charAt(0)).join('').toUpperCase();
+  protected canManageCapacity(): boolean {
+    return this.auth.hasPermission('company:capacity');
+  }
+
+  protected openCapacity(): void {
+    const company = this.company();
+    if (company) this.dialog.open(CapacityDialogComponent, { data: { company } });
   }
 
   protected cancel(): void {
@@ -336,24 +263,54 @@ export class CompanyFormComponent {
 
     if (this.companyId) {
       if (this.form.invalid) {
+        this.form.markAllAsTouched();
         return;
       }
-      this.saving.set(true);
-      this.service.update(this.companyId, payload).subscribe({
-        next: () => {
-          this.notify.success(this.transloco.translate('companies.form.updated'));
-          void this.router.navigate(['/companies']);
-        },
-        error: () => {
-          this.saving.set(false);
-          this.notify.error(this.transloco.translate('companies.form.saveError'));
-        },
-      });
+      const id = this.companyId;
+      const nextStatus = this.statusControl.value;
+      const statusChanged = nextStatus !== this.company()?.status;
+      const run = () => {
+        this.saving.set(true);
+        const status$: Observable<unknown> = statusChanged ? this.service.setStatus(id, nextStatus) : of(null);
+        this.service
+          .update(id, payload)
+          .pipe(switchMap(() => status$))
+          .subscribe({
+            next: () => {
+              this.notify.success(this.transloco.translate('companies.form.updated'));
+              void this.router.navigate(['/companies']);
+            },
+            error: () => {
+              this.saving.set(false);
+              this.notify.error(this.transloco.translate('companies.form.saveError'));
+            },
+          });
+      };
+      if (statusChanged && nextStatus === 'SUSPENDED') {
+        this.dialog
+          .open(ConfirmDialogComponent, {
+            data: {
+              title: this.transloco.translate('companies.suspend'),
+              message: this.transloco.translate('companies.confirmStatus', {
+                name: raw.name,
+                status: this.transloco.translate('companies.status.SUSPENDED'),
+              }),
+              confirmText: this.transloco.translate('companies.suspend'),
+              color: 'warn',
+            },
+          })
+          .afterClosed()
+          .subscribe((confirmed) => (confirmed ? run() : this.statusControl.setValue(this.company()!.status)));
+      } else {
+        run();
+      }
       return;
     }
 
     // Alta: se crea la empresa y, a continuación, su administrador inicial.
     if (this.form.invalid || this.adminForm.invalid) {
+      this.form.markAllAsTouched();
+      this.adminForm.markAllAsTouched();
       return;
     }
     this.saving.set(true);
@@ -410,33 +367,5 @@ export class CompanyFormComponent {
       password: a.password,
       employeeCode: a.employeeCode || undefined,
     };
-  }
-
-  protected toggleStatus(company: Company): void {
-    const next = company.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-    this.dialog
-      .open(ConfirmDialogComponent, {
-        data: {
-          title: this.transloco.translate(next === 'SUSPENDED' ? 'companies.suspend' : 'companies.activate'),
-          message: this.transloco.translate('companies.confirmStatus', {
-            name: company.name,
-            status: this.transloco.translate(`status.${next}`),
-          }),
-          color: next === 'SUSPENDED' ? 'warn' : 'primary',
-        },
-      })
-      .afterClosed()
-      .subscribe((confirmed) => {
-        if (!confirmed) {
-          return;
-        }
-        this.service.setStatus(company.id, next).subscribe({
-          next: (updated) => {
-            this.company.set(updated);
-            this.notify.success(this.transloco.translate('common.statusUpdated'));
-          },
-          error: () => this.notify.error(this.transloco.translate('common.statusError')),
-        });
-      });
   }
 }

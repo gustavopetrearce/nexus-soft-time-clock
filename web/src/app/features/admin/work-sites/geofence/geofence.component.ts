@@ -1,17 +1,20 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, TemplateRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatCardModule } from '@angular/material/card';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import * as L from 'leaflet';
 import { toDataURL } from 'qrcode';
 
+import { AlertComponent } from '../../../../core/ui/alert.component';
+import { ConfirmDialogComponent } from '../../../../core/ui/confirm-dialog.component';
+import { EmptyStateComponent } from '../../../../core/ui/empty-state.component';
+import { LoadingBarComponent } from '../../../../core/ui/loading-bar.component';
 import { NotificationService } from '../../../../core/ui/notification.service';
 import { PageHeaderComponent } from '../../../../core/ui/page-header.component';
 import { WorkSiteService } from '../work-site.service';
@@ -23,8 +26,9 @@ import { cssToken } from '../../../../core/ui/css-token';
 type QrDurationMode = 'minutes' | 'date';
 
 /**
- * Geocerca circular por centro (RF-10) con selector de mapa (clic para fijar el centro),
- * y generación/rotación del QR firmado del centro (RF-14). Requiere {@code geofence:manage}.
+ * P27 · Geocerca y QR (5 + 7): radio de la geocerca circular (RF-10, clic en el mapa para fijar el
+ * centro) y el QR firmado del centro (RF-14) con su vencimiento, Vigente/Vencido, Rotar (confirmado,
+ * S01), Mostrar e Imprimir. El backend no devuelve el QR vigente: se ve el que se genera aquí.
  */
 @Component({
   selector: 'app-geofence',
@@ -32,95 +36,129 @@ type QrDurationMode = 'minutes' | 'date';
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    MatCardModule,
+    MatDialogModule,
     MatButtonModule,
     MatButtonToggleModule,
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
-    MatProgressBarModule,
+    AlertComponent,
+    EmptyStateComponent,
+    LoadingBarComponent,
     PageHeaderComponent,
     TranslocoPipe,
     AppDatePipe,
   ],
+  styles: [
+    `
+      h2, p { margin: var(--nx-space-0); }
+      mat-form-field { width: 100%; }
+      .nx-panel > button, .nx-panel > form > button { align-self: flex-start; }
+      form { display: flex; flex-direction: column; gap: var(--nx-space-gap-related); }
+      .nx-mapa--geocerca { display: block; z-index: 0; }
+      .nx-qr { padding: var(--nx-space-2); animation: nx-fade var(--nx-motion-duration-medium) var(--nx-motion-easing-enter); }
+      .nx-qr img { display: block; width: 100%; height: auto; }
+      .nx-fila-botones { display: flex; flex-wrap: wrap; gap: var(--nx-space-gap-inline); }
+      .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
+    `,
+  ],
   template: `
-    <app-page-header [title]="'geofence.title' | transloco" [subtitle]="'geofence.subtitle' | transloco">
-      <a mat-stroked-button routerLink="/work-sites"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | transloco }}</a>
-    </app-page-header>
+    <div class="nx-regresar">
+      <a mat-button routerLink="/work-sites"><mat-icon>arrow_back</mat-icon>{{ 'common.back' | transloco }}</a>
+    </div>
+    <app-loading-bar [active]="loading()" />
+    <app-page-header [title]="'geofence.title' | transloco" [subtitle]="siteLabel()" />
 
-    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-    @if (error()) { <p class="error-text">{{ error() }}</p> }
+    @if (error()) {
+      <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco">
+        <button mat-stroked-button type="button" (click)="load()">{{ 'common.retry' | transloco }}</button>
+      </app-empty-state>
+    }
 
-    <div style="display:flex;gap:16px;flex-wrap:wrap">
-      <mat-card style="flex:1 1 480px">
-        <mat-card-header><mat-card-title>{{ 'geofence.circular' | transloco }}</mat-card-title></mat-card-header>
-        <mat-card-content>
-          <p class="muted">{{ 'geofence.mapHint' | transloco }}</p>
-          <div #mapEl style="height:340px;border-radius:8px;overflow:hidden"></div>
-          <form [formGroup]="form" (ngSubmit)="save()" style="display:flex;gap:12px;flex-wrap:wrap;align-items:baseline;margin-top:12px">
-            <mat-form-field appearance="outline" style="width:150px">
-              <mat-label>{{ 'workSites.latitude' | transloco }}</mat-label>
-              <input matInput type="number" step="any" formControlName="latitude" (change)="syncMap()" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" style="width:150px">
-              <mat-label>{{ 'workSites.longitude' | transloco }}</mat-label>
-              <input matInput type="number" step="any" formControlName="longitude" (change)="syncMap()" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" style="width:150px">
+    <div class="nx-g-5-7" [hidden]="error()">
+      <div class="nx-pila">
+        <section class="nx-panel" [attr.aria-label]="'geofence.config' | transloco">
+          <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+            <mat-form-field appearance="outline">
               <mat-label>{{ 'geofence.radius' | transloco }}</mat-label>
-              <input matInput type="number" step="any" formControlName="radiusM" (change)="syncMap()" />
+              <input matInput type="number" min="1" step="1" formControlName="radiusM" required (input)="syncMap()" />
+              <mat-hint>{{ 'geofence.mapHint' | transloco }}</mat-hint>
             </mat-form-field>
-            <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || loading()">
+            @if (form.controls.radiusM.invalid && form.controls.radiusM.touched) {
+              <app-alert tone="error">{{ 'geofence.radiusInvalid' | transloco }}</app-alert>
+            }
+            <button mat-flat-button type="submit" [disabled]="saving()" [attr.aria-busy]="saving()">
+              @if (saving()) { <span class="nx-spin" aria-hidden="true"></span> }
               {{ 'geofence.save' | transloco }}
             </button>
           </form>
-        </mat-card-content>
-      </mat-card>
+        </section>
 
-      <mat-card style="flex:1 1 320px">
-        <mat-card-header><mat-card-title>{{ 'geofence.qrTitle' | transloco }}</mat-card-title></mat-card-header>
-        <mat-card-content>
-          <p class="muted">{{ 'geofence.qrText' | transloco }}</p>
-          <form [formGroup]="qrForm" (ngSubmit)="generateQr()" style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <section class="nx-panel">
+          <h2 class="nx-text-heading-4">{{ 'geofence.validity' | transloco }}</h2>
+          <form [formGroup]="qrForm">
             <mat-button-toggle-group formControlName="mode" [attr.aria-label]="'geofence.validityMode' | transloco">
               <mat-button-toggle value="minutes">{{ 'geofence.minutes' | transloco }}</mat-button-toggle>
               <mat-button-toggle value="date">{{ 'geofence.expiryDate' | transloco }}</mat-button-toggle>
             </mat-button-toggle-group>
-
             @if (qrForm.controls.mode.value === 'minutes') {
-              <mat-form-field appearance="outline" style="width:180px">
+              <mat-form-field appearance="outline">
                 <mat-label>{{ 'geofence.validityMinutes' | transloco }}</mat-label>
                 <input matInput type="number" min="1" max="1440" step="1" formControlName="ttlMinutes" />
                 <mat-hint>{{ 'geofence.validityHint' | transloco }}</mat-hint>
               </mat-form-field>
             } @else {
-              <mat-form-field appearance="outline" style="width:220px">
+              <mat-form-field appearance="outline">
                 <mat-label>{{ 'geofence.expiresOn' | transloco }}</mat-label>
                 <input matInput type="datetime-local" formControlName="expiresAt" />
                 <mat-hint>{{ 'geofence.expiresHint' | transloco }}</mat-hint>
               </mat-form-field>
             }
-
-            <button mat-flat-button color="primary" type="submit" [disabled]="loading() || qrForm.invalid">
-              <mat-icon>qr_code_2</mat-icon> {{ 'geofence.generate' | transloco }}
-            </button>
           </form>
-          @if (qr(); as q) {
-            <div style="margin-top:16px;text-align:center">
-              @if (qrImage(); as img) {
-                <img [src]="img" [alt]="'geofence.qrTitle' | transloco" style="width:220px;height:220px" />
-              }
-              <div class="muted" style="margin-top:8px">{{ 'geofence.expires' | transloco: { date: (q.expiresAt | appDate: 'medium') } }}</div>
-              <textarea readonly style="width:100%;margin-top:8px;font-family:monospace;font-size:.75rem" rows="3">{{ q.token }}</textarea>
-            </div>
+        </section>
+      </div>
+
+      <section class="nx-panel" [attr.aria-label]="'geofence.preview' | transloco">
+        <div #mapEl class="nx-mapa nx-mapa--geocerca" role="img" [attr.aria-label]="'geofence.mapLabel' | transloco"></div>
+
+        @if (qr(); as q) {
+          @if (qrImage(); as img) {
+            <div class="nx-qr"><img [src]="img" [alt]="'geofence.qrAlt' | transloco: { site: siteLabel() }" /></div>
           }
-        </mat-card-content>
-      </mat-card>
+          <div class="nx-fila-indicadores">
+            <span class="nx-text-small">{{ 'geofence.expiresShort' | transloco }} <span class="nx-text-numeric">{{ q.expiresAt | appDate: 'dd/MM/yyyy HH:mm' }}</span></span>
+            @if (expired()) {
+              <span class="nx-chip nx-chip--neutral"><mat-icon class="nx-icon--sm" aria-hidden="true">schedule</mat-icon>{{ 'geofence.expired' | transloco }}</span>
+            } @else {
+              <span class="nx-chip nx-chip--success">{{ 'geofence.valid' | transloco }}</span>
+            }
+          </div>
+          <div class="nx-fila-botones">
+            <button mat-stroked-button type="button" [disabled]="generating()" (click)="rotate()">{{ 'geofence.rotate' | transloco }}</button>
+            <button mat-stroked-button type="button" (click)="show()"><mat-icon>visibility</mat-icon>{{ 'geofence.show' | transloco }}</button>
+            <button mat-stroked-button type="button" (click)="print()"><mat-icon>print</mat-icon>{{ 'geofence.print' | transloco }}</button>
+          </div>
+        } @else {
+          <app-empty-state icon="qr_code_2" [message]="'geofence.noQr' | transloco">
+            <button mat-flat-button type="button" [disabled]="generating() || qrForm.invalid" (click)="generateQr()">
+              @if (generating()) { <span class="nx-spin" aria-hidden="true"></span> }
+              {{ 'geofence.generate' | transloco }}
+            </button>
+          </app-empty-state>
+        }
+      </section>
     </div>
+
+    <ng-template #qrGrande>
+      <div class="nx-capa__enc"><h2 class="nx-text-heading-3" mat-dialog-title>{{ siteLabel() }}</h2></div>
+      <div class="nx-capa__cuerpo"><div class="nx-qr" style="width: 100%"><img [src]="qrImage()" [alt]="'geofence.qrAlt' | transloco: { site: siteLabel() }" /></div></div>
+      <div class="nx-capa__pie"><button mat-button type="button" mat-dialog-close cdkFocusInitial>{{ 'common.close' | transloco }}</button></div>
+    </ng-template>
   `,
 })
 export class GeofenceComponent implements AfterViewInit, OnDestroy {
   @ViewChild('mapEl') private mapEl!: ElementRef<HTMLDivElement>;
+  @ViewChild('qrGrande') private qrGrande!: TemplateRef<unknown>;
 
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
@@ -128,6 +166,7 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
   private readonly workSites = inject(WorkSiteService);
   private readonly notify = inject(NotificationService);
   private readonly transloco = inject(TranslocoService);
+  private readonly dialog = inject(MatDialog);
 
   private readonly workSiteId = this.route.snapshot.paramMap.get('id') ?? '';
   private map?: L.Map;
@@ -135,7 +174,17 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
   private radiusCircle?: L.Circle;
 
   protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal(false);
+  protected readonly saving = signal(false);
+  protected readonly generating = signal(false);
+  /** «Nombre · CÓDIGO» del centro, bajo el título. */
+  protected readonly siteLabel = signal('');
+  private readonly now = signal(Date.now());
+  protected readonly expired = computed(() => {
+    const q = this.qr();
+    return !!q && Date.parse(q.expiresAt) <= this.now();
+  });
+  private clock?: ReturnType<typeof setInterval>;
   protected readonly qr = signal<QrToken | null>(null);
   protected readonly qrImage = signal<string | null>(null);
 
@@ -162,20 +211,24 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
       this.syncMap();
     });
     this.load();
+    this.clock = setInterval(() => this.now.set(Date.now()), 30_000);
   }
 
   ngOnDestroy(): void {
+    clearInterval(this.clock);
     this.map?.remove();
   }
 
-  private load(): void {
+  protected load(): void {
     if (!this.workSiteId) {
       return;
     }
     this.loading.set(true);
+    this.error.set(false);
     // Centro por defecto: ubicación del propio centro de trabajo.
     this.workSites.get(this.workSiteId).subscribe({
       next: (site) => {
+        this.siteLabel.set(`${site.name} · ${site.code}`);
         this.form.patchValue({ latitude: site.latitude, longitude: site.longitude });
         this.syncMap(15);
         // Geocerca existente (si la hay) tiene prioridad.
@@ -189,7 +242,7 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
         });
       },
       error: () => {
-        this.error.set(this.transloco.translate('workSites.form.loadError'));
+        this.error.set(true);
         this.loading.set(false);
       },
     });
@@ -203,28 +256,30 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
     const { latitude, longitude, radiusM } = this.form.getRawValue();
     const center: L.LatLngExpression = [latitude, longitude];
     if (!this.centerMarker) {
-      this.centerMarker = L.circleMarker(center, { radius: 6, color: cssToken('color-action-primary') }).addTo(this.map);
-      this.radiusCircle = L.circle(center, { radius: radiusM, color: cssToken('color-action-primary'), fillOpacity: 0.1 }).addTo(this.map);
+      const color = cssToken('color-action-primary');
+      this.centerMarker = L.circleMarker(center, { radius: 6, color }).addTo(this.map);
+      this.radiusCircle = L.circle(center, { radius: radiusM, color, fillColor: cssToken('color-action-primary-subtle'), fillOpacity: 0.5 }).addTo(this.map);
     } else {
       this.centerMarker.setLatLng(center);
       this.radiusCircle?.setLatLng(center);
-      this.radiusCircle?.setRadius(radiusM);
+      if (radiusM > 0) this.radiusCircle?.setRadius(radiusM);
     }
     this.map.setView(center, zoom ?? this.map.getZoom());
   }
 
   protected save(): void {
     if (this.form.invalid) {
+      this.form.markAllAsTouched();
       return;
     }
-    this.loading.set(true);
+    this.saving.set(true);
     this.geofence.upsert(this.workSiteId, this.form.getRawValue()).subscribe({
       next: () => {
         this.notify.success(this.transloco.translate('geofence.saved'));
-        this.loading.set(false);
+        this.saving.set(false);
       },
       error: () => {
-        this.loading.set(false);
+        this.saving.set(false);
         this.notify.error(this.transloco.translate('geofence.saveError'));
       },
     });
@@ -245,18 +300,60 @@ export class GeofenceComponent implements AfterViewInit, OnDestroy {
     } else {
       request = { ttlMinutes: raw.ttlMinutes };
     }
-    this.loading.set(true);
+    this.generating.set(true);
     this.geofence.generateQr(this.workSiteId, request).subscribe({
       next: (token) => {
         this.qr.set(token);
         void toDataURL(token.token, { width: 220 }).then((url) => this.qrImage.set(url));
         this.notify.success(this.transloco.translate('geofence.qrGenerated'));
-        this.loading.set(false);
+        this.generating.set(false);
       },
       error: () => {
-        this.loading.set(false);
+        this.generating.set(false);
         this.notify.error(this.transloco.translate('geofence.qrError'));
       },
     });
+  }
+
+  /** Rotar invalida el QR actual: se confirma (S01) y el nuevo entra con un fundido. */
+  protected rotate(): void {
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        data: {
+          title: this.transloco.translate('geofence.rotateTitle', { site: this.siteLabel() }),
+          message: this.transloco.translate('geofence.rotateMessage'),
+          confirmText: this.transloco.translate('geofence.rotate'),
+          color: 'warn',
+        },
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (confirmed) this.generateQr();
+      });
+  }
+
+  protected show(): void {
+    this.dialog.open(this.qrGrande, { ariaLabel: this.siteLabel() });
+  }
+
+  /** Imprime solo el QR, con el nombre del centro, en una ventana aparte. */
+  protected print(): void {
+    const img = this.qrImage();
+    const win = img ? window.open('', '_blank', 'noopener=no') : null;
+    if (!win || !img) return;
+    const doc = win.document;
+    doc.title = this.siteLabel();
+    const heading = doc.createElement('h1');
+    heading.textContent = this.siteLabel();
+    const image = doc.createElement('img');
+    image.src = img;
+    image.style.width = '60%';
+    doc.body.style.fontFamily = 'sans-serif';
+    doc.body.style.textAlign = 'center';
+    doc.body.append(heading, image);
+    image.onload = () => {
+      win.print();
+      win.close();
+    };
   }
 }

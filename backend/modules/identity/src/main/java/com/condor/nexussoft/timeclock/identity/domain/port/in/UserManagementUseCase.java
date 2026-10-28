@@ -12,7 +12,7 @@ public interface UserManagementUseCase {
 
     UserView get(UUID tenantId, UUID userId);
 
-    Paged<UserView> list(UUID tenantId, int page, int size, String search);
+    Paged<UserView> list(UUID tenantId, int page, int size, UserListFilter filter);
 
     UserView updateStatus(UUID tenantId, UUID userId, String status);
 

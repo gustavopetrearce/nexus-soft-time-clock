@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import { PageResponse } from '../../../core/models/common.models';
-import { CreateUser, User, UserStatus } from './user.models';
+import { CreateUser, User, UserListFilters, UserStatus } from './user.models';
 
 /** Cliente REST de administración de usuarios del tenant (RF-06, RF-22). Requiere {@code user:manage}. */
 @Injectable({ providedIn: 'root' })
@@ -12,10 +12,15 @@ export class UserService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBaseUrl}/users`;
 
-  list(page = 0, size = 20, search?: string): Observable<PageResponse<User>> {
+  /**
+   * Listado paginado. `search` cubre nombre, apellidos y correo; `filters` acota por código de
+   * empleado (parcial), estado y rol, todo en el servidor (P20).
+   */
+  list(page = 0, size = 20, search?: string, filters: UserListFilters = {}): Observable<PageResponse<User>> {
     let params = new HttpParams().set('page', page).set('size', size);
-    if (search) {
-      params = params.set('search', search);
+    const all: Record<string, string | undefined> = { search, ...filters };
+    for (const [key, value] of Object.entries(all)) {
+      if (value) params = params.set(key, value);
     }
     return this.http.get<PageResponse<User>>(this.base, { params });
   }
