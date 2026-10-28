@@ -1,242 +1,198 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule } from '@angular/material/table';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
+import { AuthStore } from '../../core/auth/auth.store';
 import { AppDatePipe } from '../../core/i18n/app-date.pipe';
+import { AppNumberPipe } from '../../core/i18n/app-number.pipe';
+import { AlertComponent } from '../../core/ui/alert.component';
+import { PAGE_SIZE_OPTIONS, debouncedSearch, pageSizePreference } from '../../core/ui/catalog';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
+import { LoadingBarComponent } from '../../core/ui/loading-bar.component';
 import { NotificationService } from '../../core/ui/notification.service';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
+import { ScrollDirective } from '../../core/ui/scroll.directive';
 import { StatusChipComponent } from '../../core/ui/status-chip.component';
-import { ResolveVacation, VacationRequest, VacationStatus } from './vacation.models';
+import { VacationRequest, VacationResolution, VacationStatus } from './vacation.models';
 import { VacationService } from './vacation.service';
 import { VacationRequestDialogComponent } from './vacation-request-dialog.component';
 
+const STATUSES: readonly (VacationStatus | '')[] = ['PENDING', 'APPROVED', 'REJECTED', ''];
+
 /**
- * Bandeja de solicitudes de vacaciones (RF-09 ampliado): tabla + drawer de resolución,
- * espejo del flujo de Incidencias. El supervisor aprueba/rechaza con nota sin fricción.
- * Requiere {@code vacation:approve}.
+ * P19 · Bandeja de vacaciones (portal): buscador de colaborador (en el servidor, con espera de
+ * 400 ms) y estado (pendientes por defecto); Aprobar y Rechazar en la propia fila, sin confirmación.
+ * Si otra persona ya la resolvió (409) se avisa arriba del listado y se recarga.
  */
 @Component({
   selector: 'app-vacations',
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    MatCardModule,
-    MatTableModule,
-    MatDialogModule,
-    MatPaginatorModule,
     MatButtonModule,
-    MatIconModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule,
+    MatPaginatorModule,
     MatSelectModule,
-    MatProgressBarModule,
-    AppDatePipe,
-    PageHeaderComponent,
-    StatusChipComponent,
-    EmptyStateComponent,
     TranslocoPipe,
+    AppDatePipe,
+    AppNumberPipe,
+    AlertComponent,
+    EmptyStateComponent,
+    LoadingBarComponent,
+    PageHeaderComponent,
+    ScrollDirective,
+    StatusChipComponent,
   ],
-  template: `
-    <app-page-header [title]="'layout.nav.vacations' | transloco" [subtitle]="'vacations.subtitle' | transloco">
-      @if (pendingCount() > 0) {
-        <span class="count-pill"><mat-icon>schedule</mat-icon> {{ 'vacations.pendingCount' | transloco: { n: pendingCount() } }}</span>
-      }
-      <button mat-flat-button color="primary" (click)="openCreate()"><mat-icon>add</mat-icon> {{ 'vacations.newRequest' | transloco }}</button>
-    </app-page-header>
-
-    <div class="split-layout">
-      <div class="split-main">
-        <mat-card>
-          <mat-card-content>
-            <div class="filter-bar">
-              <mat-form-field appearance="outline" class="search">
-                <mat-icon matPrefix>search</mat-icon>
-                <mat-label>{{ 'vacations.search' | transloco }}</mat-label>
-                <input matInput [formControl]="searchControl" autocomplete="off" />
-              </mat-form-field>
-              <mat-form-field appearance="outline" style="width:200px">
-                <mat-label>{{ 'common.status' | transloco }}</mat-label>
-                <mat-select [formControl]="statusFilter" (selectionChange)="applyServerFilter()">
-                  <mat-option value="PENDING">{{ 'vacations.filter.pending' | transloco }}</mat-option>
-                  <mat-option value="APPROVED">{{ 'vacations.filter.approved' | transloco }}</mat-option>
-                  <mat-option value="REJECTED">{{ 'vacations.filter.rejected' | transloco }}</mat-option>
-                  <mat-option value="">{{ 'vacations.filter.all' | transloco }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
-
-            @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-            @if (error()) { <p class="error-text">{{ error() }}</p> }
-
-            <div class="table-wrap">
-              <table mat-table [dataSource]="filtered()" style="width:100%">
-                <ng-container matColumnDef="user">
-                  <th mat-header-cell *matHeaderCellDef>{{ 'users.employee' | transloco }}</th>
-                  <td mat-cell *matCellDef="let v">
-                    <div class="who">
-                      <span class="nm">{{ v.userName || v.userId }}</span>
-                      <span class="sub">{{ v.employeeCode }}{{ v.reason ? ' · ' + v.reason : '' }}</span>
-                    </div>
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="period">
-                  <th mat-header-cell *matHeaderCellDef>{{ 'vacations.period' | transloco }}</th>
-                  <td mat-cell *matCellDef="let v" style="white-space:nowrap">
-                    {{ v.startDate | appDate: 'dd MMM' }} – {{ v.endDate | appDate: 'dd MMM yyyy' }}
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="days">
-                  <th mat-header-cell *matHeaderCellDef style="text-align:right">{{ 'settings.vacation.days' | transloco }}</th>
-                  <td mat-cell *matCellDef="let v" style="text-align:right">{{ v.days }}</td>
-                </ng-container>
-                <ng-container matColumnDef="status">
-                  <th mat-header-cell *matHeaderCellDef>{{ 'common.status' | transloco }}</th>
-                  <td mat-cell *matCellDef="let v"><app-status-chip [status]="v.status" /></td>
-                </ng-container>
-                <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef></th>
-                  <td mat-cell *matCellDef="let v" style="text-align:right">
-                    <button mat-stroked-button (click)="select(v)">
-                      {{ (v.status === 'PENDING' ? 'vacations.review' : 'vacations.view') | transloco }}
-                    </button>
-                  </td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="columns"></tr>
-                <tr mat-row *matRowDef="let row; columns: columns"
-                    [style.background]="row.id === selected()?.id ? 'var(--nx-color-action-primary-subtle)' : ''"></tr>
-              </table>
-            </div>
-
-            @if (!loading() && filtered().length === 0) {
-              <app-empty-state icon="beach_access" [message]="'vacations.empty' | transloco" />
-            }
-
-            <mat-paginator
-              [length]="total()"
-              [pageSize]="size()"
-              [pageIndex]="page()"
-              [pageSizeOptions]="[10, 20, 50]"
-              (page)="onPage($event)"
-            />
-          </mat-card-content>
-        </mat-card>
-      </div>
-
-      @if (selected(); as v) {
-        <aside class="split-drawer">
-          <div class="drawer-header">
-            <div class="titles">
-              <h3>{{ 'vacations.request' | transloco }}</h3>
-              <p class="sub">{{ v.userName || v.userId }}{{ v.employeeCode ? ' · ' + v.employeeCode : '' }}</p>
-            </div>
-            <button mat-icon-button (click)="closeDrawer()" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
-          </div>
-          <div class="drawer-body">
-            <div class="detail-section-title">{{ 'vacations.detail' | transloco }}</div>
-            <div class="detail-grid">
-              <div class="detail-row"><span class="k">{{ 'vacations.period' | transloco }}</span><span class="v">{{ v.startDate | appDate: 'dd MMM yyyy' }} – {{ v.endDate | appDate: 'dd MMM yyyy' }}</span></div>
-              <div class="detail-row"><span class="k">{{ 'vacations.requestedDays' | transloco }}</span><span class="v">{{ v.days }}</span></div>
-              @if (v.reason) {
-                <div class="detail-row"><span class="k">{{ 'vacations.reason' | transloco }}</span><span class="v">{{ v.reason }}</span></div>
-              }
-              <div class="detail-row"><span class="k">{{ 'vacations.requestedOn' | transloco }}</span><span class="v">{{ v.createdAt | appDate: 'mediumDate' }}</span></div>
-              <div class="detail-row"><span class="k">{{ 'vacations.currentStatus' | transloco }}</span><span class="v"><app-status-chip [status]="v.status" /></span></div>
-              @if (v.resolvedBy) {
-                <div class="detail-row"><span class="k">{{ 'vacations.resolvedBy' | transloco }}</span><span class="v">{{ v.resolvedBy }}</span></div>
-              }
-              @if (v.resolutionNote) {
-                <div class="detail-row"><span class="k">{{ 'vacations.note' | transloco }}</span><span class="v">{{ v.resolutionNote }}</span></div>
-              }
-            </div>
-
-            @if (v.status === 'PENDING') {
-              <div class="detail-section-title">{{ 'vacations.resolution' | transloco }}</div>
-              <form [formGroup]="resolveForm">
-                <mat-form-field appearance="outline" class="drawer-field">
-                  <mat-label>{{ 'vacations.noteForEmployee' | transloco }}</mat-label>
-                  <textarea matInput formControlName="note" rows="3"
-                    [placeholder]="'vacations.notePlaceholder' | transloco"></textarea>
-                </mat-form-field>
-              </form>
-            }
-          </div>
-          @if (v.status === 'PENDING') {
-            <div class="drawer-actions">
-              <button mat-stroked-button color="warn" [disabled]="saving()" (click)="resolve(v, 'REJECTED')">
-                <mat-icon>close</mat-icon> {{ 'vacations.reject' | transloco }}
-              </button>
-              <button mat-flat-button color="primary" [disabled]="saving()" (click)="resolve(v, 'APPROVED')">
-                <mat-icon>check</mat-icon> {{ 'users.edit.approve' | transloco }}
-              </button>
-            </div>
-          }
-        </aside>
-      }
-    </div>
-  `,
   styles: [
     `
-      .count-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--nx-radius-full); background: var(--nx-color-status-warning-bg); color: var(--nx-color-status-warning-fg); font-weight: var(--nx-font-weight-semibold); font-size: var(--nx-text-small-size); }
-      .count-pill mat-icon { font-size: 18px; width: 18px; height: 18px; }
-      .who { display: flex; flex-direction: column; }
-      .who .nm { font-weight: var(--nx-font-weight-semibold); }
-      .who .sub { font-size: var(--nx-text-small-size); color: var(--nx-color-text-secondary); }
+      mat-form-field { width: 100%; }
+      td { white-space: nowrap; }
+      td.motivo .nx-trunc { max-width: calc(var(--nx-space-16) * 4); }
     `,
   ],
+  template: `
+    <app-loading-bar [active]="loading()" />
+    <app-page-header [title]="'layout.nav.vacations' | transloco">
+      @if (canRequest()) {
+        <button mat-stroked-button type="button" (click)="openCreate()"><mat-icon>add</mat-icon>{{ 'vacations.newRequest' | transloco }}</button>
+      }
+    </app-page-header>
+
+    @if (error()) {
+      <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco">
+        <button mat-stroked-button type="button" (click)="reload()">{{ 'common.retry' | transloco }}</button>
+      </app-empty-state>
+    } @else {
+      <section class="nx-panel nx-panel--listado">
+        <div class="nx-filtros">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-buscador">
+            <mat-icon matPrefix>search</mat-icon>
+            <mat-label>{{ 'vacations.search' | transloco }}</mat-label>
+            <input matInput type="search" [formControl]="searchControl" autocomplete="off" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'common.status' | transloco }}</mat-label>
+            <mat-select [formControl]="statusFilter" (selectionChange)="applyServerFilter()">
+              @for (s of statuses; track s) { <mat-option [value]="s">{{ 'vacations.filter.' + (s || 'all').toLowerCase() | transloco }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        @if (alreadyResolved()) {
+          <app-alert tone="error">{{ 'vacations.alreadyResolved' | transloco }}</app-alert>
+        }
+
+        @if (!loading() && requests().length === 0) {
+          @if (searchControl.value.trim() || statusFilter.value !== 'PENDING') {
+            <app-empty-state icon="search" [message]="'common.noResults' | transloco">
+              <button mat-button type="button" (click)="clearFilters()">{{ 'common.clearFilters' | transloco }}</button>
+            </app-empty-state>
+          } @else {
+            <app-empty-state icon="beach_access" [message]="'vacations.empty' | transloco" />
+          }
+        } @else {
+          <div class="nx-tabla">
+            <div class="nx-tabla__scroll nx-scroll" nxScroll>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{{ 'vacations.collaborator' | transloco }}</th>
+                    <th scope="col" class="num">{{ 'vacations.start' | transloco }}</th>
+                    <th scope="col" class="num">{{ 'vacations.end' | transloco }}</th>
+                    <th scope="col" class="num">{{ 'vacations.days' | transloco }}</th>
+                    <th scope="col" class="nx-col-sec">{{ 'vacations.reason' | transloco }}</th>
+                    <th scope="col">{{ 'common.status' | transloco }}</th>
+                    <th scope="col" class="nx-col-acciones">{{ 'common.actions' | transloco }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (v of requests(); track v.id) {
+                    <tr>
+                      <td><span class="nx-trunc">{{ v.userName || v.userId }}</span></td>
+                      <td class="num nx-text-numeric">{{ v.startDate | appDate: 'dd/MM/yyyy' }}</td>
+                      <td class="num nx-text-numeric">{{ v.endDate | appDate: 'dd/MM/yyyy' }}</td>
+                      <td class="num nx-text-numeric">{{ v.days | appNumber }}</td>
+                      <td class="nx-col-sec motivo"><span class="nx-trunc" [attr.title]="v.reason || null">{{ v.reason || '—' }}</span></td>
+                      <td><app-status-chip [status]="v.status" [label]="'vacations.status.' + v.status | transloco" /></td>
+                      <td class="nx-col-acciones">
+                        @if (v.status === 'PENDING') {
+                          <span class="nx-acciones-fila">
+                            <button mat-stroked-button type="button" [disabled]="savingId() === v.id" (click)="resolve(v, 'REJECTED')">
+                              {{ 'vacations.reject' | transloco }}
+                            </button>
+                            <button mat-flat-button type="button" [disabled]="savingId() === v.id" (click)="resolve(v, 'APPROVED')">
+                              {{ 'vacations.approve' | transloco }}
+                            </button>
+                          </span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        <mat-paginator
+          [length]="total()"
+          [pageSize]="size()"
+          [pageIndex]="page()"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="onPage($event)"
+        />
+      </section>
+    }
+  `,
 })
 export class VacationsComponent {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(VacationService);
+  private readonly store = inject(AuthStore);
   private readonly notify = inject(NotificationService);
   private readonly dialog = inject(MatDialog);
   private readonly transloco = inject(TranslocoService);
 
-  protected readonly columns = ['user', 'period', 'days', 'status', 'actions'];
+  protected readonly statuses = STATUSES;
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+
   protected readonly requests = signal<VacationRequest[]>([]);
   protected readonly loading = signal(false);
-  protected readonly saving = signal(false);
-  protected readonly error = signal<string | null>(null);
-  protected readonly selected = signal<VacationRequest | null>(null);
+  protected readonly error = signal(false);
+  protected readonly savingId = signal<string | null>(null);
+  protected readonly alreadyResolved = signal(false);
 
   protected readonly page = signal(0);
-  protected readonly size = signal(20);
+  protected readonly size = pageSizePreference('vacations');
   protected readonly total = signal(0);
 
   protected readonly searchControl = this.fb.nonNullable.control('');
   protected readonly statusFilter = this.fb.nonNullable.control<VacationStatus | ''>('PENDING');
-  protected readonly resolveForm = this.fb.nonNullable.group({ note: [''] });
-
-  protected readonly pendingCount = computed(() => this.requests().filter((r) => r.status === 'PENDING').length);
-
-  /** Filtro local por texto sobre lo ya cargado (el estado se filtra en el servidor). */
-  protected readonly filtered = computed(() => {
-    const q = this.searchControl.value.trim().toLowerCase();
-    if (!q) return this.requests();
-    return this.requests().filter(
-      (r) =>
-        (r.userName ?? '').toLowerCase().includes(q) ||
-        (r.employeeCode ?? '').toLowerCase().includes(q) ||
-        (r.reason ?? '').toLowerCase().includes(q),
-    );
-  });
 
   constructor() {
+    debouncedSearch(this.searchControl.valueChanges)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.applyServerFilter());
     this.reload();
   }
 
+  protected canRequest(): boolean {
+    return this.store.hasPermission('vacation:request');
+  }
+
   protected openCreate(): void {
-    const ref = this.dialog.open(VacationRequestDialogComponent, { width: '560px', maxWidth: '96vw', autoFocus: false });
+    const ref = this.dialog.open(VacationRequestDialogComponent);
     ref.afterClosed().subscribe((created) => {
       if (created) this.reload();
     });
@@ -244,15 +200,16 @@ export class VacationsComponent {
 
   protected reload(): void {
     this.loading.set(true);
-    this.error.set(null);
-    this.service.list(this.page(), this.size(), this.statusFilter.value).subscribe({
+    this.error.set(false);
+    const search = this.searchControl.value.trim() || undefined;
+    this.service.list(this.page(), this.size(), this.statusFilter.value, search).subscribe({
       next: (result) => {
         this.requests.set(result.content);
         this.total.set(result.totalElements);
         this.loading.set(false);
       },
       error: () => {
-        this.error.set(this.transloco.translate('vacations.loadError'));
+        this.error.set(true);
         this.loading.set(false);
       },
     });
@@ -266,32 +223,34 @@ export class VacationsComponent {
 
   protected applyServerFilter(): void {
     this.page.set(0);
-    this.closeDrawer();
+    this.alreadyResolved.set(false);
     this.reload();
   }
 
-  protected select(v: VacationRequest): void {
-    this.selected.set(v);
-    this.resolveForm.reset({ note: '' });
+  protected clearFilters(): void {
+    this.searchControl.setValue('', { emitEvent: false });
+    this.statusFilter.setValue('PENDING');
+    this.applyServerFilter();
   }
 
-  protected closeDrawer(): void {
-    this.selected.set(null);
-  }
-
-  protected resolve(v: VacationRequest, resolution: 'APPROVED' | 'REJECTED'): void {
-    const body: ResolveVacation = { resolution, note: this.resolveForm.getRawValue().note || undefined };
-    this.saving.set(true);
-    this.service.resolve(v.id, body).subscribe({
+  /** Sin confirmación (HIFI/08 R3): la decisión se toma desde la fila. */
+  protected resolve(v: VacationRequest, resolution: VacationResolution): void {
+    this.savingId.set(v.id);
+    this.alreadyResolved.set(false);
+    this.service.resolve(v.id, { resolution }).subscribe({
       next: () => {
-        this.saving.set(false);
+        this.savingId.set(null);
         this.notify.success(this.transloco.translate(resolution === 'APPROVED' ? 'vacations.approved' : 'vacations.rejected'));
-        this.closeDrawer();
         this.reload();
       },
-      error: () => {
-        this.saving.set(false);
-        this.notify.error(this.transloco.translate('vacations.resolveError'));
+      error: (err: unknown) => {
+        this.savingId.set(null);
+        if (err instanceof HttpErrorResponse && err.status === 409) {
+          this.alreadyResolved.set(true);
+          this.reload();
+        } else {
+          this.notify.error(this.transloco.translate('vacations.resolveError'));
+        }
       },
     });
   }

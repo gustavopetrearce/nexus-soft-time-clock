@@ -47,7 +47,14 @@
       "first": "First page",
       "last": "Last page",
       "range": "{{from}}–{{to}} of {{total}}"
-    }
+    },
+    "loadError": "Couldn't load the information.",
+    "loadErrorHint": "Try again in a moment.",
+    "actions": "Actions",
+    "review": "Review",
+    "filters": "Filters",
+    "noResults": "No results match these filters.",
+    "export": "Export"
   },
   "language": {
     "change": "Change language"
@@ -121,36 +128,15 @@
     "CANCELLED": "Cancelled"
   },
   "login": {
-    "heroTitle1": "Attendance tracking",
-    "heroTitle2": "without friction.",
-    "heroLead": "One dashboard to manage attendance, shifts and incidents across your whole operation.",
-    "features": {
-      "geofence": {
-        "title": "Geofences and GPS validation",
-        "text": "QR clock-in with anti-fraud checks and a configurable radius per site."
-      },
-      "realtime": {
-        "title": "Real-time visibility",
-        "text": "Live map, incidents and instantly exportable reports."
-      },
-      "multiCompany": {
-        "title": "Multi-company by design",
-        "text": "One dashboard to manage every site in your organization."
-      }
-    },
-    "footer": "© Nexus Soft — Workforce attendance platform",
-    "welcome": "Welcome back",
-    "subtitle": "Sign in to continue",
     "email": "Email",
     "password": "Password",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "companyCode": "Company code (optional)",
-    "companyCodePlaceholder": "e.g. ACME",
-    "companyCodeHint": "Only needed if your email belongs to more than one company",
     "submit": "Sign in",
-    "secure": "Secure connection",
-    "invalidCredentials": "Incorrect username or password."
+    "invalidCredentials": "Incorrect email or password.",
+    "locked": "Your account is locked after several failed attempts. Try again later.",
+    "tagline": "Every workday counts."
   },
   "password": {
     "title": "Change password",
@@ -168,32 +154,16 @@
   },
   "dashboard": {
     "platformTitle": "Platform dashboard",
-    "platformSubtitle": "Global company administration",
     "companies": "Companies",
     "companiesText": "Manage the platform's companies (tenants) and provision each one's initial administrator.",
-    "goToCompanies": "Go to Companies",
+    "companiesLink": "Companies: view companies",
     "title": "Dashboard",
-    "subtitle": "Operational summary of your company",
-    "attendanceToday": "Today's attendance",
-    "accepted": "Accepted",
-    "rejected": "Rejected",
+    "acceptedToday": "Accepted today",
+    "rejectedToday": "Rejected today",
     "openIncidents": "Open incidents",
-    "needsReview": "Awaiting supervisor review",
-    "viewIncidents": "View incidents",
-    "activeOperation": "Active operation",
+    "openIncidentsLink": "Open incidents: view incidents",
     "activeUsers": "Active users",
-    "activeSites": "Active sites",
-    "quickLinks": "Quick links",
-    "loading": "Loading metrics…",
-    "loadError": "Could not load the metrics (missing dashboard:read permission?).",
-    "links": {
-      "newIncident": "New incident",
-      "newReport": "Generate report",
-      "users": "Users",
-      "workSites": "Work sites",
-      "map": "View live map",
-      "scheduling": "Schedules and shifts"
-    }
+    "activeSites": "Active sites"
   },
   "errors": {
     "generic": "An unexpected error occurred.",
@@ -373,7 +343,6 @@
   },
   "people": {
     "title": "People",
-    "subtitle": "Staff report: every field, custom columns, filters, charts and export",
     "columns": "Columns",
     "exportExcel": "Export to Excel",
     "kpi": {
@@ -381,9 +350,6 @@
       "birthdays": "Birthdays today",
       "anniversaries": "Anniversaries today"
     },
-    "distribution": "Distribution",
-    "noChartData": "No data to chart.",
-    "countOf": "{{shown}} of {{total}}",
     "col": {
       "person": "Employee",
       "employeeCode": "Code",
@@ -406,20 +372,10 @@
     "anniversaryTooltip": "Work anniversary",
     "onlyWith": "Only with",
     "empty": "No matching people.",
-    "dim": {
-      "roles": "Role"
-    },
-    "noRole": "No role",
-    "loadError": "Could not load the people report.",
     "yearOne": "{{n}} year",
     "yearMany": "{{n}} years",
-    "tenure": {
-      "none": "No data",
-      "lt1": "Less than 1 year",
-      "y1to2": "1–2 years",
-      "y3to5": "3–5 years",
-      "gt5": "More than 5 years"
-    }
+    "refresh": "Refresh",
+    "visibleColumns": "Visible columns"
   },
   "workSites": {
     "title": "Work sites",
@@ -658,7 +614,9 @@
     "fortnight": "Fortnight",
     "month": "Month",
     "range": "Range",
-    "to": "To"
+    "to": "To",
+    "from": "From",
+    "label": "Period"
   },
   "attendance": {
     "event": {
@@ -692,21 +650,19 @@
     }
   },
   "attendanceEvents": {
-    "subtitle": "Individual attendance records: when each person clocks in and out",
-    "count": "{{n}} records",
     "col": {
       "date": "Date and time",
       "event": "Event",
       "site": "Work site",
       "photo": "Photo",
-      "rejection": "Rejection reason"
+      "rejection": "Rejection reason",
+      "collaborator": "Collaborator"
     },
     "siteless": "No site",
     "sitelessTooltip": "Record without a site: no geofence check",
     "nameOrCode": "Name or code",
     "viewPhoto": "View photo evidence",
-    "empty": "No attendance records in this period.",
-    "loadError": "Could not load the report (missing report:export permission?).",
+    "empty": "No records in this period.",
     "detail": {
       "employeeNo": "Employee no.",
       "noGeofence": "recorded without geofence validation",
@@ -719,22 +675,20 @@
       "evidence": "Photo evidence",
       "noPhoto": "This record has no photo.",
       "evidenceAlt": "Photo evidence of the record",
-      "evidenceError": "Could not load the evidence."
-    }
+      "evidenceError": "Couldn't load the photo.",
+      "title": "Record details",
+      "site": "Site"
+    },
+    "openDetail": "View the record details for {{name}}",
+    "count": "{{n}} records"
   },
   "reports": {
     "title": "Attendance report",
-    "subtitle": "Per-employee summary with filters and export",
     "search": "Search (name, number or site)",
-    "ofTotal": "of {{total}}",
     "recordOne": "record",
     "recordMany": "records",
-    "filterHint": "Filter using the row under each header",
-    "demo": "Demo data",
-    "demoTooltip": "No connection to the backend: showing demo data.",
     "emptyPeriod": "No data for the selected period.",
     "emptyFilters": "No employees match the applied filters.",
-    "loadErrorDemo": "Could not load the report; showing demo data.",
     "sheet": "Attendance",
     "fileName": "attendance-report",
     "pdfTitle": "Attendance report by employee",
@@ -779,12 +733,6 @@
       "totalHours": "Worked + overtime",
       "compliancePercentage": "Compliance vs. expected days"
     },
-    "filters": {
-      "employee": "Employee details",
-      "active": "Active",
-      "inactive": "Inactive",
-      "ranges": "Numeric ranges"
-    },
     "tip": {
       "noJustified": "No excused absences",
       "justified": "{{n}} excused absence(s)",
@@ -794,15 +742,14 @@
       "noLate": "No late arrivals",
       "late": "{{n}} late arrival(s)",
       "lateOver": "{{n}} late arrivals (above the threshold of {{threshold}})"
-    }
+    },
+    "exportFormat": "Export format"
   },
   "records": {
     "title": "Attendance records",
-    "subtitle": "Individual clock-ins per employee (in, out and intermediate events)",
     "eventType": "Event type",
     "emptyPeriod": "No records for the selected period.",
     "emptyFilters": "No records match the applied filters.",
-    "loadError": "Could not load the attendance records report.",
     "event": {
       "ENTRADA": "Clock-in",
       "SALIDA": "Clock-out",
@@ -812,26 +759,20 @@
     }
   },
   "incidents": {
-    "subtitle": "Review and resolve rejected clock-ins",
-    "openOne": "{{n}} open incident",
-    "openMany": "{{n}} open incidents",
-    "search": "Search by employee, type, reason or ID",
+    "search": "Search collaborator",
     "priority": "Priority",
     "filter": {
-      "open": "Open",
-      "resolved": "Resolved"
+      "allPriorities": "All",
+      "OPEN": "Open",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "RESOLVED": "Resolved"
     },
     "date": "Date",
     "type": "Type",
     "empty": "No incidents to display.",
-    "titleOf": "Incident · {{type}}",
-    "info": "Information",
-    "relatedRecord": "Related clock-in",
     "resolvedAt": "Resolved on",
-    "result": "Outcome",
-    "resolutionNote": "Resolution note",
     "saveAndNext": "Save and open next",
-    "loadError": "Could not load the inbox (missing incident:approve permission?).",
     "resolved": "Incident resolved.",
     "resolveError": "Could not resolve the incident.",
     "types": {
@@ -848,65 +789,68 @@
       "LOW": "Low",
       "MEDIUM": "Medium",
       "HIGH": "High"
-    }
+    },
+    "collaborator": "Collaborator",
+    "description": "Description",
+    "resolveTitle": "Resolve incident",
+    "decision": "Decision",
+    "decisions": {
+      "APPROVED": "Approve",
+      "REJECTED": "Reject",
+      "RESOLVED": "Resolve"
+    },
+    "note": "Note",
+    "notePlaceholder": "Add a note",
+    "notOpen": "This incident is no longer open. Open the next one.",
+    "nextOpened": "Next incident: {{type}} for {{name}}."
   },
   "audit": {
-    "subtitle": "View the system's activity log",
     "action": "Action",
     "resource": "Resource",
     "empty": "No audit records.",
-    "resourceId": "Resource ID",
+    "resourceId": "Id",
     "browser": "Browser",
     "device": "Device",
-    "oldValues": "Previous values",
-    "newValues": "New values",
-    "loadError": "Could not load the log (missing audit:read permission?).",
-    "system": "System"
+    "oldValues": "Before",
+    "newValues": "After",
+    "system": "System",
+    "detail": "Details",
+    "detailLabel": "Audit details",
+    "date": "Date",
+    "actor": "Actor",
+    "allActions": "All",
+    "searchActor": "Search actor",
+    "openDetail": "View the details of {{action}}"
   },
   "notifications": {
-    "subtitle": "View the notifications sent by the system",
     "empty": "You have no notifications.",
-    "loadError": "Could not load the notifications."
+    "unread": "unread"
   },
   "map": {
-    "subtitle": "See your operation's clock-ins as they happen",
-    "connected": "Connected in real time",
     "reconnecting": "Reconnecting…",
     "recent": "Recent events",
     "accepted": "{{n}} accepted",
     "rejected": "{{n}} rejected",
-    "waiting": "Waiting for attendance events…",
     "record": "Record",
-    "rejection": "Rejection"
+    "rejection": "Rejected record",
+    "live": "Live",
+    "updated": "updated",
+    "search": "Search work site",
+    "mapLabel": "Map: accepted records in the last hour by work site",
+    "empty": "No records yet today."
   },
   "vacations": {
-    "subtitle": "Review your team's requests and approve or reject them",
-    "pendingCount": "{{n}} pending",
     "newRequest": "New request",
-    "search": "Search by employee or reason",
+    "search": "Search collaborator",
     "filter": {
       "pending": "Pending",
       "approved": "Approved",
       "rejected": "Rejected",
       "all": "All"
     },
-    "period": "Period",
-    "review": "Review",
-    "view": "View",
     "empty": "No requests to display.",
-    "request": "Vacation request",
-    "detail": "Details",
-    "requestedDays": "Days requested",
     "reason": "Reason",
-    "requestedOn": "Requested on",
-    "currentStatus": "Current status",
-    "resolvedBy": "Resolved by",
-    "note": "Note",
-    "resolution": "Resolution",
-    "noteForEmployee": "Note for the employee",
-    "notePlaceholder": "Optional — shown to the employee when they are notified of the decision.",
     "reject": "Reject",
-    "loadError": "Could not load the inbox (missing vacation:approve permission?).",
     "approved": "Request approved.",
     "rejected": "Request rejected.",
     "resolveError": "Could not resolve the request.",
@@ -917,6 +861,28 @@
       "endBeforeStart": "The end date cannot be before the start date.",
       "created": "Request submitted.",
       "createError": "Could not submit the request (check for overlaps or permissions)."
+    },
+    "collaborator": "Collaborator",
+    "start": "Start",
+    "end": "End",
+    "days": "Days",
+    "approve": "Approve",
+    "alreadyResolved": "The request was already resolved.",
+    "status": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    }
+  },
+  "support": {
+    "forbidden": {
+      "title": "You don't have access to this section.",
+      "action": "Go to home"
+    },
+    "connection": {
+      "title": "Couldn't connect to the server.",
+      "description": "Check your connection and try again."
     }
   }
 }

@@ -1,148 +1,196 @@
-import { Component, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTableModule } from '@angular/material/table';
+import { MatSelectModule } from '@angular/material/select';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
+import { AppDatePipe } from '../../core/i18n/app-date.pipe';
+import { PAGE_SIZE_OPTIONS, pageSizePreference } from '../../core/ui/catalog';
+import { openDrawer } from '../../core/ui/drawer';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
+import { FiltersButtonComponent } from '../../core/ui/filters-button.component';
+import { LoadingBarComponent } from '../../core/ui/loading-bar.component';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
+import { ScrollDirective } from '../../core/ui/scroll.directive';
+import { AuditDetailDrawerComponent } from './audit-detail-drawer.component';
 import { AuditEntry } from './audit.models';
 import { AuditService } from './audit.service';
-import { AppDatePipe } from '../../core/i18n/app-date.pipe';
 
 /**
- * Bitácora de auditoría (RF-12): consulta paginada de solo lectura. Los registros son
- * inmutables (RN-61): la UI no ofrece editar ni borrar.
+ * P17 · Auditoría (RF-12, solo lectura): fecha y hora, usuario, acción, recurso (tipo · id) y
+ * origen; la fila abre el detalle P18 en un drawer y queda seleccionada. El backend solo pagina, así
+ * que actor, fechas, acción y recurso filtran la página cargada.
  */
 @Component({
   selector: 'app-audit',
   standalone: true,
   imports: [
-    MatCardModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatProgressBarModule,
-    MatIconModule,
+    NgTemplateOutlet,
+    ReactiveFormsModule,
     MatButtonModule,
-    PageHeaderComponent,
-    EmptyStateComponent,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatPaginatorModule,
+    MatSelectModule,
     TranslocoPipe,
     AppDatePipe,
+    EmptyStateComponent,
+    FiltersButtonComponent,
+    LoadingBarComponent,
+    PageHeaderComponent,
+    ScrollDirective,
   ],
-  template: `
-    <app-page-header [title]="'layout.nav.audit' | transloco" [subtitle]="'audit.subtitle' | transloco" />
-
-    <div class="split-layout">
-      <div class="split-main">
-        <mat-card>
-          <mat-card-content>
-            @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-            @if (error()) { <p class="error-text">{{ error() }}</p> }
-
-            <div class="table-wrap">
-              <table mat-table [dataSource]="entries()" style="width:100%">
-                <ng-container matColumnDef="createdAt">
-                  <th mat-header-cell *matHeaderCellDef>{{ 'attendanceEvents.col.date' | transloco }}</th>
-                  <td mat-cell *matCellDef="let e">{{ e.createdAt | appDate: 'medium' }}</td>
-                </ng-container>
-                <ng-container matColumnDef="actor">
-                  <th mat-header-cell *matHeaderCellDef>{{ 'scheduling.user' | transloco }}</th>
-                  <td mat-cell *matCellDef="let e">{{ actor(e) }}</td>
-                </ng-container>
-                <ng-container matColumnDef="action">
-                  <th mat-header-cell *matHeaderCellDef>{{ 'audit.action' | transloco }}</th>
-                  <td mat-cell *matCellDef="let e">{{ e.action }}</td>
-                </ng-container>
-                <ng-container matColumnDef="resource">
-                  <th mat-header-cell *matHeaderCellDef>{{ 'audit.resource' | transloco }}</th>
-                  <td mat-cell *matCellDef="let e">{{ e.resourceType }} · {{ e.resourceId }}</td>
-                </ng-container>
-                <ng-container matColumnDef="ip">
-                  <th mat-header-cell *matHeaderCellDef>{{ 'attendanceEvents.detail.source' | transloco }}</th>
-                  <td mat-cell *matCellDef="let e">{{ e.ip || '—' }}</td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="columns"></tr>
-                <tr mat-row *matRowDef="let row; columns: columns"
-                    (click)="select(row)"
-                    style="cursor:pointer"
-                    [style.background]="row.id === selected()?.id ? 'var(--nx-color-action-primary-subtle)' : ''"></tr>
-              </table>
-            </div>
-
-            @if (!loading() && entries().length === 0) {
-              <app-empty-state icon="fact_check" [message]="'audit.empty' | transloco" />
-            }
-
-            <mat-paginator
-              [length]="total()"
-              [pageSize]="size()"
-              [pageIndex]="page()"
-              [pageSizeOptions]="[25, 50, 100]"
-              (page)="onPage($event)"
-            />
-          </mat-card-content>
-        </mat-card>
-      </div>
-
-      @if (selected(); as e) {
-        <aside class="split-drawer">
-          <div class="drawer-header">
-            <div class="titles"><h3>{{ e.action }}</h3><p class="sub">{{ e.createdAt | appDate: 'medium' }}</p></div>
-            <button mat-icon-button (click)="selected.set(null)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
-          </div>
-          <div class="drawer-body">
-            <div class="detail-grid">
-              <div class="detail-row"><span class="k">{{ 'scheduling.user' | transloco }}</span><span class="v">{{ actor(e) }}</span></div>
-              <div class="detail-row"><span class="k">{{ 'audit.action' | transloco }}</span><span class="v">{{ e.action }}</span></div>
-              <div class="detail-row"><span class="k">{{ 'audit.resource' | transloco }}</span><span class="v">{{ e.resourceType }}</span></div>
-              <div class="detail-row"><span class="k">{{ 'audit.resourceId' | transloco }}</span><span class="v">{{ e.resourceId }}</span></div>
-              <div class="detail-row"><span class="k">IP</span><span class="v">{{ e.ip || '—' }}</span></div>
-              <div class="detail-row"><span class="k">{{ 'audit.browser' | transloco }}</span><span class="v">{{ e.userAgent || '—' }}</span></div>
-              <div class="detail-row"><span class="k">{{ 'audit.device' | transloco }}</span><span class="v">{{ e.deviceInfo || '—' }}</span></div>
-              @if (e.oldValues) {
-                <div class="detail-section-title">{{ 'audit.oldValues' | transloco }}</div>
-                <pre class="values-block">{{ pretty(e.oldValues) }}</pre>
-              }
-              @if (e.newValues) {
-                <div class="detail-section-title">{{ 'audit.newValues' | transloco }}</div>
-                <pre class="values-block">{{ pretty(e.newValues) }}</pre>
-              }
-            </div>
-          </div>
-        </aside>
-      }
-    </div>
-  `,
   styles: [
     `
-      .values-block {
-        margin: 0;
-        padding: var(--nx-space-3);
-        background: var(--nx-color-surface-subtle);
-        border-radius: var(--nx-radius-sm);
-        font-size: var(--nx-text-small-size);
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
+      mat-form-field { width: 100%; }
+      tbody tr { cursor: pointer; }
+      tbody tr.is-sel { background: var(--nx-color-action-primary-subtle); }
+      .nx-fila-link { padding: var(--nx-space-0); border: 0; background: transparent; font: inherit; color: var(--nx-color-action-primary); cursor: pointer; }
+      td { white-space: nowrap; }
+      .nx-id { display: inline-block; vertical-align: bottom; max-width: calc(var(--nx-space-16) * 2); }
     `,
   ],
+  template: `
+    <app-loading-bar [active]="loading()" />
+    <app-page-header [title]="'layout.nav.audit' | transloco" />
+
+    <ng-template #secundarios>
+      <ng-container [formGroup]="filters">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'audit.action' | transloco }}</mat-label>
+          <mat-select formControlName="action">
+            <mat-option value="">{{ 'audit.allActions' | transloco }}</mat-option>
+            @for (a of actions(); track a) { <mat-option [value]="a">{{ a }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'audit.resource' | transloco }}</mat-label>
+          <mat-select formControlName="resource">
+            <mat-option value="">{{ 'common.all' | transloco }}</mat-option>
+            @for (r of resources(); track r) { <mat-option [value]="r">{{ r }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+      </ng-container>
+    </ng-template>
+
+    @if (error()) {
+      <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco">
+        <button mat-stroked-button type="button" (click)="reload()">{{ 'common.retry' | transloco }}</button>
+      </app-empty-state>
+    } @else {
+      <section class="nx-panel nx-panel--listado">
+        <div class="nx-filtros nx-filtros--reporte" [formGroup]="filters">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-buscador">
+            <mat-icon matPrefix>search</mat-icon>
+            <mat-label>{{ 'audit.searchActor' | transloco }}</mat-label>
+            <input matInput type="search" formControlName="actor" autocomplete="off" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-campo--fecha">
+            <mat-label>{{ 'period.from' | transloco }}</mat-label>
+            <input matInput type="date" formControlName="from" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-campo--fecha">
+            <mat-label>{{ 'period.to' | transloco }}</mat-label>
+            <input matInput type="date" formControlName="to" />
+          </mat-form-field>
+          <div class="nx-flt-sec nx-flt-sec--grupo"><ng-container [ngTemplateOutlet]="secundarios" /></div>
+          <app-filters-button [filters]="secundarios" />
+        </div>
+
+        @if (!loading() && entries().length === 0) {
+          <app-empty-state icon="fact_check" [message]="'audit.empty' | transloco" />
+        } @else if (!loading() && filtered().length === 0) {
+          <app-empty-state icon="search" [message]="'common.noResults' | transloco">
+            <button mat-button type="button" (click)="filters.reset()">{{ 'common.clearFilters' | transloco }}</button>
+          </app-empty-state>
+        } @else {
+          <div class="nx-tabla">
+            <div class="nx-tabla__scroll nx-scroll" nxScroll>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{{ 'attendanceEvents.col.date' | transloco }}</th>
+                    <th scope="col">{{ 'scheduling.user' | transloco }}</th>
+                    <th scope="col">{{ 'audit.action' | transloco }}</th>
+                    <th scope="col">{{ 'audit.resource' | transloco }}</th>
+                    <th scope="col" class="nx-col-sec">{{ 'attendanceEvents.detail.source' | transloco }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (e of filtered(); track e.id) {
+                    <tr [class.is-sel]="e.id === selectedId()" (click)="open(e)">
+                      <td class="nx-text-code">
+                        <button type="button" class="nx-fila-link" (click)="open(e); $event.stopPropagation()"
+                                [attr.aria-label]="'audit.openDetail' | transloco: { action: e.action }">
+                          {{ e.createdAt | appDate: 'dd/MM/yyyy HH:mm:ss' }}
+                        </button>
+                      </td>
+                      <td>{{ actor(e) }}</td>
+                      <td class="nx-text-code">{{ e.action }}</td>
+                      <td>{{ e.resourceType }} · <span class="nx-trunc nx-text-code nx-id">{{ e.resourceId }}</span></td>
+                      <td class="nx-col-sec nx-text-code">{{ e.ip || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        <mat-paginator
+          [length]="total()"
+          [pageSize]="size()"
+          [pageIndex]="page()"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="onPage($event)"
+        />
+      </section>
+    }
+  `,
 })
 export class AuditComponent {
   private readonly service = inject(AuditService);
+  private readonly dialog = inject(MatDialog);
   private readonly transloco = inject(TranslocoService);
 
-  protected readonly columns = ['createdAt', 'actor', 'action', 'resource', 'ip'];
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   protected readonly entries = signal<AuditEntry[]>([]);
   protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
-  protected readonly selected = signal<AuditEntry | null>(null);
+  protected readonly error = signal(false);
+  protected readonly selectedId = signal<string | null>(null);
 
   protected readonly page = signal(0);
-  protected readonly size = signal(50);
+  protected readonly size = pageSizePreference('audit');
   protected readonly total = signal(0);
+
+  protected readonly filters = inject(FormBuilder).nonNullable.group({ actor: '', from: '', to: '', action: '', resource: '' });
+  private readonly f = toSignal(this.filters.valueChanges, { initialValue: this.filters.getRawValue() });
+
+  protected readonly actions = computed(() => [...new Set(this.entries().map((e) => e.action))].sort());
+  protected readonly resources = computed(() => [...new Set(this.entries().map((e) => e.resourceType))].sort());
+
+  protected readonly filtered = computed(() => {
+    const { actor = '', from = '', to = '', action = '', resource = '' } = this.f();
+    const term = actor.trim().toLowerCase();
+    return this.entries()
+      .filter((e) => {
+        if (term && !this.actor(e).toLowerCase().includes(term)) return false;
+        const day = e.createdAt.slice(0, 10);
+        if (from && day < from) return false;
+        if (to && day > to) return false;
+        if (action && e.action !== action) return false;
+        return !resource || e.resourceType === resource;
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  });
 
   constructor() {
     this.reload();
@@ -150,7 +198,7 @@ export class AuditComponent {
 
   protected reload(): void {
     this.loading.set(true);
-    this.error.set(null);
+    this.error.set(false);
     this.service.list(this.page(), this.size()).subscribe({
       next: (result) => {
         this.entries.set(result.content);
@@ -158,7 +206,7 @@ export class AuditComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set(this.transloco.translate('audit.loadError'));
+        this.error.set(true);
         this.loading.set(false);
       },
     });
@@ -169,17 +217,12 @@ export class AuditComponent {
     return entry.actorEmail || entry.actorUserId || this.transloco.translate('audit.system');
   }
 
-  /** Los valores llegan como JSON en una línea; se indentan para poder leerlos. */
-  protected pretty(json: string): string {
-    try {
-      return JSON.stringify(JSON.parse(json), null, 2);
-    } catch {
-      return json;
-    }
-  }
-
-  protected select(entry: AuditEntry): void {
-    this.selected.set(entry);
+  protected open(entry: AuditEntry): void {
+    this.selectedId.set(entry.id);
+    openDrawer(this.dialog, AuditDetailDrawerComponent, {
+      data: entry,
+      ariaLabel: this.transloco.translate('audit.detailLabel'),
+    });
   }
 
   protected onPage(event: PageEvent): void {

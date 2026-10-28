@@ -29,13 +29,6 @@ export interface RecordSortState {
   direction: 'asc' | 'desc';
 }
 
-/** Tono visual (clase .status-chip) por estado. */
-export const STATUS_TONES: Record<AttendanceRecordStatus, string> = {
-  ACCEPTED: 'success',
-  REJECTED: 'danger',
-  PENDING_REVIEW: 'warning',
-};
-
 /**
  * Nombres por defecto del tipo de evento tal como los siembra el backend. Sirven para distinguir
  * una etiqueta personalizada por la empresa (que se muestra tal cual, en cualquier idioma) de la

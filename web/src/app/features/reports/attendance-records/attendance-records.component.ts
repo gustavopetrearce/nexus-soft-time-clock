@@ -1,22 +1,26 @@
-import { DatePipe } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
+import { AppDatePipe } from '../../../core/i18n/app-date.pipe';
+import { AppNumberPipe } from '../../../core/i18n/app-number.pipe';
+import { PAGE_SIZE_OPTIONS, SEARCH_DEBOUNCE_MS, pageSizePreference } from '../../../core/ui/catalog';
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
-import { NotificationService } from '../../../core/ui/notification.service';
+import { FiltersButtonComponent } from '../../../core/ui/filters-button.component';
+import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
+import { ScrollDirective } from '../../../core/ui/scroll.directive';
+import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { AttendanceEventType } from '../../admin/event-types/event-type.models';
 import { EventTypesService } from '../../admin/event-types/event-types.service';
 import {
@@ -25,7 +29,6 @@ import {
   DEFAULT_EVENT_TYPE_LABELS,
   RecordSortColumn,
   RecordSortState,
-  STATUS_TONES,
 } from './attendance-records.models';
 import { AttendanceRecordsService } from './attendance-records.service';
 import { recordStatusLabel, rejectionLabel } from '../../attendance-events/attendance-events.models';
@@ -50,251 +53,155 @@ const STATUS_OPTIONS: readonly AttendanceRecordStatus[] = ['ACCEPTED', 'REJECTED
 const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
 
 /**
- * Reporte de registros individuales de asistencia por empleado (RF-11). Muestra una fila por
- * marcación (número + nombre de empleado, fecha y hora, tipo de evento, estado y centro de trabajo),
- * sin exponer ids. Carga el rango de fechas del backend y aplica búsqueda, filtros (estado y tipo de
- * evento), ordenamiento y paginación en el cliente.
+ * P40 · Registros de asistencia (RF-11): una fila por marcación (número y nombre, fecha y hora,
+ * tipo de evento, estado y centro), sin exponer ids. El rango Desde/Hasta recarga del backend con
+ * espera de 400 ms; búsqueda, estado, tipo de evento, orden (fecha y hora descendente) y paginación
+ * se aplican sobre lo cargado. El chip de estado muestra el motivo de rechazo.
  */
 @Component({
   selector: 'app-attendance-records',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    NgTemplateOutlet,
     ReactiveFormsModule,
-    DatePipe,
-    MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
     MatTooltipModule,
-    MatProgressBarModule,
     MatPaginatorModule,
-    PageHeaderComponent,
-    EmptyStateComponent,
     TranslocoPipe,
+    AppDatePipe,
+    AppNumberPipe,
+    EmptyStateComponent,
+    FiltersButtonComponent,
+    LoadingBarComponent,
+    PageHeaderComponent,
+    ScrollDirective,
+    StatusChipComponent,
+  ],
+  styles: [
+    `
+      p { margin: var(--nx-space-0); }
+      mat-form-field { width: 100%; }
+      .orden { padding: var(--nx-space-0); border: 0; background: transparent; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; }
+      .orden mat-icon { width: var(--nx-icon-size-sm); height: var(--nx-icon-size-sm); font-size: var(--nx-icon-size-sm); }
+      th[aria-sort] .orden { color: var(--nx-color-action-primary); }
+      td { white-space: nowrap; }
+    `,
   ],
   template: `
-    <app-page-header [title]="'records.title' | transloco" [subtitle]="'records.subtitle' | transloco" />
+    <app-loading-bar [active]="loading()" />
+    <app-page-header [title]="'records.title' | transloco" />
 
-    <mat-card>
-      <mat-card-content>
-        <div class="toolbar" [formGroup]="form">
-          <mat-form-field appearance="outline" class="search">
+    <ng-template #secundarios>
+      <ng-container [formGroup]="form">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'common.status' | transloco }}</mat-label>
+          <mat-select formControlName="status">
+            <mat-option value="ALL">{{ 'common.all' | transloco }}</mat-option>
+            @for (s of statusOptions; track s) { <mat-option [value]="s">{{ statusLabel(s) }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'records.eventType' | transloco }}</mat-label>
+          <mat-select formControlName="eventType">
+            <mat-option value="ALL">{{ 'common.all' | transloco }}</mat-option>
+            @for (t of eventTypeOptions; track t) { <mat-option [value]="t">{{ eventLabel(t) }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+      </ng-container>
+    </ng-template>
+
+    @if (error()) {
+      <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco">
+        <button mat-stroked-button type="button" (click)="reload()">{{ 'common.retry' | transloco }}</button>
+      </app-empty-state>
+    } @else {
+      <section class="nx-panel nx-panel--listado">
+        <div class="nx-filtros nx-filtros--reporte" [formGroup]="form">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-buscador">
             <mat-icon matPrefix>search</mat-icon>
             <mat-label>{{ 'reports.search' | transloco }}</mat-label>
-            <input matInput formControlName="search" autocomplete="off" />
+            <input matInput type="search" formControlName="search" autocomplete="off" />
           </mat-form-field>
-
-          <div class="dates">
-            <mat-form-field appearance="outline" class="date">
-              <mat-label>{{ 'scheduling.from' | transloco }}</mat-label>
-              <input matInput type="date" formControlName="from" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="date">
-              <mat-label>{{ 'period.to' | transloco }}</mat-label>
-              <input matInput type="date" formControlName="to" />
-            </mat-form-field>
-          </div>
-
-          <mat-form-field appearance="outline" class="filter">
-            <mat-label>{{ 'common.status' | transloco }}</mat-label>
-            <mat-select formControlName="status">
-              <mat-option value="ALL">{{ 'common.all' | transloco }}</mat-option>
-              @for (s of statusOptions; track s) {
-                <mat-option [value]="s">{{ statusLabel(s) }}</mat-option>
-              }
-            </mat-select>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-campo--fecha">
+            <mat-label>{{ 'period.from' | transloco }}</mat-label>
+            <input matInput type="date" formControlName="from" />
           </mat-form-field>
-
-          <mat-form-field appearance="outline" class="filter">
-            <mat-label>{{ 'records.eventType' | transloco }}</mat-label>
-            <mat-select formControlName="eventType">
-              <mat-option value="ALL">{{ 'common.all' | transloco }}</mat-option>
-              @for (t of eventTypeOptions; track t) {
-                <mat-option [value]="t">{{ eventLabel(t) }}</mat-option>
-              }
-            </mat-select>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-campo--fecha">
+            <mat-label>{{ 'period.to' | transloco }}</mat-label>
+            <input matInput type="date" formControlName="to" />
           </mat-form-field>
+          <div class="nx-flt-sec nx-flt-sec--grupo"><ng-container [ngTemplateOutlet]="secundarios" /></div>
+          <app-filters-button [filters]="secundarios" />
         </div>
 
-        <div class="indicators">
-          <span class="count">
-            <strong>{{ filtered().length }}</strong>
-            @if (filtered().length !== total()) { <span class="muted">{{ 'reports.ofTotal' | transloco: { total: total() } }}</span> }
-            {{ (filtered().length === 1 ? 'reports.recordOne' : 'reports.recordMany') | transloco }}
-          </span>
-        </div>
-
-        @if (loading()) { <mat-progress-bar mode="indeterminate" class="loader-bar" /> }
-
-        @if (loading()) {
-          <div class="skeleton">
-            @for (r of skeletonRows; track r) { <div class="skeleton-row"></div> }
-          </div>
-        } @else if (error()) {
-          <div class="error-block">
-            <mat-icon>cloud_off</mat-icon>
-            <p>{{ error() }}</p>
-            <button mat-flat-button color="primary" (click)="reload()">
-              <mat-icon>refresh</mat-icon> {{ 'common.retry' | transloco }}
-            </button>
-          </div>
-        } @else if (filtered().length === 0) {
-          <app-empty-state
-            icon="search_off"
-            [message]="(total() === 0 ? 'records.emptyPeriod' : 'records.emptyFilters') | transloco"
-          />
+        @if (!loading() && total() === 0) {
+          <app-empty-state icon="history" [message]="'records.emptyPeriod' | transloco" />
+        } @else if (!loading() && filtered().length === 0) {
+          <app-empty-state icon="search" [message]="'records.emptyFilters' | transloco">
+            <button mat-button type="button" (click)="clearFilters()">{{ 'common.clearFilters' | transloco }}</button>
+          </app-empty-state>
         } @else {
-          <div class="table-wrap">
-            <table class="records-table">
-              <thead>
-                <tr>
-                  @for (col of columns; track col.key) {
-                    <th [class.sorted]="sort().column === col.key" (click)="onSort(col.key)">
-                      <span class="th-content">
-                        {{ col.label | transloco }}
-                        <mat-icon class="sort-icon">{{ sortIcon(col.key) }}</mat-icon>
-                      </span>
-                    </th>
-                  }
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of paged(); track $index) {
+          <p class="nx-contador">
+            <b class="nx-text-numeric">{{ filtered().length | appNumber }}</b>
+            {{ (filtered().length === 1 ? 'reports.recordOne' : 'reports.recordMany') | transloco }}
+          </p>
+          <div class="nx-tabla">
+            <div class="nx-tabla__scroll nx-scroll" nxScroll>
+              <table>
+                <thead>
                   <tr>
-                    <td class="mono">{{ row.employeeNumber }}</td>
-                    <td>{{ row.employeeName }}</td>
-                    <td class="mono">{{ row.serverTime | date: 'yyyy-MM-dd HH:mm:ss' }}</td>
-                    <td>{{ eventLabel(row.eventType) }}</td>
-                    <td>
-                      <span
-                        class="status-chip"
-                        [class]="statusTone(row.status)"
-                        [matTooltip]="rejectionTooltip(row)"
-                        [matTooltipDisabled]="!rejectionTooltip(row)"
-                      >
-                        {{ statusLabel(row.status) }}
-                      </span>
-                    </td>
-                    <td>{{ row.workCenter }}</td>
+                    @for (col of columns; track col.key) {
+                      <th scope="col" [attr.aria-sort]="ariaSort(col.key)">
+                        <button type="button" class="nx-th orden" (click)="onSort(col.key)">
+                          {{ col.label | transloco }}
+                          <mat-icon class="nx-orden" [class.is-on]="sort().column === col.key" aria-hidden="true">{{ sortIcon(col.key) }}</mat-icon>
+                        </button>
+                      </th>
+                    }
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (row of paged(); track $index) {
+                    <tr>
+                      <td class="nx-text-code">{{ row.employeeNumber }}</td>
+                      <td><span class="nx-trunc">{{ row.employeeName }}</span></td>
+                      <td class="nx-text-numeric">{{ row.serverTime | appDate: 'dd/MM/yyyy HH:mm:ss' }}</td>
+                      <td>{{ eventLabel(row.eventType) }}</td>
+                      <td>
+                        <app-status-chip [status]="row.status" [label]="statusLabel(row.status)"
+                          [matTooltip]="rejectionTooltip(row)" [matTooltipDisabled]="!rejectionTooltip(row)" />
+                      </td>
+                      <td><span class="nx-trunc">{{ row.workCenter }}</span></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           </div>
           <mat-paginator
             [length]="filtered().length"
             [pageSize]="pageSize()"
             [pageIndex]="pageIndex()"
-            [pageSizeOptions]="[25, 50, 100]"
+            [pageSizeOptions]="pageSizeOptions"
             (page)="onPage($event)"
           />
         }
-      </mat-card-content>
-    </mat-card>
+      </section>
+    }
   `,
-  styles: [
-    `
-      .toolbar {
-        display: flex;
-        gap: var(--nx-space-3);
-        align-items: flex-start;
-        flex-wrap: wrap;
-        margin-bottom: var(--nx-space-2);
-      }
-      .toolbar .search { flex: 1 1 320px; }
-      .dates { display: flex; gap: var(--nx-space-2); }
-      .date { width: 160px; }
-      .filter { width: 180px; }
-
-      .indicators { margin: var(--nx-space-2) 0 var(--nx-space-3); }
-      .count { font-size: 0.9rem; }
-      .count strong { font-size: 1.05rem; color: var(--nx-color-action-primary); }
-      .loader-bar { margin: var(--nx-space-2) 0; }
-
-      .records-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        font-size: 0.85rem;
-        min-width: 820px;
-      }
-      thead th {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        background: var(--nx-color-surface-subtle);
-        color: var(--nx-color-text-secondary);
-        font-size: 0.72rem;
-        font-weight: var(--nx-font-weight-semibold);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        text-align: left;
-        padding: var(--nx-space-3) var(--nx-space-3);
-        border-bottom: 1px solid var(--nx-color-border-default);
-        cursor: pointer;
-        user-select: none;
-        white-space: nowrap;
-        transition: color 0.12s var(--nx-motion-easing-standard);
-      }
-      thead th:hover { color: var(--nx-color-text-primary); }
-      thead th.sorted { color: var(--nx-color-action-primary); }
-      .th-content { display: inline-flex; align-items: center; gap: 2px; }
-      .sort-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.7; }
-      tbody td {
-        padding: var(--nx-space-3) var(--nx-space-3);
-        border-bottom: 1px solid var(--nx-color-border-default);
-        color: var(--nx-color-text-primary);
-        white-space: nowrap;
-      }
-      tbody td.mono { font-variant-numeric: tabular-nums; color: var(--nx-color-text-secondary); }
-      tbody tr { transition: background 0.12s var(--nx-motion-easing-standard); animation: fade-in 0.18s var(--nx-motion-easing-standard); }
-      tbody tr:nth-child(even) { background: color-mix(in srgb, var(--nx-color-surface-subtle) 55%, transparent); }
-      tbody tr:hover { background: var(--nx-color-surface-subtle); }
-
-      .error-block {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: var(--nx-space-3);
-        padding: 48px 16px;
-        color: var(--nx-color-text-secondary);
-        text-align: center;
-      }
-      .error-block mat-icon { font-size: 44px; width: 44px; height: 44px; opacity: 0.6; }
-      .error-block p { margin: 0; max-width: 420px; }
-
-      .skeleton { display: flex; flex-direction: column; gap: 10px; padding: var(--nx-space-4) 0; }
-      .skeleton-row {
-        height: 40px;
-        border-radius: var(--nx-radius-sm);
-        background: linear-gradient(90deg, var(--nx-color-surface-subtle) 25%, var(--nx-color-border-default) 37%, var(--nx-color-surface-subtle) 63%);
-        background-size: 400% 100%;
-        animation: shimmer 1.4s var(--nx-motion-easing-standard) infinite;
-      }
-      @keyframes shimmer {
-        0% { background-position: 100% 50%; }
-        100% { background-position: 0 50%; }
-      }
-      @keyframes fade-in {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-
-      mat-paginator { background: transparent; margin-top: var(--nx-space-2); }
-    `,
-  ],
 })
 export class AttendanceRecordsComponent {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(AttendanceRecordsService);
   private readonly eventTypes = inject(EventTypesService);
-  private readonly notify = inject(NotificationService);
   private readonly transloco = inject(TranslocoService);
 
-  protected readonly skeletonRows = Array.from({ length: 8 }, (_, i) => i);
+  protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   protected readonly columns = COLUMNS;
   protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly eventTypeOptions = Object.keys(DEFAULT_EVENT_TYPE_LABELS) as AttendanceEventType[];
@@ -303,14 +210,14 @@ export class AttendanceRecordsComponent {
 
   private readonly rawRows = signal<AttendanceRecordReport[]>([]);
   protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal(false);
 
   /** Etiquetas de tipo de evento personalizadas por la empresa; las predeterminadas se traducen. */
   private readonly eventLabels = signal<Record<string, string>>({});
 
   protected readonly sort = signal<RecordSortState>({ column: 'serverTime', direction: 'desc' });
   protected readonly pageIndex = signal(0);
-  protected readonly pageSize = signal(25);
+  protected readonly pageSize = pageSizePreference('attendance-records');
 
   private readonly formValue = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
 
@@ -351,8 +258,8 @@ export class AttendanceRecordsComponent {
   constructor() {
     const from$ = this.form.get('from')!.valueChanges;
     const to$ = this.form.get('to')!.valueChanges;
-    from$.pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
-    to$.pipe(debounceTime(400), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
+    from$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
+    to$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
     this.form.valueChanges.pipe(debounceTime(150), takeUntilDestroyed()).subscribe(() => this.pageIndex.set(0));
 
     this.loadEventTypeLabels();
@@ -362,7 +269,7 @@ export class AttendanceRecordsComponent {
   protected reload(): void {
     const { from, to } = this.form.getRawValue() as { from: string; to: string };
     this.loading.set(true);
-    this.error.set(null);
+    this.error.set(false);
     this.service.records(from, to).subscribe({
       next: (rows) => {
         this.rawRows.set(rows);
@@ -370,9 +277,8 @@ export class AttendanceRecordsComponent {
       },
       error: () => {
         this.rawRows.set([]);
-        this.error.set(this.transloco.translate('records.loadError'));
+        this.error.set(true);
         this.loading.set(false);
-        this.notify.error(this.transloco.translate('records.loadError'));
       },
     });
   }
@@ -386,8 +292,9 @@ export class AttendanceRecordsComponent {
     return recordStatusLabel(status);
   }
 
-  protected statusTone(status: AttendanceRecordStatus): string {
-    return STATUS_TONES[status];
+  /** Limpia búsqueda, estado y tipo de evento, conservando el rango de fechas. */
+  protected clearFilters(): void {
+    this.form.patchValue({ search: '', status: 'ALL', eventType: 'ALL' });
   }
 
   protected rejectionTooltip(row: AttendanceRecordReport): string {
@@ -409,6 +316,11 @@ export class AttendanceRecordsComponent {
   protected onPage(event: PageEvent): void {
     this.pageIndex.set(event.pageIndex);
     this.pageSize.set(event.pageSize);
+  }
+
+  protected ariaSort(column: RecordSortColumn): 'ascending' | 'descending' | null {
+    if (this.sort().column !== column) return null;
+    return this.sort().direction === 'asc' ? 'ascending' : 'descending';
   }
 
   protected sortIcon(column: RecordSortColumn): string {

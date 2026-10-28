@@ -62,7 +62,15 @@ function declarations(tokens, raw) {
       const transform = token.$extensions?.['nx.textTransform'];
       lines.push(`  ${cssName([...token.path, 'transform'])}: ${transform ?? 'none'};`);
     } else {
-      lines.push(`  ${cssName(token.path)}: ${cssValue(type, value)};`);
+      const css = cssValue(type, value);
+      lines.push(`  ${cssName(token.path)}: ${css};`);
+      // Relleno compuesto «vertical horizontal» (inset de chip y celda): también por eje, como lo
+      // usan las reglas de la maqueta (padding: …-y …-x).
+      const axes = /^var\([^ ]+\) var\([^ ]+\)$/.test(css) ? css.split(' ') : [];
+      if (axes.length === 2) {
+        lines.push(`  ${cssName([...token.path, 'y'])}: ${axes[0]};`);
+        lines.push(`  ${cssName([...token.path, 'x'])}: ${axes[1]};`);
+      }
     }
   }
   return lines.join('\n');

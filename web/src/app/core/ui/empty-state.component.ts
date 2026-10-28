@@ -22,6 +22,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
     `
       p { margin: var(--nx-space-0); }
       .nx-vacio__icono { width: var(--nx-icon-size-xl); height: var(--nx-icon-size-xl); font-size: var(--nx-icon-size-xl); }
+      /* Página completa (S02, S03): icon-size-2xl. */
+      .nx-vacio--pagina .nx-vacio__icono { width: var(--nx-icon-size-2xl); height: var(--nx-icon-size-2xl); font-size: var(--nx-icon-size-2xl); }
     `,
   ],
 })

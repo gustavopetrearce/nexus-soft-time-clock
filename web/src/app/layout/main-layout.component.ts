@@ -13,12 +13,14 @@ import { filter } from 'rxjs';
 
 import { AuthService } from '../core/auth/auth.service';
 import { AuthStore } from '../core/auth/auth.store';
+import { ConnectionStore } from '../core/connection/connection.store';
 import { ChangePasswordDialogComponent } from '../core/auth/change-password-dialog.component';
 import { LanguageSwitcherComponent } from '../core/i18n/language-switcher.component';
 import { ThemeService } from '../core/theme/theme.service';
 import { LogoComponent } from '../core/ui/logo.component';
 import { ScrollDirective } from '../core/ui/scroll.directive';
 import { roleLabel } from '../features/admin/roles/role.models';
+import { ConnectionErrorComponent } from '../features/support/connection-error.component';
 
 interface NavItem {
   route: string;
@@ -91,6 +93,7 @@ const NAV: readonly NavGroup[] = [
   standalone: true,
   imports: [
     RouterOutlet,
+    ConnectionErrorComponent,
     RouterLink,
     RouterLinkActive,
     MatToolbarModule,
@@ -237,7 +240,13 @@ const NAV: readonly NavGroup[] = [
         </mat-toolbar>
 
         <main class="nx-pagina">
-          <router-outlet />
+          <!-- S03: sin conexión se muestra el error en lugar de la pantalla; al reintentar, el
+               outlet se vuelve a crear y la pantalla recarga sus datos. -->
+          @if (connection.lost()) {
+            <app-connection-error (retry)="connection.reset()" />
+          } @else {
+            <router-outlet />
+          }
         </main>
       </mat-sidenav-content>
     </mat-sidenav-container>
@@ -250,6 +259,7 @@ export class MainLayoutComponent {
   private readonly dialog = inject(MatDialog);
   private readonly transloco = inject(TranslocoService);
   protected readonly theme = inject(ThemeService);
+  protected readonly connection = inject(ConnectionStore);
 
   private readonly drawer = viewChild.required<MatSidenav>('drawer');
   private readonly menuButton = viewChild.required('menuButton', { read: ElementRef<HTMLElement> });
@@ -271,13 +281,15 @@ export class MainLayoutComponent {
     if (!this.store.user()) {
       this.authService.loadCurrentUser().subscribe({ error: () => void 0 });
     }
-    // Elegir un ítem cierra la navegación; el foco vuelve al botón de menú.
+    // Elegir un ítem cierra la navegación; el foco vuelve al botón de menú. Navegar también
+    // reintenta tras un error de conexión.
     this.router.events
       .pipe(
         filter((e) => e instanceof NavigationEnd),
         takeUntilDestroyed(inject(DestroyRef)),
       )
       .subscribe(() => {
+        this.connection.reset();
         if (this.drawer().opened) {
           void this.drawer()
             .close()

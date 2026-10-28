@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../../environments/environment';
 import { AuthStore } from '../auth/auth.store';
+import { ConnectionStore } from '../connection/connection.store';
 import { authInterceptor } from './auth.interceptor';
 
 describe('authInterceptor', () => {
@@ -55,5 +56,21 @@ describe('authInterceptor', () => {
 
     // expectNone no cuenta como aserción en Jasmine, así que se comprueba explícitamente.
     expect(httpMock.match(`${environment.apiBaseUrl}/auth/refresh`).length).toBe(0);
+  });
+
+  it('marca la conexión como perdida si la API no responde (S03)', () => {
+    http.get(`${environment.apiBaseUrl}/attendance/me`).subscribe({ error: () => undefined });
+
+    httpMock.expectOne(`${environment.apiBaseUrl}/attendance/me`).error(new ProgressEvent('error'), { status: 0 });
+
+    expect(TestBed.inject(ConnectionStore).lost()).toBeTrue();
+  });
+
+  it('no marca la conexión desde el login: tiene su propio aviso', () => {
+    http.post(`${environment.apiBaseUrl}/auth/login`, {}).subscribe({ error: () => undefined });
+
+    httpMock.expectOne(`${environment.apiBaseUrl}/auth/login`).error(new ProgressEvent('error'), { status: 0 });
+
+    expect(TestBed.inject(ConnectionStore).lost()).toBeFalse();
   });
 });

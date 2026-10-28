@@ -84,3 +84,19 @@ export function exportToPdf(rows: AttendanceReport[], range?: { from: string; to
 
   doc.save(`${t('reports.fileName')}-${stamp()}.pdf`);
 }
+
+/** Exporta las filas dadas (ya filtradas) a .csv UTF-8 con BOM, para que Excel respete los acentos. */
+export function exportToCsv(rows: AttendanceReport[]): void {
+  const cell = (v: string | number) => {
+    const text = String(v);
+    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  const lines = [headers(), ...rows.map(toRow)].map((r) => r.map(cell).join(','));
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${t('reports.fileName')}-${stamp()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

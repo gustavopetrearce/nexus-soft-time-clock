@@ -47,19 +47,25 @@ const LABEL_BY_STATUS: Record<string, string> = {
   SENT: 'Enviada',
 };
 
-/** Píldora de color que representa un estado de dominio (RN de presentación). */
+/**
+ * Píldora de color que representa un estado de dominio (RN de presentación). `label` reemplaza la
+ * etiqueta cuando el código no es un estado (p. ej. la prioridad HIGH → «Alta»).
+ */
 @Component({
   selector: 'app-status-chip',
   standalone: true,
-  template: `<span class="nx-chip nx-chip--{{ tone() }}">{{ label() }}</span>`,
+  template: `<span class="nx-chip nx-chip--{{ tone() }}">{{ text() }}</span>`,
 })
 export class StatusChipComponent {
   readonly status = input.required<string>();
+  readonly label = input<string | null>(null);
   private readonly language = inject(LanguageService);
 
   protected readonly tone = computed<Tone>(() => TONE_BY_STATUS[this.status()?.toUpperCase()] ?? 'neutral');
-  protected readonly label = computed(() => {
+  protected readonly text = computed(() => {
     this.language.lang(); // re-etiqueta al cambiar de idioma
+    const custom = this.label();
+    if (custom) return custom;
     const raw = this.status() ?? '';
     const code = raw.toUpperCase();
     return translateOr(`status.${code}`, LABEL_BY_STATUS[code] ?? raw);
