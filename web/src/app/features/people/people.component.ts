@@ -53,9 +53,13 @@ const STATUSES = ['ACTIVE', 'INACTIVE', 'LOCKED', 'INVITED'];
       .columnas { display: flex; flex-direction: column; padding: var(--nx-space-2) var(--nx-space-3); }
       .exportar .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
       .nx-fila-filtros th { padding-block: var(--nx-space-1); }
-      input.nx-mini, select.nx-mini { width: 100%; min-width: calc(var(--nx-space-16) + var(--nx-space-8)); background: var(--nx-color-surface-default); font-family: inherit; text-transform: none; letter-spacing: var(--nx-font-tracking-normal); }
+      input.nx-mini, select.nx-mini { width: 100%; min-width: calc(var(--nx-space-16) + var(--nx-space-8)); background-color: var(--nx-color-surface-default); font-family: inherit; text-transform: none; letter-spacing: var(--nx-font-tracking-normal); }
       input.nx-mini::placeholder { color: var(--nx-color-text-placeholder); }
       td { white-space: nowrap; }
+      /* Roles: ancho acotado; los chips bajan de renglón en vez de ensanchar la columna. */
+      td.roles { white-space: normal; max-width: calc(var(--nx-space-16) * 3); }
+      .roles__chips { display: flex; flex-wrap: wrap; gap: var(--nx-space-1); }
+      .roles__chips .nx-chip + .nx-chip { margin-left: var(--nx-space-0); }
       .nx-chip mat-icon { width: var(--nx-icon-size-sm); height: var(--nx-icon-size-sm); font-size: var(--nx-icon-size-sm); }
     `,
   ],
@@ -169,8 +173,10 @@ const STATUSES = ['ACTIVE', 'INACTIVE', 'LOCKED', 'INVITED'];
                           @case ('employeeCode') { <td class="nx-text-code">{{ p.employeeCode || '—' }}</td> }
                           @case ('status') { <td><app-status-chip [status]="p.status" [label]="statusLabel(p.status)" /></td> }
                           @case ('roles') {
-                            <td>
-                              @for (r of p.roles; track r) { <span class="nx-chip nx-chip--info">{{ rl(r) }}</span> } @empty { — }
+                            <td class="roles">
+                              <span class="roles__chips">
+                                @for (r of p.roles; track r) { <span class="nx-chip nx-chip--info">{{ rl(r) }}</span> } @empty { — }
+                              </span>
                             </td>
                           }
                           @case ('birthday') {

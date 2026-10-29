@@ -174,7 +174,7 @@ const COLUMNS: readonly ColumnDef[] = [
       input.nx-mini,
       select.nx-mini {
         width: 100%;
-        background: var(--nx-color-surface-default);
+        background-color: var(--nx-color-surface-default);
         font-family: inherit;
         text-transform: none;
         letter-spacing: var(--nx-font-tracking-normal);

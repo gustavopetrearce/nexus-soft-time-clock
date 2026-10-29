@@ -63,7 +63,7 @@ const DATE_TIME = 'dd/MM/yyyy HH:mm:ss';
       mat-form-field { width: 100%; }
       .exportar .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
       .nx-fila-filtros th { padding-block: var(--nx-space-1); }
-      input.nx-mini, select.nx-mini { width: 100%; background: var(--nx-color-surface-default); font-family: inherit; text-transform: none; letter-spacing: var(--nx-font-tracking-normal); }
+      input.nx-mini, select.nx-mini { width: 100%; background-color: var(--nx-color-surface-default); font-family: inherit; text-transform: none; letter-spacing: var(--nx-font-tracking-normal); }
       input.nx-mini::placeholder { color: var(--nx-color-text-placeholder); }
       .nx-fila-link { padding: var(--nx-space-0); border: 0; background: transparent; font: inherit; color: var(--nx-color-action-primary); cursor: pointer; text-align: left; }
       tbody tr { cursor: pointer; }
