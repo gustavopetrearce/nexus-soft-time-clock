@@ -9,6 +9,7 @@ import '../../../core/storage/device_identity_store.dart';
 import '../data/attendance_sync_service.dart';
 import '../domain/attendance_operation.dart';
 import 'attendance_message.dart';
+import 'today_attendance.dart';
 
 class AttendanceUiState {
   const AttendanceUiState({
@@ -121,28 +122,35 @@ class AttendanceController extends Notifier<AttendanceUiState> {
       // fila local (HU-10 CA3, HU-15 CA4). Se fija DESPUÉS de _refreshCount porque copyWith
       // resetea message en cada llamada.
       final row = await db.findByUuid(op.operationUuid);
-      state = state.copyWith(busy: false, message: _messageFor(row, position.accuracy));
+      state = state.copyWith(busy: false, message: _messageFor(row, eventType, position.accuracy));
+      ref.invalidate(todayAttendanceProvider);
     }
   }
 
   /// Traduce el estado final de la operación (tras sincronizar) a un aviso para el colaborador.
   /// [accuracyM] es la precisión del fix enviado; se muestra en el rechazo por GPS para dar
-  /// contexto accionable (saber cuán lejos quedó del umbral) y como dato de diagnóstico.
-  AttendanceMessage _messageFor(PendingAttendanceOp? row, double accuracyM) {
+  /// contexto accionable (saber cuán lejos quedó del umbral) y como dato de diagnóstico. El
+  /// veredicto en memoria del sync aporta la hora del servidor, la distancia y las banderas.
+  AttendanceMessage _messageFor(PendingAttendanceOp? row, String eventType, double accuracyM) {
+    final verdict = row == null ? null : ref.read(attendanceSyncServiceProvider).verdictFor(row.operationUuid);
     switch (row?.status) {
       case 'SYNCED':
+        if (verdict?.status == 'PENDING_REVIEW') {
+          return InReviewMessage(eventType: eventType, serverTime: verdict?.serverTime, flags: verdict!.flags);
+        }
         // Para SYNCED, lastError se reutiliza como nota del servidor: 'LATE:<min>' si hubo retardo.
         final note = row?.lastError;
-        if (note != null && note.startsWith('LATE:')) {
-          return AcceptedMessage(lateMinutes: note.substring(5));
-        }
-        return const AcceptedMessage();
+        return AcceptedMessage(
+          eventType: eventType,
+          serverTime: verdict?.serverTime,
+          lateMinutes: note != null && note.startsWith('LATE:') ? note.substring(5) : null,
+        );
       case 'REJECTED':
         final reason = row?.lastError;
         if (reason == 'LOW_GPS_ACCURACY') {
           return RejectedLowAccuracyMessage(accuracyM);
         }
-        return RejectedMessage(reason);
+        return RejectedMessage(reason, eventType: eventType, distanceM: verdict?.distanceToSiteM);
       case 'ERROR':
         // El servidor contestó y rechazó la operación en firme: anunciarlo como falta de
         // conexión dejaba al colaborador esperando una sincronización que nunca iba a ocurrir.
@@ -171,6 +179,7 @@ class AttendanceController extends Notifier<AttendanceUiState> {
               ? SyncPendingMessage(state.pendingCount)
               : SyncFailedMessage(issue);
       state = state.copyWith(busy: false, message: message);
+      ref.invalidate(todayAttendanceProvider);
     }
   }
 

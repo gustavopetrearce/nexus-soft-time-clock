@@ -2,9 +2,11 @@
 //   web/src/styles/tokens.css   → custom properties --nx-*: :root (claro) + body.dark (oscuro)
 //   web/src/styles/_tokens.scss → los mismos tokens como variables Sass resueltas (tema claro),
 //                                 para construir el tema de Angular Material.
+//   mobile/lib/src/app/tokens.g.dart → constantes NxTokens + ThemeExtension NxColors (dart.mjs).
 // No se edita a mano ninguna salida: se regeneran con `npm run build` (CI verifica que coincidan).
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import StyleDictionary from 'style-dictionary';
+import { buildDart } from './dart.mjs';
 
 const LIGHT = 'tokens/tokens.json';
 const DARK = 'tokens/tokens.dark.json';
@@ -145,3 +147,5 @@ const darkCss = readFileSync(`${OUT}tokens.dark.css`, 'utf8').replace(HEADER, ''
 writeFileSync(`${OUT}tokens.css`, `${readFileSync(`${OUT}tokens.css`, 'utf8')}
 ${darkCss}`);
 rmSync(`${OUT}tokens.dark.css`);
+
+buildDart({ light: LIGHT, dark: DARK, out: '../mobile/lib/src/app/tokens.g.dart' });

@@ -9,13 +9,52 @@ void main() {
   final en = lookupAppLocalizations(const Locale('en'));
 
   test('los mensajes del controller se traducen al idioma activo', () {
-    const late = AcceptedMessage(lateMinutes: '7');
-    expect(es.attendanceMessageText(late), 'Registro aceptado (retardo de 7 min).');
-    expect(en.attendanceMessageText(late), 'Record accepted (7 min late).');
+    final at = DateTime(2026, 10, 30, 8, 2);
+    final late = AcceptedMessage(eventType: 'ENTRADA', serverTime: at, lateMinutes: '7');
+    expect(es.attendanceMessageText(late), 'Entrada registrada a las 08:02. Con 7 min de retardo.');
+    expect(en.attendanceMessageText(late), 'Clock in recorded at 08:02. 7 min late.');
+    expect(
+      es.attendanceMessageText(AcceptedMessage(eventType: 'INICIO_DESCANSO', serverTime: at)),
+      'Inicio de descanso registrado a las 08:02.',
+    );
 
-    const rejected = RejectedMessage('OUT_OF_GEOFENCE');
-    expect(es.attendanceMessageText(rejected), 'Registro rechazado: fuera del área permitida.');
-    expect(en.attendanceMessageText(rejected), 'Record rejected: outside the allowed area.');
+    const rejected = RejectedMessage('OUT_OF_GEOFENCE', eventType: 'ENTRADA', distanceM: 120.4);
+    expect(
+      es.attendanceMessageText(rejected),
+      'Estás a 120 m del centro, fuera del área permitida. Acércate e inténtalo de nuevo.',
+    );
+    expect(
+      en.attendanceMessageText(const RejectedMessage('OUT_OF_GEOFENCE')),
+      "You're outside the site's allowed area. Move closer and try again.",
+    );
+  });
+
+  test('registro en revisión: hora, bandera y nota del supervisor (RN-29)', () {
+    final review = InReviewMessage(
+      eventType: 'ENTRADA',
+      serverTime: DateTime(2026, 10, 30, 8, 2),
+      flags: const ['MOCK_LOCATION'],
+    );
+    expect(
+      es.attendanceMessageText(review),
+      'Entrada registrada a las 08:02. Se detectó ubicación simulada. Tu supervisor revisará este registro.',
+    );
+    expect(review.persistent, isTrue);
+    expect(const SavedOfflineMessage().persistent, isFalse);
+  });
+
+  test('cada motivo de rechazo tiene su mensaje completo', () {
+    const reasons = [
+      'OUT_OF_GEOFENCE', 'LOW_GPS_ACCURACY', 'GPS_UNAVAILABLE', 'INVALID_QR', 'OUT_OF_SCHEDULE',
+      'INVALID_SEQUENCE', 'UNTRUSTED_DEVICE', 'FRAUD_MOCK_LOCATION', 'FRAUD_GPS_SPOOF_APP',
+      'FRAUD_ROOTED_DEVICE', 'REPLAY_DETECTED', 'PHOTO_REQUIRED', 'BIOMETRIC_REQUIRED',
+      'EVENT_TYPE_DISABLED', 'SITELESS_NOT_ALLOWED',
+    ];
+    for (final reason in reasons) {
+      expect(es.rejectionMessage(reason), isNot(contains(reason)), reason: reason);
+    }
+    expect(es.rejectionMessage('INVALID_SEQUENCE', eventType: 'ENTRADA'),
+        'Ya registraste tu entrada. Lo siguiente es la salida.',);
   });
 
   test('plural de operaciones pendientes', () {

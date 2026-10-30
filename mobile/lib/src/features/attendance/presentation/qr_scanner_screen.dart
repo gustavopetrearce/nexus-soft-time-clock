@@ -1,10 +1,16 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/ui/nx_ui.dart';
+import '../domain/qr_token.dart';
 
-/// Escáner de cámara para leer el QR firmado del centro. Devuelve por [Navigator.pop]
-/// el valor crudo del primer código detectado, o `null` si el usuario cancela.
+/// Escáner de QR (P05): visor de cámara con velo y marco guía. Devuelve por [Navigator.pop] el
+/// valor crudo del primer QR reconocible, o `null` si el colaborador cancela. Un QR ilegible no
+/// cierra el visor: se avisa y se sigue escaneando.
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
 
@@ -15,6 +21,7 @@ class QrScannerScreen extends StatefulWidget {
 class _QrScannerScreenState extends State<QrScannerScreen> {
   final _controller = MobileScannerController(formats: const [BarcodeFormat.qrCode]);
   bool _handled = false;
+  bool _invalid = false;
 
   @override
   void dispose() {
@@ -32,126 +39,139 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     if (raw == null) {
       return;
     }
+    if (scopeFromQrToken(raw) == null) {
+      if (!_invalid) setState(() => _invalid = true);
+      return;
+    }
     _handled = true; // evita lecturas duplicadas mientras se cierra la pantalla
     Navigator.of(context).pop(raw);
   }
 
-  static const double _frameSize = 260;
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: NxTokens.colorNeutral950,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        title: Text(context.l10n.qrTitle),
+        foregroundColor: NxTokens.colorWhite,
+        shape: const Border(),
+        automaticallyImplyLeading: false,
+        title: Semantics(header: true, child: Text(l10n.qrTitle, style: const TextStyle(color: NxTokens.colorWhite))),
         actions: [
           IconButton(
-            icon: const Icon(Icons.flash_on),
-            tooltip: context.l10n.qrTorch,
+            icon: const Icon(Icons.flashlight_on_outlined),
+            color: NxTokens.colorWhite,
+            tooltip: l10n.qrTorch,
             onPressed: () => _controller.toggleTorch(),
           ),
+          const SizedBox(width: NxTokens.space2),
         ],
       ),
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          MobileScanner(
-            controller: _controller,
-            onDetect: _onDetect,
-            errorBuilder: (context, error, child) => _ScannerError(error: error),
-          ),
-          // Scrim oscuro con una ventana recortada sobre el marco guía.
-          IgnorePointer(
-            child: ColorFiltered(
-              colorFilter: ColorFilter.mode(
-                Colors.black.withValues(alpha: 0.55),
-                BlendMode.srcOut,
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.black,
-                      backgroundBlendMode: BlendMode.dstOut,
-                    ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Marco: 70 % del ancho con tope de space-16 × 4, como la maqueta.
+          final frame = math.min(constraints.maxWidth * 0.7, NxTokens.space16 * 4);
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned.fill(
+                child: Semantics(
+                  label: l10n.qrCameraView,
+                  image: true,
+                  child: MobileScanner(
+                    controller: _controller,
+                    onDetect: _onDetect,
+                    // El error se pinta encima del velo (más abajo).
+                    errorBuilder: (context, error, child) => const SizedBox.shrink(),
                   ),
-                  Container(
-                    width: _frameSize,
-                    height: _frameSize,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: _ScrimPainter(frame)))),
+              // Instrucción y aviso, debajo del marco (centrado en la pantalla).
+              Positioned(
+                top: constraints.maxHeight / 2 + frame / 2 + NxTokens.spaceGapSection,
+                left: NxTokens.spaceInsetPage,
+                right: NxTokens.spaceInsetPage,
+                child: Column(
+                  children: [
+                    Text(
+                      l10n.qrHint,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: NxTokens.colorWhite),
                     ),
+                    if (_invalid) ...[
+                      const SizedBox(height: NxTokens.spaceGapRelated),
+                      NxAviso(tone: NxTone.error, message: l10n.attendanceInvalidQr),
+                    ],
+                  ],
+                ),
+              ),
+              Positioned.fill(
+                child: ValueListenableBuilder<MobileScannerState>(
+                  valueListenable: _controller,
+                  builder: (context, scanner, _) => scanner.error == null
+                      ? const SizedBox.shrink()
+                      : ColoredBox(
+                          color: NxTokens.colorNeutral950,
+                          child: _ScannerError(error: scanner.error!),
+                        ),
+                ),
+              ),
+              Positioned(
+                left: NxTokens.spaceInsetPage,
+                right: NxTokens.spaceInsetPage,
+                bottom: NxTokens.spaceInsetPage + MediaQuery.paddingOf(context).bottom,
+                child: Center(
+                  child: NxBoton(
+                    label: l10n.commonCancel,
+                    icon: Icons.close,
+                    variant: NxBotonVariant.secondary,
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          // Marcadores de esquina del marco guía.
-          const IgnorePointer(
-            child: SizedBox(
-              width: _frameSize,
-              height: _frameSize,
-              child: Stack(
-                children: [
-                  Positioned(top: 0, left: 0, child: _Corner(Alignment.topLeft)),
-                  Positioned(top: 0, right: 0, child: _Corner(Alignment.topRight)),
-                  Positioned(bottom: 0, left: 0, child: _Corner(Alignment.bottomLeft)),
-                  Positioned(bottom: 0, right: 0, child: _Corner(Alignment.bottomRight)),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 64,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Text(
-                context.l10n.qrHint,
-                style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500),
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-/// Marcador de esquina en forma de "L" para el marco guía del escáner.
-class _Corner extends StatelessWidget {
-  const _Corner(this.alignment);
+/// Velo `overlay-scrim` con una ventana recortada y el marco blanco de `border-width-focus`.
+class _ScrimPainter extends CustomPainter {
+  const _ScrimPainter(this.frame);
 
-  final Alignment alignment;
+  final double frame;
 
   @override
-  Widget build(BuildContext context) {
-    const side = BorderSide(color: Colors.white, width: 4);
-    final isTop = alignment.y < 0;
-    final isLeft = alignment.x < 0;
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        border: Border(
-          top: isTop ? side : BorderSide.none,
-          bottom: isTop ? BorderSide.none : side,
-          left: isLeft ? side : BorderSide.none,
-          right: isLeft ? BorderSide.none : side,
-        ),
-      ),
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: center, width: frame, height: frame),
+      const Radius.circular(NxTokens.radiusLg),
+    );
+    final scrim = Path()
+      ..addRect(Offset.zero & size)
+      ..addRRect(rect)
+      ..fillType = PathFillType.evenOdd;
+    canvas.drawPath(scrim, Paint()..color = NxColors.dark.overlayScrim);
+    canvas.drawRRect(
+      rect,
+      Paint()
+        ..color = NxTokens.colorWhite
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = NxTokens.borderWidthFocus,
     );
   }
+
+  @override
+  bool shouldRepaint(covariant _ScrimPainter oldDelegate) => oldDelegate.frame != frame;
 }
 
+/// Sin permiso de cámara (o cámara no disponible): estado vacío con "Abrir ajustes".
 class _ScannerError extends StatelessWidget {
   const _ScannerError({required this.error});
 
@@ -159,21 +179,23 @@ class _ScannerError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final denied = error.errorCode == MobileScannerErrorCode.permissionDenied;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.no_photography, size: 48, color: Colors.white70),
-            const SizedBox(height: 16),
-            Text(
-              denied ? context.l10n.qrPermissionDenied : context.l10n.qrCameraError,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ],
+        padding: const EdgeInsets.all(NxTokens.spaceInsetPage),
+        child: Container(
+          decoration: BoxDecoration(
+            color: NxColors.of(context).surfaceDefault,
+            borderRadius: const BorderRadius.all(Radius.circular(NxTokens.radiusLg)),
+          ),
+          child: NxEstadoVacio(
+            page: true,
+            icon: Icons.no_photography_outlined,
+            title: denied ? l10n.qrPermissionDenied : l10n.qrCameraError,
+            actionLabel: denied ? l10n.qrOpenSettings : null,
+            onAction: denied ? Geolocator.openAppSettings : null,
+          ),
         ),
       ),
     );

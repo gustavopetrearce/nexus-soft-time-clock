@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/app_database.dart';
@@ -5,6 +6,7 @@ import '../../../core/network/session_events.dart';
 import '../../../core/storage/secure_token_store.dart';
 import '../../admin_vacations/application/admin_vacations_controller.dart';
 import '../../attendance/application/attendance_controller.dart';
+import '../../attendance/application/today_attendance.dart';
 import '../../attendance/data/attendance_sync_service.dart';
 import '../../attendance/data/event_type_service.dart';
 import '../../profile/data/profile_repository.dart';
@@ -15,7 +17,8 @@ import '../domain/auth_models.dart';
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
 /// Motivo de un login fallido; la pantalla lo traduce.
-enum AuthError { invalidCredentials }
+/// Motivo del fallo de inicio de sesión: credenciales (401) o cuenta bloqueada (423, RN-40).
+enum AuthError { invalidCredentials, accountLocked }
 
 class AuthState {
   const AuthState({required this.status, this.loading = false, this.error});
@@ -72,10 +75,11 @@ class AuthController extends Notifier<AuthState> {
     try {
       await ref.read(authRepositoryProvider).login(credentials);
       state = const AuthState(status: AuthStatus.authenticated);
-    } catch (_) {
-      state = const AuthState(
+    } catch (e) {
+      final locked = e is DioException && e.response?.statusCode == 423;
+      state = AuthState(
         status: AuthStatus.unauthenticated,
-        error: AuthError.invalidCredentials,
+        error: locked ? AuthError.accountLocked : AuthError.invalidCredentials,
       );
     }
   }
@@ -117,6 +121,7 @@ class AuthController extends Notifier<AuthState> {
     ref.invalidate(myVacationsProvider);
     ref.invalidate(enabledIntermediateEventTypesProvider);
     ref.invalidate(attendanceControllerProvider);
+    ref.invalidate(todayAttendanceProvider);
     ref.invalidate(adminVacationsControllerProvider);
   }
 }

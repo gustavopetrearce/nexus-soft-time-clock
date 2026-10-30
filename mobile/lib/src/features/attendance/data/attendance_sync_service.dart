@@ -30,6 +30,13 @@ class AttendanceSyncService {
   final AppDatabase _db;
   final EvidenceUploadService _evidence;
 
+  /// Último veredicto del servidor por operación, con los datos que la fila local no guarda (hora
+  /// del servidor, distancia al centro, banderas). Solo vive en memoria: lo usa la pantalla de
+  /// registro para el mensaje del resultado inmediato; el historial lo trae del servidor.
+  final Map<String, SyncVerdict> _verdicts = {};
+
+  SyncVerdict? verdictFor(String operationUuid) => _verdicts[operationUuid];
+
   Future<void> syncPending() async {
     final pending = await _db.pending();
     if (pending.isEmpty) {
@@ -87,6 +94,9 @@ class AttendanceSyncService {
     }
     final error = r['error'] as String?;
     final status = r['status'] as String?;
+    if (error == null && status != null) {
+      _verdicts[uuid] = SyncVerdict.fromJson(r);
+    }
 
     if (error != null) {
       // Fallo por operación (RN-54). Puede ser transitorio, así que se reintenta, pero con cota:
@@ -94,8 +104,9 @@ class AttendanceSyncService {
       await _retryLater([uuid], error);
       return;
     }
-    if (status == 'ACCEPTED') {
-      // Aceptado; si el servidor detectó retardo (RN-16) se anota en la nota para informarlo.
+    if (status == 'ACCEPTED' || status == 'PENDING_REVIEW') {
+      // Aceptado (o registrado en revisión por una bandera antifraude aceptada por política,
+      // RN-29): no se reintenta. Si el servidor detectó retardo (RN-16) se anota en la nota.
       final late = r['minutesLate'] as int?;
       await _db.markStatus(uuid, 'SYNCED', (late != null && late > 0) ? 'LATE:$late' : null);
       await _discardLocalPhoto(uuid);
@@ -228,3 +239,35 @@ final attendanceSyncServiceProvider = Provider<AttendanceSyncService>(
     ref.read(evidenceUploadServiceProvider),
   ),
 );
+
+/// Resultado del servidor para una operación del lote (`SyncItemResult`).
+class SyncVerdict {
+  const SyncVerdict({
+    required this.status,
+    this.rejectionReason,
+    this.serverTime,
+    this.distanceToSiteM,
+    this.flags = const [],
+    this.minutesLate = 0,
+  });
+
+  final String status;
+  final String? rejectionReason;
+  final DateTime? serverTime;
+  final double? distanceToSiteM;
+  final List<String> flags;
+  final int minutesLate;
+
+  factory SyncVerdict.fromJson(Map<dynamic, dynamic> r) {
+    final time = r['serverTime'];
+    final flags = r['flags'];
+    return SyncVerdict(
+      status: r['status'] as String,
+      rejectionReason: r['rejectionReason'] as String?,
+      serverTime: time is String ? DateTime.tryParse(time)?.toLocal() : null,
+      distanceToSiteM: (r['distanceToSiteM'] as num?)?.toDouble(),
+      flags: flags is List ? flags.whereType<String>().toList() : const [],
+      minutesLate: (r['minutesLate'] as num?)?.toInt() ?? 0,
+    );
+  }
+}

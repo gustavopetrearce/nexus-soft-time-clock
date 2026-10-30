@@ -71,6 +71,22 @@ flutter:
   uses-material-design: true
   generate: true   # habilita gen-l10n (i18n)
 
+  # Tipografía del design system: font.family.sans empieza por "Inter Variable" y la app se
+  # registra con ese nombre para que coincida sin depender del respaldo. Son los pesos estáticos
+  # 400–700 de Inter 4.1 (licencia OFL, assets/fonts/OFL.txt): se empaquetan para no depender de
+  # la red.
+  fonts:
+    - family: Inter Variable
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+
 # Iconos de launcher (marca del reloj índigo, consistente con la web).
 # Fuentes en assets/icon/. Regenerar con: dart run flutter_launcher_icons
 flutter_launcher_icons:

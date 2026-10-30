@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 import '../../../core/i18n/l10n.dart';
 import '../application/attendance_message.dart';
 import '../domain/attendance_record.dart';
@@ -7,16 +9,73 @@ import '../domain/attendance_record.dart';
 extension AttendanceL10n on AppLocalizations {
   String attendanceMessageText(AttendanceMessage message) => switch (message) {
         GpsUnavailableMessage() => attendanceGpsUnavailable,
-        AcceptedMessage(lateMinutes: final m?) => attendanceAcceptedLate(m),
-        AcceptedMessage() => attendanceAccepted,
-        RejectedLowAccuracyMessage(:final accuracyM) => attendanceRejectedLowAccuracy(accuracyM.round()),
-        RejectedMessage(:final reason) => attendanceRejected(rejectionPhrase(reason)),
+        AcceptedMessage(:final eventType, :final serverTime, :final lateMinutes) => [
+            registeredText(eventType, serverTime),
+            if (lateMinutes != null) attendanceLate(lateMinutes),
+          ].join(' '),
+        InReviewMessage(:final eventType, :final serverTime, :final flags) => [
+            registeredText(eventType, serverTime),
+            flagText(flags),
+            attendanceReviewNote,
+          ].join(' '),
+        RejectedLowAccuracyMessage() => rejectMsgLowGpsAccuracy,
+        RejectedMessage(:final reason, :final eventType, :final distanceM) =>
+          rejectionMessage(reason, eventType: eventType, distanceM: distanceM),
         NotRegisteredMessage(:final failure) => attendanceNotRegistered(failurePhrase(failure)),
         SavedOfflineMessage() => attendanceSavedOffline,
         SavedRetryingMessage(:final failure) => attendanceSavedRetrying(failurePhrase(failure)),
         SyncCompletedMessage() => syncCompleted,
         SyncPendingMessage(:final count) => syncPending(count),
         SyncFailedMessage(:final failure) => syncFailed(failurePhrase(failure)),
+      };
+
+  /// "Entrada registrada a las 08:02." con la hora del servidor (RN-11), o sin hora si el
+  /// servidor no la devolvió.
+  String registeredText(String code, DateTime? serverTime) {
+    final name = eventTypeName(code) ?? prettifyCode(code);
+    // En español, Entrada y Salida son femeninos; el resto de eventos, masculinos.
+    final gender = code == 'ENTRADA' || code == 'SALIDA' ? 'f' : 'm';
+    return serverTime == null
+        ? attendanceRegistered(name, gender)
+        : attendanceRegisteredAt(name, DateFormat('HH:mm').format(serverTime), gender);
+  }
+
+  /// Frase de la bandera antifraude que deja el registro en revisión.
+  String flagText(List<String> flags) {
+    for (final flag in flags) {
+      final text = switch (flag) {
+        'MOCK_LOCATION' => flagMockLocation,
+        'GPS_SPOOF_APP' => flagGpsSpoofApp,
+        'ROOTED_DEVICE' => flagRootedDevice,
+        'UNTRUSTED_DEVICE' => flagUntrustedDevice,
+        'GPS_DISABLED' => flagGpsDisabled,
+        _ => null,
+      };
+      if (text != null) return text;
+    }
+    return flagGeneric;
+  }
+
+  /// Mensaje completo de un rechazo (HIFI/05, P04 rechazado · motivo): qué pasó y qué hacer.
+  String rejectionMessage(String? reason, {String? eventType, double? distanceM}) => switch (reason) {
+        'OUT_OF_GEOFENCE' => distanceM == null
+            ? rejectMsgOutOfGeofence
+            : rejectMsgOutOfGeofenceDistance(distanceM.round()),
+        'LOW_GPS_ACCURACY' => rejectMsgLowGpsAccuracy,
+        'GPS_UNAVAILABLE' => attendanceGpsUnavailable,
+        'INVALID_QR' => rejectMsgInvalidQr,
+        'OUT_OF_SCHEDULE' => rejectMsgOutOfSchedule,
+        'INVALID_SEQUENCE' => eventType == 'ENTRADA' ? rejectMsgInvalidSequenceEntry : rejectMsgInvalidSequence,
+        'UNTRUSTED_DEVICE' => rejectMsgUntrustedDevice,
+        'FRAUD_MOCK_LOCATION' => rejectMsgMockLocation,
+        'FRAUD_GPS_SPOOF_APP' => rejectMsgGpsSpoofApp,
+        'FRAUD_ROOTED_DEVICE' => rejectMsgRootedDevice,
+        'REPLAY_DETECTED' => rejectMsgReplay,
+        'PHOTO_REQUIRED' => rejectMsgPhotoRequired,
+        'BIOMETRIC_REQUIRED' => rejectMsgBiometricRequired,
+        'EVENT_TYPE_DISABLED' => rejectMsgEventTypeDisabled,
+        'SITELESS_NOT_ALLOWED' => rejectMsgSitelessNotAllowed,
+        _ => attendanceNotRegistered(rejectionPhrase(reason)),
       };
 
   /// Motivo de un envío fallido (no de un rechazo de negocio), en minúsculas para insertar en frase.
