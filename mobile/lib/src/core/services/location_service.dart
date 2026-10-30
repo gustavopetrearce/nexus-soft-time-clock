@@ -14,7 +14,29 @@ class LocationService {
   /// con el mejor fix acumulado.
   static const Duration _maxWait = Duration(seconds: 15);
 
+  /// Umbral de precisión por defecto del backend (`company_settings.default_gps_accuracy_max_m`)
+  /// cuando aún no se conoce la política del centro: el indicador de P04 pasa a warning por encima.
+  static const double defaultAccuracyMaxM = 50;
+
   Future<bool> isGpsEnabled() => Geolocator.isLocationServiceEnabled();
+
+  /// Lectura continua para el indicador de P04. No pide permiso (eso ocurre al registrar): sin
+  /// permiso solo informa que se está buscando. El plugin comparte un único stream entre
+  /// suscriptores, así que convive con [current] durante un registro.
+  Stream<GpsReading> watch() async* {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      yield const GpsReading(enabled: false);
+      return;
+    }
+    final permission = await Geolocator.checkPermission();
+    yield const GpsReading(enabled: true);
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      return;
+    }
+    yield* Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 0),
+    ).map((p) => GpsReading(enabled: true, accuracyM: p.accuracy));
+  }
 
   /// Devuelve el mejor fix GPS disponible. La primera lectura del proveedor fusionado suele ser
   /// gruesa (red/celda) y aún no convergió; por eso se escucha el stream hasta [_maxWait] y se
@@ -77,4 +99,15 @@ class LocationService {
   }
 }
 
+/// Estado del GPS para el indicador: apagado, buscando (sin [accuracyM]) o con precisión en m.
+class GpsReading {
+  const GpsReading({required this.enabled, this.accuracyM});
+
+  final bool enabled;
+  final double? accuracyM;
+}
+
 final locationServiceProvider = Provider<LocationService>((ref) => LocationService());
+
+final gpsReadingProvider =
+    StreamProvider.autoDispose<GpsReading>((ref) => ref.read(locationServiceProvider).watch());

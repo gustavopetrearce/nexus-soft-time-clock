@@ -10,6 +10,8 @@ import '../features/auth/presentation/change_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
+import '../core/i18n/l10n.dart';
+import '../core/ui/nx_ui.dart';
 import '../features/vacations/presentation/vacations_screen.dart';
 
 /// Router de la app (GoRouter) con redirect basado en la sesión: mientras se restaura la
@@ -73,12 +75,34 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Pantalla de carga mientras se restaura la sesión al abrir la app.
+/// Splash (P01): isotipo y barra de progreso mientras se valida la sesión guardada.
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(NxTokens.spaceInsetPage),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const NxIsotipo(size: NxTokens.space16),
+                const SizedBox(height: NxTokens.spaceGapSection),
+                SizedBox(
+                  width: NxTokens.space16 * 2,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.all(Radius.circular(NxTokens.radiusFull)),
+                    child: LinearProgressIndicator(semanticsLabel: context.l10n.commonLoading),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

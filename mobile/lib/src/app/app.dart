@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/i18n/l10n.dart';
 import '../core/i18n/locale_controller.dart';
+import '../core/theme/theme_mode_controller.dart';
 import 'router.dart';
 import 'theme.dart';
 
-/// Widget raíz. Material 3 con soporte de tema claro/oscuro del sistema (dark mode)
-/// e i18n (es/en). El idioma sale de [localeControllerProvider]: el elegido por el usuario o,
-/// si no eligió, el del sistema (con español como respaldo si el del sistema no es es/en).
+/// Widget raíz. Material 3 con el tema del design system (claro/oscuro: el del sistema o el
+/// elegido en Inicio, [themeModeControllerProvider]) e i18n (es/en). El idioma sale de
+/// [localeControllerProvider]: el elegido por el usuario o, si no eligió, el del sistema (con
+/// español como respaldo si el del sistema no es es/en).
 /// El árbol de rutas y el redirect de sesión provienen de [routerProvider].
 class NexusTimeClockApp extends ConsumerWidget {
   const NexusTimeClockApp({super.key});
@@ -21,7 +23,8 @@ class NexusTimeClockApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeModeControllerProvider),
+      scrollBehavior: const NxScrollBehavior(),
       routerConfig: router,
       locale: ref.watch(localeControllerProvider),
       supportedLocales: AppLocalizations.supportedLocales,

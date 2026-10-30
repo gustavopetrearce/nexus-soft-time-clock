@@ -5,6 +5,8 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 *.g.dart
+# Salida de design-tokens (no es de build_runner): se versiona y CI verifica que coincida.
+!lib/src/app/tokens.g.dart
 lib/l10n/app_localizations*.dart
 .idea/
 .vscode/

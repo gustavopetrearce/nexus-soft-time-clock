@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../../core/i18n/l10n.dart';
 import '../../../core/i18n/language_picker.dart';
 import '../../../core/i18n/locale_controller.dart';
+import '../../../core/ui/nx_ui.dart';
+import '../../auth/application/auth_controller.dart';
 import '../data/profile_repository.dart';
 import '../domain/my_profile.dart';
 
@@ -28,11 +30,7 @@ class ProfileScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final locale = Localizations.localeOf(context).toLanguageTag();
     final chosen = ref.watch(localeControllerProvider);
-    final languageName = switch (chosen?.languageCode) {
-      'es' => l10n.languageSpanish,
-      'en' => l10n.languageEnglish,
-      _ => l10n.languageSystem,
-    };
+    final languageName = currentLanguageName(l10n, chosen);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.profileTitle)),
       body: async.when(
@@ -52,24 +50,23 @@ class ProfileScreen extends ConsumerWidget {
                 _Row(icon: Icons.wc_outlined, label: l10n.profileGender, value: _gender(l10n, p.gender)),
                 _Row(icon: Icons.call_outlined, label: l10n.profilePhone, value: p.phone),
                 _Row(icon: Icons.place_outlined, label: l10n.profileAddress, value: p.address),
-              ]),
+              ],),
               const SizedBox(height: 16),
               _Section(title: l10n.profileCompanyData, children: [
                 _Row(icon: Icons.event_available_outlined, label: l10n.profileHireDate, value: _fmt(p.hireDate, locale)),
-              ]),
+              ],),
               const SizedBox(height: 16),
               _Section(title: l10n.profileEmergency, children: [
                 _Row(icon: Icons.person_outline, label: l10n.profileName, value: p.emergencyContactName),
                 _Row(icon: Icons.phone_outlined, label: l10n.profilePhone, value: p.emergencyContactPhone),
-              ]),
+              ],),
               const SizedBox(height: 16),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.translate),
-                  title: Text(l10n.languageTitle),
-                  subtitle: Text(languageName),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => showLanguagePicker(context, ref),
+              LanguageMenu(
+                builder: (context, controller) => NxTarjetaAcceso(
+                  icon: Icons.translate,
+                  title: l10n.languageTitle,
+                  subtitle: languageName,
+                  onTap: () => controller.isOpen ? controller.close() : controller.open(),
                 ),
               ),
               const SizedBox(height: 20),
@@ -90,6 +87,13 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              NxBoton(
+                label: l10n.profileLogout,
+                icon: Icons.logout,
+                variant: NxBotonVariant.tertiary,
+                onPressed: () => ref.read(authControllerProvider.notifier).logout(),
               ),
             ],
           ),
@@ -123,11 +127,11 @@ class _Header extends StatelessWidget {
           radius: 44,
           backgroundColor: theme.colorScheme.primaryContainer,
           child: Text(initials,
-              style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.onPrimaryContainer)),
+              style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.onPrimaryContainer),),
         ),
         const SizedBox(height: 14),
         Text(name.isEmpty ? context.l10n.profileDefaultName : name,
-            style: theme.textTheme.titleLarge, textAlign: TextAlign.center),
+            style: theme.textTheme.titleLarge, textAlign: TextAlign.center,),
         if (profile.email != null)
           Text(profile.email!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ],
@@ -150,7 +154,7 @@ class _Section extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(title.toUpperCase(),
               style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.primary, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
+                  color: theme.colorScheme.primary, fontWeight: FontWeight.w700, letterSpacing: 0.6,),),
         ),
         Card(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4), child: Column(children: children))),
       ],
@@ -190,6 +194,6 @@ class _ErrorView extends StatelessWidget {
           Text(context.l10n.profileLoadError),
           const SizedBox(height: 12),
           FilledButton(onPressed: onRetry, child: Text(context.l10n.commonRetry)),
-        ]),
+        ],),
       );
 }
