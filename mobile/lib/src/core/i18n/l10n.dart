@@ -13,6 +13,16 @@ extension L10nContext on BuildContext {
   String get intlLocale => Localizations.localeOf(this).toLanguageTag();
 }
 
+/// Fecha completa con día y mes a dos cifras (`dd/mm/aaaa` en español, HIFI/08 Formatos).
+String fullDate(BuildContext context, DateTime date) =>
+    DateFormat(context.intlLocale.startsWith('es') ? 'dd/MM/yyyy' : 'MM/dd/yyyy').format(date);
+
+/// Fecha ISO de la API (`yyyy-MM-dd…`) en formato completo; el texto original si no es fecha.
+String fullIsoDate(BuildContext context, String iso) {
+  final date = iso.length >= 10 ? DateTime.tryParse(iso.substring(0, 10)) : null;
+  return date == null ? iso : fullDate(context, date);
+}
+
 /// Fecha ISO de la API (`yyyy-MM-dd…`) como día y mes en el orden del idioma activo
 /// (23/10 en español, 10/23 en inglés). Devuelve el texto original si no es una fecha.
 String shortIsoDate(BuildContext context, String iso) {

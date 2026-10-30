@@ -3,12 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/ui/nx_ui.dart';
 import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
 
-/// Cambio de contraseña del propio colaborador (RF-01): exige la actual y confirma la nueva.
+/// Cambiar contraseña (P32, RF-01): la actual se valida en el servidor y la confirmación al salir
+/// del campo. Al guardar se cierran todas las sesiones y se vuelve al login (RN-41).
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
+
+  /// Largo mínimo de la contraseña nueva.
+  static const minLength = 8;
 
   @override
   ConsumerState<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
@@ -22,6 +27,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
   bool _obscureCurrent = true;
   bool _obscureNew = true;
+  bool _obscureConfirm = true;
   bool _saving = false;
   String? _error;
 
@@ -34,7 +40,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_saving || !_formKey.currentState!.validate()) {
       return;
     }
     setState(() {
@@ -56,9 +62,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     } on DioException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.response?.statusCode == 401
-            ? context.l10n.passwordWrongCurrent
-            : context.l10n.passwordFailed;
+        _error = e.response?.statusCode == 401 ? context.l10n.passwordWrongCurrent : context.l10n.passwordFailed;
       });
     } catch (_) {
       if (!mounted) return;
@@ -68,94 +72,74 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     }
   }
 
+  NxMostrarContrasena _toggle(bool obscured, VoidCallback onToggle) => NxMostrarContrasena(
+        obscured: obscured,
+        onToggle: onToggle,
+        showLabel: context.l10n.passwordShow,
+        hideLabel: context.l10n.passwordHide,
+      );
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.passwordTitle)),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _currentController,
-                  obscureText: _obscureCurrent,
-                  decoration: InputDecoration(
-                    labelText: l10n.passwordCurrent,
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscureCurrent ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
-                    ),
-                  ),
-                  validator: (v) => (v == null || v.isEmpty) ? l10n.commonRequired : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _newController,
-                  obscureText: _obscureNew,
-                  decoration: InputDecoration(
-                    labelText: l10n.passwordNew,
-                    helperText: l10n.passwordMinLength,
-                    prefixIcon: const Icon(Icons.lock_reset),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscureNew ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () => setState(() => _obscureNew = !_obscureNew),
-                    ),
-                  ),
-                  validator: (v) => (v == null || v.length < 8) ? l10n.passwordMinLength : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _confirmController,
-                  obscureText: _obscureNew,
-                  decoration: InputDecoration(
-                    labelText: l10n.passwordConfirm,
-                    prefixIcon: const Icon(Icons.lock_reset),
-                  ),
-                  validator: (v) =>
-                      v != _newController.text ? l10n.passwordMismatch : null,
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: scheme.errorContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline, size: 20, color: scheme.onErrorContainer),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(_error!, style: TextStyle(color: scheme.onErrorContainer)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _saving ? null : _submit,
-                  child: _saving
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.passwordTitle),
-                ),
-              ],
+      body: Form(
+        key: _formKey,
+        child: NxContenido(
+          children: [
+            if (_error != null) NxAviso(key: ValueKey(_error), tone: NxTone.error, message: _error!),
+            NxCampo(
+              label: l10n.passwordCurrent,
+              required: true,
+              controller: _currentController,
+              obscureText: _obscureCurrent,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.password],
+              autovalidateMode: AutovalidateMode.onUnfocus,
+              validator: (v) => (v == null || v.isEmpty) ? l10n.commonRequired : null,
+              suffix: _toggle(_obscureCurrent, () => setState(() => _obscureCurrent = !_obscureCurrent)),
             ),
-          ),
+            NxCampo(
+              label: l10n.passwordNew,
+              required: true,
+              controller: _newController,
+              obscureText: _obscureNew,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.newPassword],
+              helperText: l10n.passwordMinLength,
+              autovalidateMode: AutovalidateMode.onUnfocus,
+              validator: (v) {
+                if (v == null || v.isEmpty) return l10n.commonRequired;
+                return v.length < ChangePasswordScreen.minLength ? l10n.passwordMinLength : null;
+              },
+              suffix: _toggle(_obscureNew, () => setState(() => _obscureNew = !_obscureNew)),
+            ),
+            NxCampo(
+              label: l10n.passwordConfirm,
+              required: true,
+              controller: _confirmController,
+              obscureText: _obscureConfirm,
+              textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.newPassword],
+              autovalidateMode: AutovalidateMode.onUnfocus,
+              onFieldSubmitted: (_) => _submit(),
+              validator: (v) {
+                if (v == null || v.isEmpty) return l10n.commonRequired;
+                return v != _newController.text ? l10n.passwordMismatch : null;
+              },
+              suffix: _toggle(_obscureConfirm, () => setState(() => _obscureConfirm = !_obscureConfirm)),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: NxAccionFija(
+        child: NxBoton(
+          label: l10n.passwordSave,
+          busy: _saving,
+          block: true,
+          onPressed: _submit,
         ),
       ),
     );
