@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/admin_vacation_repository.dart';
@@ -6,8 +7,12 @@ import '../domain/admin_vacation_models.dart';
 /// Error de la bandeja; la pantalla lo traduce al idioma activo.
 enum AdminVacationsError { load, loadMore }
 
-/// Estado de la bandeja de aprobación de vacaciones. Paginación por append
-/// ("Cargar más") sobre un filtro de estado (por defecto PENDING).
+/// Resultado de resolver una solicitud. `alreadyResolved` es el 409 de una transición no válida
+/// (otra persona la resolvió antes): la hoja lo avisa sin perder la nota escrita.
+enum ResolveOutcome { resolved, alreadyResolved, failed }
+
+/// Estado de la bandeja de aprobación de vacaciones. Paginación por append ("Cargar más") sobre
+/// las solicitudes PENDING: la bandeja de la app solo muestra lo que queda por decidir (P10 R1).
 class AdminVacationsState {
   const AdminVacationsState({
     this.items = const [],
@@ -104,23 +109,22 @@ class AdminVacationsController extends Notifier<AdminVacationsState> {
     }
   }
 
-  Future<void> setStatus(String status) async {
-    if (status == state.statusFilter) return;
-    state = state.copyWith(statusFilter: status);
-    await load();
-  }
-
-  /// Aprueba o rechaza una solicitud y recarga la bandeja. Devuelve true si tuvo éxito.
-  Future<bool> resolve(AdminVacationRequest request, {required bool approve, String? note}) async {
+  /// Aprueba o rechaza una solicitud y recarga la bandeja.
+  Future<ResolveOutcome> resolve(AdminVacationRequest request, {required bool approve, String? note}) async {
     state = state.copyWith(saving: true);
     try {
       await _repo.resolve(request.id, approve: approve, note: note);
       state = state.copyWith(saving: false);
       await load();
-      return true;
-    } catch (_) {
+      return ResolveOutcome.resolved;
+    } catch (e) {
       state = state.copyWith(saving: false);
-      return false;
+      if (e is DioException && e.response?.statusCode == 409) {
+        // Ya no está pendiente: se recarga para que salga de la bandeja.
+        await load();
+        return ResolveOutcome.alreadyResolved;
+      }
+      return ResolveOutcome.failed;
     }
   }
 }
