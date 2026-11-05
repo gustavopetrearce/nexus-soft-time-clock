@@ -702,6 +702,7 @@
       "notVerified": "Not verified",
       "source": "Source",
       "offline": "Synced while offline",
+      "external": "External system",
       "online": "Online",
       "evidence": "Photo evidence",
       "noPhoto": "This record has no photo.",

@@ -19,6 +19,15 @@ import java.util.List;
 @Component
 public class NexusJwtAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
+    public static final String TOKEN_USE_CLAIM = "token_use";
+    public static final String TOKEN_USE_CLIENT = "client";
+
+    /** Marca los tokens de sistema externo: {@code SecurityConfig} los deja fuera de la API de usuarios. */
+    public static final String CLIENT_AUTHORITY = "CLIENT";
+
+    /** Fuera del catálogo de permisos a propósito: ningún rol de usuario puede recibirla (V28). */
+    public static final String EXTERNAL_ATTENDANCE_AUTHORITY = "attendance:register:external";
+
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {
         List<GrantedAuthority> authorities = new ArrayList<>();
@@ -30,6 +39,9 @@ public class NexusJwtAuthenticationConverter implements Converter<Jwt, AbstractA
         List<String> roles = jwt.getClaimAsStringList("roles");
         if (roles != null) {
             roles.forEach(r -> authorities.add(new SimpleGrantedAuthority("ROLE_" + r)));
+        }
+        if (TOKEN_USE_CLIENT.equals(jwt.getClaimAsString(TOKEN_USE_CLAIM))) {
+            authorities.add(new SimpleGrantedAuthority(CLIENT_AUTHORITY));
         }
         return new JwtAuthenticationToken(jwt, authorities, jwt.getSubject());
     }

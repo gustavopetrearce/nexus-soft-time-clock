@@ -77,7 +77,16 @@ public class StompAuthorizationInterceptor implements ChannelInterceptor {
         }
         try {
             Jwt jwt = jwtDecoder.decode(header.substring(BEARER_PREFIX.length()).trim());
-            return jwtAuthConverter.convert(jwt);
+            Authentication authentication = jwtAuthConverter.convert(jwt);
+            // /ws no pasa por las reglas HTTP de SecurityConfig: hay que confinar aquí también al
+            // token de sistema externo, que lleva tenant_id pero no representa a ningún usuario.
+            boolean client = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .anyMatch(NexusJwtAuthenticationConverter.CLIENT_AUTHORITY::equals);
+            if (client) {
+                throw new MessagingException("Un token de sistema externo no abre sesiones en este canal.");
+            }
+            return authentication;
         } catch (JwtException e) {
             throw new MessagingException("Token inválido o caducado en el CONNECT.");
         }

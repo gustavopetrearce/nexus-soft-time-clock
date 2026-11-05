@@ -9,7 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -83,6 +85,33 @@ public class GlobalExceptionHandler {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
         pd.setTitle("Solicitud inválida");
         pd.setProperty("code", "VALIDATION_ERROR");
+        pd.setProperty("timestamp", Instant.now());
+        pd.setProperty("path", request.getRequestURI());
+        return pd;
+    }
+
+    /**
+     * Cuerpo ilegible (JSON roto, fecha sin desfase, UUID malformado). Sin este manejador caía en el
+     * catch-all como un 500, y un sistema externo lo reintentaría en vez de corregir la petición.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "El cuerpo de la petición no se puede interpretar.");
+        pd.setTitle("Solicitud inválida");
+        pd.setProperty("code", "MALFORMED_REQUEST");
+        pd.setProperty("timestamp", Instant.now());
+        pd.setProperty("path", request.getRequestURI());
+        return pd;
+    }
+
+    /** Content-Type no admitido: mismo motivo que {@link #handleNotReadable}, es un error del cliente. */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ProblemDetail handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "Tipo de contenido no admitido en este endpoint.");
+        pd.setTitle("Solicitud inválida");
+        pd.setProperty("code", "UNSUPPORTED_MEDIA_TYPE");
         pd.setProperty("timestamp", Instant.now());
         pd.setProperty("path", request.getRequestURI());
         return pd;

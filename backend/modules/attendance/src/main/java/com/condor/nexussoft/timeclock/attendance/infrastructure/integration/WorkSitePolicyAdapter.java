@@ -2,6 +2,7 @@ package com.condor.nexussoft.timeclock.attendance.infrastructure.integration;
 
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.CompanyPolicyPort;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.WorkSitePolicyPort;
+import com.condor.nexussoft.timeclock.organization.domain.WorkSite;
 import com.condor.nexussoft.timeclock.organization.domain.port.in.WorkSiteManagementUseCase;
 import org.springframework.stereotype.Component;
 
@@ -44,6 +45,13 @@ public class WorkSitePolicyAdapter implements WorkSitePolicyPort {
                         site.requirePhoto() != null ? site.requirePhoto() : company.requirePhoto(),
                         site.requireBiometric() != null ? site.requireBiometric() : company.requireBiometric()))
                 .orElseGet(() -> companyWide(company));
+    }
+
+    @Override
+    public boolean isActive(UUID tenantId, UUID workSiteId) {
+        return workSites.find(tenantId, workSiteId)
+                .filter(site -> site.status() == WorkSite.Status.ACTIVE)
+                .isPresent();
     }
 
     private SitePolicy companyWide(CompanyPolicyPort.CompanyPolicy company) {

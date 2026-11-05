@@ -19,8 +19,8 @@ final class ReportColumns {
                 r.eventType(),
                 r.status(),
                 r.rejectionReason() == null ? "" : r.rejectionReason(),
-                String.valueOf(r.latitude()),
-                String.valueOf(r.longitude())
+                r.latitude() == null ? "" : String.valueOf(r.latitude()),
+                r.longitude() == null ? "" : String.valueOf(r.longitude())
         };
     }
 }

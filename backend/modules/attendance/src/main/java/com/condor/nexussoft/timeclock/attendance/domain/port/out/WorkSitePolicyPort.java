@@ -7,6 +7,9 @@ public interface WorkSitePolicyPort {
 
     SitePolicy find(UUID tenantId, UUID workSiteId);
 
+    /** El centro existe en este tenant y está activo. */
+    boolean isActive(UUID tenantId, UUID workSiteId);
+
     /**
      * @param gpsAccuracyMaxM   umbral de precisión GPS por-centro; {@code null} → usar el default de plataforma.
      * @param requirePhoto      el centro exige evidencia fotográfica (HU-13 CA1).

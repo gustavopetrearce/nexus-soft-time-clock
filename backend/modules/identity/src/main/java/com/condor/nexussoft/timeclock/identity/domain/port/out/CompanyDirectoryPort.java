@@ -12,4 +12,6 @@ public interface CompanyDirectoryPort {
 
     /** Resuelve el tenant activo por código de empresa o dominio de email. */
     Optional<UUID> resolveActiveTenant(String companyCodeOrEmailDomain);
+
+    boolean isActiveTenant(UUID tenantId);
 }

@@ -42,8 +42,9 @@ public class AttendanceReportService {
                 rs.getString("event_type"),
                 rs.getString("status"),
                 rs.getString("rejection_reason"),
-                rs.getDouble("lat"),
-                rs.getDouble("lng")), args.toArray());
+                // getObject y no getDouble: este devuelve 0 con NULL y la marca sin GPS saldría en 0,0.
+                rs.getObject("lat", Double.class),
+                rs.getObject("lng", Double.class)), args.toArray());
     }
 
     /**

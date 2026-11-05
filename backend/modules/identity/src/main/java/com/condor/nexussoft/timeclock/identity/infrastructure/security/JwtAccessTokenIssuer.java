@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.identity.infrastructure.security;
 
+import com.condor.nexussoft.timeclock.identity.domain.model.ApiClient;
 import com.condor.nexussoft.timeclock.identity.domain.model.User;
 import com.condor.nexussoft.timeclock.identity.domain.port.out.AccessTokenIssuerPort;
 import com.condor.nexussoft.timeclock.identity.domain.port.out.IssuedToken;
@@ -50,6 +51,21 @@ public class JwtAccessTokenIssuer implements AccessTokenIssuerPort {
             claims.claim("tenant_id", user.tenantId().toString());
         }
 
+        return sign(claims);
+    }
+
+    @Override
+    public IssuedToken issueForClient(ApiClient client) {
+        Instant now = clock.instant();
+        return sign(JwtClaimsSet.builder()
+                .issuer("nexus-time-clock")
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(accessTtlSeconds))
+                .claims(claims -> claims.putAll(
+                        ClientClaims.of(client.id(), client.tenantId(), client.clientId(), client.name()))));
+    }
+
+    private IssuedToken sign(JwtClaimsSet.Builder claims) {
         JwsHeader header = JwsHeader.with(org.springframework.security.oauth2.jose.jws.SignatureAlgorithm.RS256).build();
         String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims.build())).getTokenValue();
         return new IssuedToken(token, accessTtlSeconds);

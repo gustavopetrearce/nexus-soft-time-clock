@@ -14,6 +14,8 @@ public interface UserJpaRepository extends JpaRepository<UserJpaEntity, UUID>, J
 
     Optional<UserJpaEntity> findByPlatformAdminTrueAndEmail(String email);
 
+    Optional<UserJpaEntity> findByTenantIdAndEmployeeCode(UUID tenantId, String employeeCode);
+
     // --- Administración de usuarios (BC-01) ---
     boolean existsByTenantIdAndEmail(UUID tenantId, String email);
 

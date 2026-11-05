@@ -82,6 +82,23 @@ class StompAuthorizationInterceptorTest {
         assertThat(user.getName()).isEqualTo(userId);
     }
 
+    @Test
+    @DisplayName("un token de sistema externo no abre sesión: lleva tenant_id pero no es un usuario")
+    void connectConTokenDeCliente() {
+        Jwt client = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .subject(UUID.randomUUID().toString())
+                .claim("token_use", "client")
+                .claim("tenant_id", TENANT)
+                .claim("permissions", List.of("attendance:register:external", "dashboard:read"))
+                .build();
+        when(jwtDecoder.decode("cliente")).thenReturn(client);
+
+        assertThatThrownBy(() -> preSend(connect("Bearer cliente")))
+                .isInstanceOf(MessagingException.class)
+                .hasMessageContaining("sistema externo");
+    }
+
     // ---------- SUBSCRIBE ----------
 
     @Test

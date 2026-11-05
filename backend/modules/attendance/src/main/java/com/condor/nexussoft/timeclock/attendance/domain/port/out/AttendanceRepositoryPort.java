@@ -27,4 +27,12 @@ public interface AttendanceRepositoryPort {
      *              ENTRADA sin su SALIDA bloquearía al colaborador indefinidamente.
      */
     Optional<LastEvent> findLastAcceptedEvent(UUID tenantId, UUID userId, Instant since);
+
+    /**
+     * Último evento aceptado anterior a {@code before}: el estado de la jornada <b>en ese momento</b>,
+     * para una marca que llega con su propia hora (ADR-013), no el de ahora.
+     */
+    Optional<LastEvent> findLastAcceptedEventBefore(UUID tenantId, UUID userId, Instant since, Instant before);
+
+    boolean existsAcceptedEventSince(UUID tenantId, UUID userId, Instant since);
 }

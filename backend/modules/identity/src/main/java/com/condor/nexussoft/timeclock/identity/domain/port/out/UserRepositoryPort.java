@@ -15,6 +15,8 @@ public interface UserRepositoryPort {
 
     Optional<User> findById(UUID id);
 
+    Optional<User> findByTenantAndEmployeeCode(UUID tenantId, String employeeCode);
+
     void save(User user);
 
     /** Actualiza solo el hash de contraseña (el {@link #save} general no toca credenciales). */
