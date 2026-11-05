@@ -702,6 +702,7 @@
       "notVerified": "No verificada",
       "source": "Origen",
       "offline": "Sincronizado sin conexión",
+      "external": "Sistema externo",
       "online": "En línea",
       "evidence": "Evidencia fotográfica",
       "noPhoto": "Este registro no tiene foto asociada.",

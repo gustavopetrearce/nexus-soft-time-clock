@@ -49,10 +49,9 @@ public class AttendanceRecordJpaEntity {
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
-    @Column(nullable = false)
     private Point location;
 
-    @Column(name = "gps_accuracy_m", nullable = false)
+    @Column(name = "gps_accuracy_m")
     private Double gpsAccuracyM;
 
     @Column(name = "distance_to_site_m")

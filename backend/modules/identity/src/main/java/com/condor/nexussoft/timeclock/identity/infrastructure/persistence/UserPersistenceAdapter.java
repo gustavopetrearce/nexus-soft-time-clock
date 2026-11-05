@@ -35,6 +35,11 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
     }
 
     @Override
+    public Optional<User> findByTenantAndEmployeeCode(UUID tenantId, String employeeCode) {
+        return jpa.findByTenantIdAndEmployeeCode(tenantId, employeeCode).map(this::toDomain);
+    }
+
+    @Override
     public void save(User user) {
         // La autenticación solo muta estado de bloqueo/contadores.
         jpa.findById(user.getId()).ifPresent(entity -> {

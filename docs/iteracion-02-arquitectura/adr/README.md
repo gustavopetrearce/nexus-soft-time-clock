@@ -16,3 +16,4 @@ Registro de decisiones arquitectónicas significativas (formato Michael Nygard).
 | [ADR-010](ADR-010-redis.md) | Redis para caché, rate limiting y anti-replay | Aceptado |
 | [ADR-011](ADR-011-websocket-realtime.md) | WebSocket (STOMP) para tiempo real | Aceptado |
 | [ADR-012](ADR-012-capacidad-tenant.md) | Capacidad de colaboradores activos por tenant (cupo + bloques) | Aceptado |
+| [ADR-013](ADR-013-credenciales-de-sistema.md) | Credenciales de sistema y marcación externa | Aceptado |

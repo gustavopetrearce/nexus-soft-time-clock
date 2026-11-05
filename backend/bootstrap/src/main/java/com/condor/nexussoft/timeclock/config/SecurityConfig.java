@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.config;
 
+import com.condor.nexussoft.timeclock.identity.infrastructure.security.ApiClientBasicAuthenticationFilter;
 import com.condor.nexussoft.timeclock.identity.infrastructure.security.AuditContextFilter;
 import com.condor.nexussoft.timeclock.identity.infrastructure.security.NexusJwtAuthenticationConverter;
 import com.condor.nexussoft.timeclock.identity.infrastructure.security.TenantContextFilter;
@@ -9,6 +10,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.expression.WebExpressionAuthorizationManager;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 
 /**
@@ -22,6 +24,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            NexusJwtAuthenticationConverter jwtAuthConverter,
+                                           ApiClientBasicAuthenticationFilter apiClientBasicFilter,
                                            TenantContextFilter tenantContextFilter,
                                            AuditContextFilter auditContextFilter) throws Exception {
         http
@@ -32,6 +35,7 @@ public class SecurityConfig {
                     "/api/v1/auth/login",
                     "/api/v1/auth/refresh",
                     "/api/v1/auth/logout",
+                    "/api/v1/oauth/token",
                     "/api/v1/ping",
                     "/actuator/health/**",
                     "/actuator/info",
@@ -45,10 +49,16 @@ public class SecurityConfig {
                     // destino se acota al tenant en StompAuthorizationInterceptor.
                     "/ws/**"
                 ).permitAll()
-                .anyRequest().authenticated()
+                .requestMatchers("/api/v1/integrations/attendance")
+                    .hasAuthority(NexusJwtAuthenticationConverter.EXTERNAL_ATTENDANCE_AUTHORITY)
+                // Un token de sistema lleva tenant_id pero su sub no es un usuario: hay endpoints con
+                // isAuthenticated() que lo tratarían como tal. Queda confinado a la regla anterior.
+                .anyRequest().access(new WebExpressionAuthorizationManager(
+                        "isAuthenticated() and !hasAuthority('" + NexusJwtAuthenticationConverter.CLIENT_AUTHORITY + "')"))
             )
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter)))
+            .addFilterBefore(apiClientBasicFilter, BearerTokenAuthenticationFilter.class)
             .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class)
             // Después del tenant: ambos leen el token ya autenticado y el de auditoría debe
             // envolver a todo lo que escriba (RN-60).

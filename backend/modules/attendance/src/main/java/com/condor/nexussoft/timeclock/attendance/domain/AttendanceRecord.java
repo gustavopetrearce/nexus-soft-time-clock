@@ -20,6 +20,7 @@ public class AttendanceRecord {
     private final AttendanceEventType eventType;
     private final AttendanceStatus status;
     private final RejectionReason rejectionReason;
+    /** Lectura GPS; nula solo en las marcas de un sistema externo, que no la aportan (ADR-013). */
     private final GpsFix gps;
     private final Double distanceToSiteM;
     private final String deviceId;

@@ -83,7 +83,7 @@ import { AttendanceEventsService } from './attendance-events.service';
         @if (data.source) {
           <div class="nx-dato">
             <dt class="nx-text-heading-6">{{ 'attendanceEvents.detail.source' | transloco }}</dt>
-            <dd>{{ (data.source === 'OFFLINE_SYNC' ? 'attendanceEvents.detail.offline' : 'attendanceEvents.detail.online') | transloco }}</dd>
+            <dd>{{ sourceKey(data.source) | transloco }}</dd>
           </div>
         }
       </dl>
@@ -132,6 +132,11 @@ export class AttendanceDetailDialogComponent {
         this.loading.set(false);
       },
     });
+  }
+
+  protected sourceKey(source: string): string {
+    if (source === 'OFFLINE_SYNC') return 'attendanceEvents.detail.offline';
+    return source === 'EXTERNAL' ? 'attendanceEvents.detail.external' : 'attendanceEvents.detail.online';
   }
 
   protected eventLabel(code: string): string {

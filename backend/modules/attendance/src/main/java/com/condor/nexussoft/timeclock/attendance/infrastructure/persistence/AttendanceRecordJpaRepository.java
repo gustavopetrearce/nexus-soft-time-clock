@@ -16,4 +16,11 @@ public interface AttendanceRecordJpaRepository extends JpaRepository<AttendanceR
     Optional<AttendanceRecordJpaEntity>
     findFirstByTenantIdAndUserIdAndStatusAndServerTimeGreaterThanEqualOrderByServerTimeDesc(
             UUID tenantId, UUID userId, String status, Instant since);
+
+    Optional<AttendanceRecordJpaEntity>
+    findFirstByTenantIdAndUserIdAndStatusAndServerTimeGreaterThanEqualAndServerTimeLessThanOrderByServerTimeDesc(
+            UUID tenantId, UUID userId, String status, Instant since, Instant before);
+
+    boolean existsByTenantIdAndUserIdAndStatusAndServerTimeGreaterThanEqual(
+            UUID tenantId, UUID userId, String status, Instant since);
 }

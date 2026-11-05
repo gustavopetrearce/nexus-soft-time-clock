@@ -5,6 +5,7 @@ import com.condor.nexussoft.timeclock.attendance.domain.AttendanceRecord;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceSequenceValidator.LastEvent;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceStatus;
 import com.condor.nexussoft.timeclock.attendance.domain.Evidence;
+import com.condor.nexussoft.timeclock.attendance.domain.GpsFix;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.AttendanceSummary;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.AttendanceRepositoryPort;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -31,12 +32,13 @@ public class AttendancePersistenceAdapter implements AttendanceRepositoryPort {
     @Override
     public void save(AttendanceRecord r) {
         Evidence e = r.evidence();
+        GpsFix gps = r.gps();
         jpa.save(new AttendanceRecordJpaEntity(
                 r.id(), r.tenantId(), r.serverTime(), r.userId(), r.workSiteId(), r.shiftId(),
                 r.eventType().name(), r.status().name(),
                 r.rejectionReason() == null ? null : r.rejectionReason().name(),
-                GeoSupport.point(r.gps().latitude(), r.gps().longitude()),
-                r.gps().accuracyM(), r.distanceToSiteM(),
+                gps == null ? null : GeoSupport.point(gps.latitude(), gps.longitude()),
+                gps == null ? null : gps.accuracyM(), r.distanceToSiteM(),
                 null,                       // device_id (uuid) — no resuelto en esta iteración
                 r.deviceTime(), r.timeSkewSeconds(), r.qrNonce(), r.operationUuid(), r.source(),
                 r.biometricVerified(),
@@ -50,6 +52,19 @@ public class AttendancePersistenceAdapter implements AttendanceRepositoryPort {
         return jpa.findFirstByTenantIdAndUserIdAndStatusAndServerTimeGreaterThanEqualOrderByServerTimeDesc(
                         tenantId, userId, AttendanceStatus.ACCEPTED.name(), since)
                 .map(e -> new LastEvent(AttendanceEventType.valueOf(e.getEventType()), e.getWorkSiteId()));
+    }
+
+    @Override
+    public Optional<LastEvent> findLastAcceptedEventBefore(UUID tenantId, UUID userId, Instant since, Instant before) {
+        return jpa.findFirstByTenantIdAndUserIdAndStatusAndServerTimeGreaterThanEqualAndServerTimeLessThanOrderByServerTimeDesc(
+                        tenantId, userId, AttendanceStatus.ACCEPTED.name(), since, before)
+                .map(e -> new LastEvent(AttendanceEventType.valueOf(e.getEventType()), e.getWorkSiteId()));
+    }
+
+    @Override
+    public boolean existsAcceptedEventSince(UUID tenantId, UUID userId, Instant since) {
+        return jpa.existsByTenantIdAndUserIdAndStatusAndServerTimeGreaterThanEqual(
+                tenantId, userId, AttendanceStatus.ACCEPTED.name(), since);
     }
 
     /**
