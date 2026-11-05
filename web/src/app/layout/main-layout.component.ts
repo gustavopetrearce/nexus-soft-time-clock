@@ -63,6 +63,7 @@ const NAV: readonly NavGroup[] = [
       { route: '/companies', icon: 'business', key: 'companies', permission: 'company:manage' },
       { route: '/work-sites', icon: 'location_on', key: 'workSites', permission: 'worksite:manage' },
       { route: '/projects', icon: 'work', key: 'projects', permission: 'project:manage' },
+      { route: '/integrations', icon: 'vpn_key', key: 'apiClients', permission: 'integration:manage' },
     ],
   },
   {

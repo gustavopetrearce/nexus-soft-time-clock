@@ -88,6 +88,7 @@
       "companies": "Empresas",
       "workSites": "Centros de trabajo",
       "projects": "Proyectos",
+      "apiClients": "Integraciones",
       "scheduling": "Horarios y turnos",
       "eventTypes": "Tipos de evento",
       "vacations": "Vacaciones",
@@ -167,6 +168,8 @@
   },
   "errors": {
     "generic": "Ocurrió un error inesperado.",
+    "API_CLIENT_NAME_TAKEN": "Ya existe una credencial con ese nombre.",
+    "API_CLIENT_REVOKED": "La credencial está revocada.",
     "FORBIDDEN_ROLE_GRANT": "No puedes otorgar un rol de nivel igual o superior al tuyo.",
     "CAPACITY_BELOW_USAGE": "El cupo no puede ser menor que la cantidad de colaboradores activos.",
     "CAPACITY_EXCEEDED": "La empresa alcanzó su cupo de colaboradores activos.",
@@ -501,6 +504,44 @@
     "search": "Buscar proyecto",
     "startsOn": "Inicio",
     "endsOn": "Fin"
+  },
+  "apiClients": {
+    "title": "Integraciones",
+    "subtitle": "Credenciales para que relojes y otros sistemas registren marcaciones.",
+    "new": "Nueva credencial",
+    "generate": "Generar",
+    "nameHint": "Identifica el dispositivo o sistema, por ejemplo «Reloj Planta 1». Usa una credencial por reloj.",
+    "createError": "No se pudo crear la credencial.",
+    "status": {
+      "ACTIVE": "Activa",
+      "REVOKED": "Revocada"
+    },
+    "empty": "Todavía no hay credenciales.",
+    "emptyHint": "Crea una para conectar un reloj u otro sistema.",
+    "lastUsed": "Último uso",
+    "neverUsed": "Sin uso",
+    "createdAt": "Creada",
+    "rotate": "Rotar secreto",
+    "rotateTitle": "¿Rotar el secreto de «{{name}}»?",
+    "rotateMessage": "El secreto actual dejará de valer al instante y el dispositivo no podrá marcar hasta configurarle el nuevo.",
+    "revoke": "Revocar",
+    "revokeTitle": "¿Revocar «{{name}}»?",
+    "revokeMessage": "El dispositivo dejará de marcar al instante. Esta acción no se puede deshacer: para volver a conectarlo tendrás que crear otra credencial.",
+    "revoked": "Credencial «{{name}}» revocada.",
+    "secret": {
+      "title": "Credencial «{{name}}» creada",
+      "titleRotated": "Nuevo secreto de «{{name}}»",
+      "warning": "Guarda el secreto ahora: no se volverá a mostrar. Quien lo tenga puede marcar por cualquier colaborador de la empresa.",
+      "warningRotated": "Guarda el secreto ahora: no se volverá a mostrar. El anterior ya no vale, así que hay que reconfigurar el dispositivo.",
+      "clientId": "ID de cliente",
+      "clientSecret": "Secreto",
+      "header": "Cabecera para el reloj",
+      "headerHint": "Un reloj que solo admite una cabecera fija la envía tal cual en cada marcación. La credencial no caduca.",
+      "copy": "Copiar {{field}}",
+      "copied": "Copiado.",
+      "copyError": "No se pudo copiar. Selecciona el texto y cópialo a mano.",
+      "done": "Ya lo guardé"
+    }
   },
   "eventTypes": {
     "subtitle": "Define qué eventos intermedios puede registrar el personal de tu empresa",

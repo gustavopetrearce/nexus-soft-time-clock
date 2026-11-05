@@ -88,6 +88,7 @@
       "companies": "Companies",
       "workSites": "Work sites",
       "projects": "Projects",
+      "apiClients": "Integrations",
       "scheduling": "Schedules and shifts",
       "eventTypes": "Event types",
       "vacations": "Vacations",
@@ -167,6 +168,8 @@
   },
   "errors": {
     "generic": "An unexpected error occurred.",
+    "API_CLIENT_NAME_TAKEN": "A credential with that name already exists.",
+    "API_CLIENT_REVOKED": "The credential has been revoked.",
     "FORBIDDEN_ROLE_GRANT": "You cannot grant a role at or above your own level.",
     "CAPACITY_BELOW_USAGE": "The capacity cannot be lower than the number of active employees.",
     "CAPACITY_EXCEEDED": "The company has reached its active employee capacity.",
@@ -501,6 +504,44 @@
     "search": "Search project",
     "startsOn": "Start",
     "endsOn": "End"
+  },
+  "apiClients": {
+    "title": "Integrations",
+    "subtitle": "Credentials that let time clocks and other systems record attendance.",
+    "new": "New credential",
+    "generate": "Generate",
+    "nameHint": "Identifies the device or system, for example \"Plant 1 clock\". Use one credential per clock.",
+    "createError": "The credential could not be created.",
+    "status": {
+      "ACTIVE": "Active",
+      "REVOKED": "Revoked"
+    },
+    "empty": "There are no credentials yet.",
+    "emptyHint": "Create one to connect a time clock or another system.",
+    "lastUsed": "Last used",
+    "neverUsed": "Never",
+    "createdAt": "Created",
+    "rotate": "Rotate secret",
+    "rotateTitle": "Rotate the secret of \"{{name}}\"?",
+    "rotateMessage": "The current secret stops working immediately, and the device cannot record attendance until it is configured with the new one.",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke \"{{name}}\"?",
+    "revokeMessage": "The device stops recording attendance immediately. This cannot be undone: to reconnect it you will need a new credential.",
+    "revoked": "Credential \"{{name}}\" revoked.",
+    "secret": {
+      "title": "Credential \"{{name}}\" created",
+      "titleRotated": "New secret for \"{{name}}\"",
+      "warning": "Save the secret now: it will not be shown again. Anyone who has it can record attendance for any employee in the company.",
+      "warningRotated": "Save the secret now: it will not be shown again. The previous one no longer works, so the device must be reconfigured.",
+      "clientId": "Client ID",
+      "clientSecret": "Secret",
+      "header": "Header for the clock",
+      "headerHint": "A clock that only supports a fixed header sends it as is with every record. The credential does not expire.",
+      "copy": "Copy {{field}}",
+      "copied": "Copied.",
+      "copyError": "Could not copy. Select the text and copy it manually.",
+      "done": "I have saved it"
+    }
   },
   "eventTypes": {
     "subtitle": "Choose which intermediate events your company's staff can record",
