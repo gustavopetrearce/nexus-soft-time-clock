@@ -24,8 +24,8 @@ import java.util.Map;
 
 /**
  * Autentica con credencial fija a los dispositivos que no pueden renovar un token, como un reloj
- * checador (ADR-013). Solo actúa en el endpoint de marcación: una cabecera Basic en cualquier otra
- * ruta se ignora y acaba en 401.
+ * checador (ADR-013). Solo actúa en la marcación y en la consulta de colaborador: una cabecera Basic
+ * en cualquier otra ruta se ignora y acaba en 401.
  *
  * <p>Construye en memoria el mismo {@link Jwt} que llevaría un token de cliente. No se firma porque
  * no sale de la petición, y así {@code TenantContextFilter}, {@code AuditContextFilter} y las reglas
@@ -35,6 +35,7 @@ import java.util.Map;
 public class ApiClientBasicAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String ATTENDANCE_PATH = "/api/v1/integrations/attendance";
+    private static final String USER_LOOKUP_PATH = "/api/v1/integrations/users";
 
     private final ApiClientUseCase clients;
     private final NexusJwtAuthenticationConverter converter;
@@ -49,9 +50,15 @@ public class ApiClientBasicAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
-        return !HttpMethod.POST.matches(request.getMethod())
-                || !ATTENDANCE_PATH.equals(request.getRequestURI())
+        return !isIntegrationEndpoint(request)
                 || !BasicCredentials.isBasic(request.getHeader(HttpHeaders.AUTHORIZATION));
+    }
+
+    private boolean isIntegrationEndpoint(HttpServletRequest request) {
+        String method = request.getMethod();
+        String path = request.getRequestURI();
+        return (HttpMethod.POST.matches(method) && ATTENDANCE_PATH.equals(path))
+                || (HttpMethod.GET.matches(method) && USER_LOOKUP_PATH.equals(path));
     }
 
     @Override

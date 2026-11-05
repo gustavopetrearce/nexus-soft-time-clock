@@ -28,6 +28,9 @@ public class NexusJwtAuthenticationConverter implements Converter<Jwt, AbstractA
     /** Fuera del catálogo de permisos a propósito: ningún rol de usuario puede recibirla (V28). */
     public static final String EXTERNAL_ATTENDANCE_AUTHORITY = "attendance:register:external";
 
+    /** Consulta de un colaborador por código desde un sistema externo; fuera del catálogo como la anterior. */
+    public static final String EXTERNAL_USER_LOOKUP_AUTHORITY = "user:lookup:external";
+
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {
         List<GrantedAuthority> authorities = new ArrayList<>();

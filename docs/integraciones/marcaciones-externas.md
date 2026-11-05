@@ -18,7 +18,9 @@ Para generar el valor:
 printf '%s' "$CLIENT_ID:$CLIENT_SECRET" | base64 -w0
 ```
 
-El cuerpo y las respuestas son los del [paso 3](#3-registrar-una-marcación). Si la credencial no es válida o fue revocada, la respuesta es 401 con `code: INVALID_CLIENT`.
+El cuerpo y las respuestas son los del [paso 4](#4-registrar-una-marcación). Si la credencial no es válida o fue revocada, la respuesta es 401 con `code: INVALID_CLIENT`.
+
+La misma cabecera sirve para [consultar un colaborador](#3-consultar-un-colaborador) con `GET /api/v1/integrations/users?employeeCode=…`. En cualquier otra ruta se ignora y la respuesta es 401.
 
 **La credencial no caduca.** Solo deja de valer si la revocas, rotas el secreto o la empresa queda inactiva. `lastUsedAt`, con una precisión de 5 minutos, permite detectar un reloj que dejó de reportar.
 
@@ -80,7 +82,7 @@ También se admite HTTP Basic con `client_id:client_secret`.
 { "access_token": "…", "token_type": "Bearer", "expires_in": 900 }
 ```
 
-No hay refresh token: pide uno nuevo poco antes de que venza `expires_in` o al recibir un 401. El token solo sirve para el endpoint de marcación.
+No hay refresh token: pide uno nuevo poco antes de que venza `expires_in` o al recibir un 401. El token solo sirve para la consulta de colaborador y la marcación.
 
 | Error | Causa |
 |---|---|
@@ -88,7 +90,47 @@ No hay refresh token: pide uno nuevo poco antes de que venza `expires_in` o al r
 | 400 `unsupported_grant_type` | `grant_type` distinto de `client_credentials` |
 | 400 `invalid_request` | Falta `grant_type`, o el secreto va en la URL |
 
-## 3. Registrar una marcación
+## 3. Consultar un colaborador
+
+Opcional: comprueba un código de empleado antes de marcar, por ejemplo al dar de alta a la persona en tu sistema o en el reloj. Acepta la cabecera fija o el token.
+
+```bash
+curl "$BASE_URL/api/v1/integrations/users?employeeCode=EMP-001" \
+  -H "Authorization: Basic $(printf '%s' "$CLIENT_ID:$CLIENT_SECRET" | base64 -w0)"
+
+curl "$BASE_URL/api/v1/integrations/users?employeeCode=EMP-001" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+El código debe coincidir exactamente, incluidas las mayúsculas; no hay búsqueda parcial. Si el código lleva caracteres especiales, codifícalo en la URL.
+
+```json
+{
+  "id": "…",
+  "employeeCode": "EMP-001",
+  "firstName": "Ada",
+  "lastName": "Lovelace",
+  "status": "ACTIVE",
+  "canRegisterAttendance": true
+}
+```
+
+| Campo | Significado |
+|---|---|
+| `status` | Estado de la cuenta: `ACTIVE`, `INACTIVE`, `LOCKED` o `INVITED` |
+| `canRegisterAttendance` | `true` si una marca suya no se rechazaría por `EMPLOYEE_INACTIVE` ni `EMPLOYEE_NOT_ENABLED`. No adelanta los rechazos de horario o secuencia |
+
+No devuelve correo ni roles.
+
+| HTTP | `code` | Causa |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Falta el parámetro `employeeCode` |
+| 401 | — | Token ausente, caducado o inválido |
+| 401 | `INVALID_CLIENT` | Cabecera fija con credencial incorrecta o revocada, o empresa inactiva |
+| 403 | `API_CLIENT_REVOKED` | Token aún vigente de una credencial revocada o de una empresa inactiva |
+| 404 | `NOT_FOUND` | No existe ese código en tu empresa |
+
+## 4. Registrar una marcación
 
 ```bash
 curl -X POST "$BASE_URL/api/v1/integrations/attendance" \

@@ -6,6 +6,7 @@ import com.condor.nexussoft.timeclock.identity.infrastructure.security.NexusJwtA
 import com.condor.nexussoft.timeclock.identity.infrastructure.security.TenantContextFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -51,8 +52,10 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers("/api/v1/integrations/attendance")
                     .hasAuthority(NexusJwtAuthenticationConverter.EXTERNAL_ATTENDANCE_AUTHORITY)
+                .requestMatchers(HttpMethod.GET, "/api/v1/integrations/users")
+                    .hasAuthority(NexusJwtAuthenticationConverter.EXTERNAL_USER_LOOKUP_AUTHORITY)
                 // Un token de sistema lleva tenant_id pero su sub no es un usuario: hay endpoints con
-                // isAuthenticated() que lo tratarían como tal. Queda confinado a la regla anterior.
+                // isAuthenticated() que lo tratarían como tal. Queda confinado a las reglas anteriores.
                 .anyRequest().access(new WebExpressionAuthorizationManager(
                         "isAuthenticated() and !hasAuthority('" + NexusJwtAuthenticationConverter.CLIENT_AUTHORITY + "')"))
             )

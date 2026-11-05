@@ -9,7 +9,7 @@ import java.util.UUID;
  * credencial fija: así el resto de la petición no distingue por cuál de las dos llegó.
  *
  * <p>El {@code sub} es el id de la credencial, no de un usuario, y por eso {@code token_use} la delata
- * ante {@link NexusJwtAuthenticationConverter}, que la confina a su endpoint. El correo lleva el
+ * ante {@link NexusJwtAuthenticationConverter}, que la confina a sus endpoints. El correo lleva el
  * nombre de la integración para que la bitácora diga quién fue (RN-60).
  */
 final class ClientClaims {
@@ -24,6 +24,7 @@ final class ClientClaims {
                 "client_id", clientId,
                 "email", "integration:" + name,
                 "tenant_id", tenantId.toString(),
-                "permissions", List.of(NexusJwtAuthenticationConverter.EXTERNAL_ATTENDANCE_AUTHORITY));
+                "permissions", List.of(NexusJwtAuthenticationConverter.EXTERNAL_ATTENDANCE_AUTHORITY,
+                        NexusJwtAuthenticationConverter.EXTERNAL_USER_LOOKUP_AUTHORITY));
     }
 }

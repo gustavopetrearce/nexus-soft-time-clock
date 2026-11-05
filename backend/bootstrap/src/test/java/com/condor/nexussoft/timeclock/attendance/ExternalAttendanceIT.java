@@ -38,6 +38,7 @@ class ExternalAttendanceIT extends PostgisIntegrationTest {
     private static final String PASSWORD = "secret-123";
     private static final String ATTENDANCE_URL = "/api/v1/integrations/attendance";
     private static final String CLIENTS_URL = "/api/v1/integrations/clients";
+    private static final String USERS_URL = "/api/v1/integrations/users";
 
     @Autowired
     private MockMvc mvc;
@@ -407,6 +408,90 @@ class ExternalAttendanceIT extends PostgisIntegrationTest {
                 + "\",\"workSiteId\":\"" + siteId + "\",\"eventType\":\"ENTRADA\",\"eventTime\":\"2026-11-05T08:00:00\"}";
 
         postAttendance(token, body).andExpect(status().isBadRequest());
+    }
+
+    private ResultActions lookup(String authorization, String code) throws Exception {
+        return mvc.perform(get(USERS_URL).param("employeeCode", code)
+                .header(HttpHeaders.AUTHORIZATION, authorization));
+    }
+
+    /** El emisor comprueba el código antes de marcar, con cualquiera de las dos vías. */
+    @Test
+    void consultaPorCodigo_conCabeceraFijaYConToken() throws Exception {
+        JsonNode client = createClient(adminToken());
+        String clientId = client.get("clientId").asText();
+        String secret = client.get("clientSecret").asText();
+        String token = json.readTree(requestToken(clientId, secret)
+                        .andReturn().getResponse().getContentAsString())
+                .get("access_token").asText();
+
+        for (String authorization : new String[]{basic(clientId, secret), "Bearer " + token}) {
+            lookup(authorization, employeeCode)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(employeeId.toString()))
+                    .andExpect(jsonPath("$.employeeCode").value(employeeCode))
+                    .andExpect(jsonPath("$.firstName").value("Ada"))
+                    .andExpect(jsonPath("$.lastName").value("Lovelace"))
+                    .andExpect(jsonPath("$.status").value("ACTIVE"))
+                    .andExpect(jsonPath("$.canRegisterAttendance").value(true))
+                    .andExpect(jsonPath("$.email").doesNotExist())
+                    .andExpect(jsonPath("$.roles").doesNotExist());
+        }
+    }
+
+    @Test
+    void consultaPorCodigo_inexistenteDeOtraEmpresaOParcial_da404() throws Exception {
+        JsonNode client = createClient(adminToken());
+        String header = basic(client.get("clientId").asText(), client.get("clientSecret").asText());
+
+        UUID otherTenant = UUID.randomUUID();
+        String suffix = otherTenant.toString().substring(0, 8);
+        seedCompany(otherTenant, "IT-" + suffix);
+        String otherCode = "EMP-" + suffix;
+        assignRole(seedUser(otherTenant, "emp-" + suffix + "@example.com", otherCode), "EMPLOYEE");
+
+        for (String code : new String[]{"NO-EXISTE", otherCode, employeeCode.substring(0, 6), ""}) {
+            lookup(header, code)
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        }
+        mvc.perform(get(USERS_URL).header(HttpHeaders.AUTHORIZATION, header))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void consultaPorCodigo_colaboradorSinPermisoDeMarcar() throws Exception {
+        String code = "SIN-" + tenantId.toString().substring(0, 8);
+        seedUser(tenantId, "sin-" + code + "@example.com", code);
+        JsonNode client = createClient(adminToken());
+
+        lookup(basic(client.get("clientId").asText(), client.get("clientSecret").asText()), code)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canRegisterAttendance").value(false));
+    }
+
+    @Test
+    void consultaPorCodigo_credencialRevocadaOTokenDeUsuario_noPasan() throws Exception {
+        String admin = adminToken();
+        JsonNode client = createClient(admin);
+        String clientId = client.get("clientId").asText();
+        String secret = client.get("clientSecret").asText();
+        String token = json.readTree(requestToken(clientId, secret)
+                        .andReturn().getResponse().getContentAsString())
+                .get("access_token").asText();
+
+        lookup("Bearer " + admin, employeeCode).andExpect(status().isForbidden());
+
+        mvc.perform(delete(CLIENTS_URL + "/" + client.get("id").asText())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + admin))
+                .andExpect(status().isNoContent());
+        lookup(basic(clientId, secret), employeeCode)
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_CLIENT"));
+        lookup("Bearer " + token, employeeCode)
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("API_CLIENT_REVOKED"));
     }
 
     private Integer countRecords() {
