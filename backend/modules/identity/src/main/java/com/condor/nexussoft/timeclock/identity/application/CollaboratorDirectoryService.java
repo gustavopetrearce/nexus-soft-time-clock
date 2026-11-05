@@ -25,7 +25,8 @@ public class CollaboratorDirectoryService implements CollaboratorDirectoryUseCas
     @Transactional(readOnly = true)
     public Optional<Collaborator> findByEmployeeCode(UUID tenantId, String employeeCode) {
         return users.findByTenantAndEmployeeCode(tenantId, employeeCode)
-                .map(user -> new Collaborator(user.getId(), eligibility(user)));
+                .map(user -> new Collaborator(user.getId(), user.firstName(), user.lastName(),
+                        user.status().name(), eligibility(user)));
     }
 
     private Eligibility eligibility(User user) {

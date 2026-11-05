@@ -13,6 +13,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -83,6 +84,19 @@ public class GlobalExceptionHandler {
                 .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+        pd.setTitle("Solicitud inválida");
+        pd.setProperty("code", "VALIDATION_ERROR");
+        pd.setProperty("timestamp", Instant.now());
+        pd.setProperty("path", request.getRequestURI());
+        return pd;
+    }
+
+    /** Falta un parámetro de consulta obligatorio: mismo motivo que {@link #handleNotReadable}. */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ProblemDetail handleMissingParameter(MissingServletRequestParameterException ex,
+                                                HttpServletRequest request) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                ex.getParameterName() + ": es obligatorio");
         pd.setTitle("Solicitud inválida");
         pd.setProperty("code", "VALIDATION_ERROR");
         pd.setProperty("timestamp", Instant.now());
