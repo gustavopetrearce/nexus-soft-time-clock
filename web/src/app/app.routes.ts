@@ -119,6 +119,12 @@ export const routes: Routes = [
           import('./features/admin/work-sites/geofence/geofence.component').then((m) => m.GeofenceComponent),
       },
       {
+        path: 'integrations',
+        canActivate: [requirePermission('integration:manage')],
+        loadComponent: () =>
+          import('./features/admin/integrations/api-clients.component').then((m) => m.ApiClientsComponent),
+      },
+      {
         path: 'projects',
         canActivate: [requirePermission('project:manage')],
         loadComponent: () => import('./features/admin/projects/projects.component').then((m) => m.ProjectsComponent),

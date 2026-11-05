@@ -37,7 +37,11 @@ Usa **una credencial por reloj**: si se pierde o se roba uno, revocas la suya si
 
 ## 1. Crear la credencial
 
-Lo hace un administrador de la empresa (permiso `integration:manage`), con su token de usuario:
+Lo hace un administrador de la empresa (permiso `integration:manage`).
+
+**Desde el portal:** en **Integraciones**, pulsa **Nueva credencial**. El diálogo muestra el secreto una sola vez, junto con la cabecera lista para copiar en el reloj. Esa misma pantalla permite rotar el secreto y revocar la credencial.
+
+**Por API**, con su token de usuario:
 
 ```bash
 curl -X POST "$BASE_URL/api/v1/integrations/clients" \
@@ -103,7 +107,7 @@ curl -X POST "$BASE_URL/api/v1/integrations/attendance" \
 |---|---|
 | `operationUuid` | UUID generado por tu sistema, uno por marcación. **Reutilízalo en los reintentos** |
 | `employeeCode` | Código de empleado del colaborador en Nexus |
-| `workSiteId` | UUID del centro de trabajo, activo y de tu empresa. Se obtiene del portal o de la API de centros |
+| `workSiteId` | UUID del centro de trabajo, activo y de tu empresa. Se obtiene con `GET /api/v1/work-sites` o de la URL del centro en el portal (`/work-sites/<id>/edit`) |
 | `eventType` | `ENTRADA`, `SALIDA`, `INICIO_DESCANSO`, `FIN_DESCANSO` o `CAMBIO_SITIO` |
 | `eventTime` | Hora en que ocurrió, ISO-8601 **con desfase horario**. Máximo 72 h atrás y 5 min adelante |
 

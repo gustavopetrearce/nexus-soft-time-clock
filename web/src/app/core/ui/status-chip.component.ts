@@ -18,6 +18,7 @@ const TONE_BY_STATUS: Record<string, Tone> = {
   MEDIUM: 'warning',
   REJECTED: 'error',
   LOCKED: 'error',
+  REVOKED: 'error',
   FAILED: 'error',
   HIGH: 'error',
   OPEN: 'info',
