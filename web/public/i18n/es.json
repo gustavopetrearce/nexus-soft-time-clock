@@ -137,7 +137,8 @@
     "submit": "Iniciar sesión",
     "invalidCredentials": "Correo o contraseña incorrectos.",
     "locked": "Tu cuenta está bloqueada por varios intentos fallidos. Inténtalo más tarde.",
-    "tagline": "Cada jornada cuenta."
+    "tagline": "Cada jornada cuenta.",
+    "copyright": "© {{ year }} Nexus Soft"
   },
   "password": {
     "title": "Cambiar contraseña",
