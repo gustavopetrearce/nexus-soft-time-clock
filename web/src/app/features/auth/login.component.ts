@@ -43,6 +43,14 @@ type LoginError = 'invalid' | 'locked' | 'offline';
       h1, p { margin: var(--nx-space-0); }
       mat-form-field { width: 100%; }
       .enviar .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
+      .cabecera { display: flex; flex-direction: column; align-items: center; gap: var(--nx-space-gap-related); text-align: center; }
+      .nx-campo__label > span { color: var(--nx-color-status-error-fg); }
+      .pie {
+        padding-top: var(--nx-space-4);
+        border-top: var(--nx-border-width-default) solid var(--nx-color-border-default);
+        color: var(--nx-color-text-secondary);
+        text-align: center;
+      }
     `,
   ],
   template: `
@@ -70,7 +78,10 @@ type LoginError = 'invalid' | 'locked' | 'offline';
       <div class="nx-acceso__lado">
         <app-language-switcher class="idioma" />
         <form class="nx-acceso__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-          <h1 class="nx-text-heading-2">{{ 'login.submit' | transloco }}</h1>
+          <div class="cabecera">
+            <app-logo class="md" />
+            <h1 class="nx-text-heading-2">{{ 'login.submit' | transloco }}</h1>
+          </div>
 
           @switch (error()) {
             @case ('invalid') { <app-alert tone="error">{{ 'login.invalidCredentials' | transloco }}</app-alert> }
@@ -83,35 +94,43 @@ type LoginError = 'invalid' | 'locked' | 'offline';
             }
           }
 
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'login.email' | transloco }}</mat-label>
-            <input matInput type="email" formControlName="email" autocomplete="email" required />
-          </mat-form-field>
+          <div class="nx-campo">
+            <label class="nx-campo__label" for="login-email">{{ 'login.email' | transloco }} <span aria-hidden="true">*</span></label>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <input matInput id="login-email" type="email" formControlName="email" autocomplete="email" required />
+            </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'login.password' | transloco }}</mat-label>
-            <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" required />
-            <button
-              mat-icon-button
-              matSuffix
-              type="button"
-              (click)="showPassword.set(!showPassword())"
-              [attr.aria-label]="(showPassword() ? 'login.hidePassword' : 'login.showPassword') | transloco"
-              [attr.aria-pressed]="showPassword()"
-            >
-              <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-            </button>
-          </mat-form-field>
+          <div class="nx-campo">
+            <label class="nx-campo__label" for="login-password">{{ 'login.password' | transloco }} <span aria-hidden="true">*</span></label>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <input matInput id="login-password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" required />
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                (click)="showPassword.set(!showPassword())"
+                [attr.aria-label]="(showPassword() ? 'login.hidePassword' : 'login.showPassword') | transloco"
+                [attr.aria-pressed]="showPassword()"
+              >
+                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+            </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'login.companyCode' | transloco }}</mat-label>
-            <input matInput formControlName="companyCode" autocomplete="organization" />
-          </mat-form-field>
+          <div class="nx-campo">
+            <label class="nx-campo__label" for="login-company">{{ 'login.companyCode' | transloco }}</label>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <input matInput id="login-company" formControlName="companyCode" autocomplete="organization" />
+            </mat-form-field>
+          </div>
 
           <button mat-flat-button type="submit" class="nx-boton--block enviar" [disabled]="loading()" [attr.aria-busy]="loading()">
             @if (loading()) { <span class="nx-spin" aria-hidden="true"></span> }
             {{ 'login.submit' | transloco }}
           </button>
+
+          <p class="pie nx-text-caption">{{ 'login.copyright' | transloco: { year } }}</p>
         </form>
       </div>
     </div>
@@ -125,6 +144,7 @@ export class LoginComponent {
   protected readonly loading = signal(false);
   protected readonly error = signal<LoginError | null>(null);
   protected readonly showPassword = signal(false);
+  protected readonly year = new Date().getFullYear();
 
   protected readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],

@@ -85,6 +85,7 @@
 }
 /* DS/02 · semánticos · oscuro (body.dark, como ThemeService; solo reasigna el nivel semántico) */
 body.dark{
+  --nx-color-surface-brand:var(--nx-color-indigo-700);
   --nx-color-bg-app:var(--nx-color-neutral-950);--nx-color-surface-default:var(--nx-color-neutral-800);--nx-color-surface-subtle:var(--nx-color-neutral-900);--nx-color-surface-hover:var(--nx-color-neutral-700);
   --nx-color-text-primary:var(--nx-color-neutral-200);--nx-color-text-secondary:var(--nx-color-neutral-400);--nx-color-text-disabled:var(--nx-color-neutral-500);--nx-color-text-placeholder:var(--nx-color-neutral-400);--nx-color-text-inverse:var(--nx-color-neutral-900);
   --nx-color-action-primary:var(--nx-color-indigo-300);--nx-color-action-primary-hover:var(--nx-color-indigo-200);--nx-color-on-action-primary:var(--nx-color-indigo-950);--nx-color-action-primary-subtle:var(--nx-color-indigo-900);

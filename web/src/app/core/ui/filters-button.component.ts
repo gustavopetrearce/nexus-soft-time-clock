@@ -30,8 +30,18 @@ import { TranslocoPipe } from '@jsverse/transloco';
   styles: [
     `
       :host { flex: none; }
-      ::ng-deep .nx-filtros-dialogo { display: flex; flex-direction: column; gap: var(--nx-space-gap-related); }
+      /* Título y contenido comparten el inset de 24 px; el relleno superior evita que el contorno
+         recorte la etiqueta flotante del primer campo. */
+      ::ng-deep .nx-filtros-panel .mat-mdc-dialog-content.nx-filtros-dialogo {
+        display: flex; flex-direction: column; gap: var(--nx-space-gap-section);
+        padding: var(--nx-space-3) var(--nx-space-6) var(--nx-space-6);
+      }
       ::ng-deep .nx-filtros-dialogo mat-form-field { width: 100%; }
+      ::ng-deep .nx-filtros-panel .mat-mdc-dialog-actions {
+        padding: var(--nx-space-4) var(--nx-space-6) var(--nx-space-6);
+        border-top: var(--nx-border-width-default) solid var(--nx-color-border-default);
+      }
+      ::ng-deep .nx-filtros-panel .mat-mdc-dialog-actions button { width: 100%; }
     `,
   ],
 })
@@ -41,6 +51,10 @@ export class FiltersButtonComponent {
   private readonly dialogo = viewChild.required<TemplateRef<unknown>>('dialogo');
 
   protected open(): void {
-    this.dialog.open(this.dialogo(), { width: '100%', maxWidth: 'var(--nx-layout-dialog-max)' });
+    this.dialog.open(this.dialogo(), {
+      width: '100%',
+      maxWidth: 'var(--nx-layout-dialog-max)',
+      panelClass: 'nx-filtros-panel',
+    });
   }
 }

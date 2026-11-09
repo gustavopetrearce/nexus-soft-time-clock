@@ -137,7 +137,8 @@
     "submit": "Sign in",
     "invalidCredentials": "Incorrect email or password.",
     "locked": "Your account is locked after several failed attempts. Try again later.",
-    "tagline": "Every workday counts."
+    "tagline": "Every workday counts.",
+    "copyright": "© {{ year }} Nexus Soft"
   },
   "password": {
     "title": "Change password",
