@@ -38,6 +38,14 @@ type LoginError = 'invalid' | 'locked' | 'offline';
   ],
   styles: [
     `
+      :host { display: block; min-height: 100vh; padding: var(--nx-space-5); background: var(--nx-color-bg-app); box-sizing: border-box; }
+      .nx-acceso {
+        min-height: calc(100vh - 2 * var(--nx-space-5));
+        border: var(--nx-border-width-default) solid var(--nx-color-border-default);
+        border-radius: var(--nx-radius-lg);
+        box-shadow: var(--nx-shadow-1);
+        overflow: hidden;
+      }
       .nx-acceso__lado { position: relative; }
       .idioma { position: absolute; top: var(--nx-space-4); right: var(--nx-space-4); }
       h1, p { margin: var(--nx-space-0); }
