@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
  * Reglas de negocio automatizadas (event-driven) para RR.HH./supervisor (RF-09):
  * cada rechazo de asistencia abre una incidencia REGISTRO_RECHAZADO, cada ENTRADA aceptada con
  * retardo (RN-16) abre una incidencia RETARDO, y cada marca aceptada fuera de la ventana del turno
- * (RN-15) abre una FUERA_DE_VENTANA.
+ * (RN-15) abre una FUERA_DE_VENTANA. Una ENTRADA aceptada sin turno vigente abre una SIN_TURNO.
  */
 @Component
 public class IncidentEventListener {
@@ -39,6 +39,11 @@ public class IncidentEventListener {
         if (event.outOfWindow()) {
             incidents.openForOutOfWindow(event.tenantId(), event.userId(),
                     event.attendanceId(), event.eventKind());
+        }
+        // Solo la ENTRADA: es la que abre la jornada sin horario, y basta una incidencia por jornada.
+        // Excluyente con las dos anteriores, que exigen turno.
+        if (ENTRADA.equals(event.eventKind()) && event.noSchedule()) {
+            incidents.openForNoSchedule(event.tenantId(), event.userId(), event.attendanceId());
         }
     }
 }

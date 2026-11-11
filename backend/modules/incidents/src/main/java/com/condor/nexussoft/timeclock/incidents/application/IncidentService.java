@@ -54,4 +54,10 @@ public class IncidentService implements IncidentManagementUseCase {
     public Incident openForOutOfWindow(UUID tenantId, UUID userId, UUID attendanceId, String eventKind) {
         return incidents.save(Incident.openForOutOfWindow(tenantId, userId, attendanceId, eventKind));
     }
+
+    @Override
+    @Transactional
+    public Incident openForNoSchedule(UUID tenantId, UUID userId, UUID attendanceId) {
+        return incidents.save(Incident.openForNoSchedule(tenantId, userId, attendanceId));
+    }
 }

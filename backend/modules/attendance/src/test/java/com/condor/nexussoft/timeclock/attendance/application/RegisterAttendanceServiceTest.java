@@ -644,6 +644,29 @@ class RegisterAttendanceServiceTest {
         assertThat(publishedRegistered().outOfWindow()).isFalse();
     }
 
+    /** Sin turno vigente la marca se acepta, pero marcada: es la señal para la incidencia SIN_TURNO. */
+    @Test
+    void sinTurnoVigente_seAceptaMarcadaYLoSenalaEnElEvento() {
+        happyPathStubs();
+
+        AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(result.flags()).contains("NO_SCHEDULE");
+        assertThat(publishedRegistered().noSchedule()).isTrue();
+    }
+
+    @Test
+    void conTurnoVigente_noSeMarcaSinTurno() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        withinWindowStub(0);
+
+        AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));
+
+        assertThat(result.flags()).doesNotContain("NO_SCHEDULE");
+        assertThat(publishedRegistered().noSchedule()).isFalse();
+    }
+
     @Test
     void entrada_dentroDeVentana_trasTolerancia_esAceptadaYMarcadaComoRetardo() {
         baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());

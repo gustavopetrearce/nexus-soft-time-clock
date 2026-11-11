@@ -20,4 +20,7 @@ public interface IncidentManagementUseCase {
 
     /** Alta automática por marca aceptada fuera de la ventana del turno (consumida de un evento, RN-15). */
     Incident openForOutOfWindow(UUID tenantId, UUID userId, UUID attendanceId, String eventKind);
+
+    /** Alta automática por ENTRADA aceptada sin turno vigente (consumida de un evento). */
+    Incident openForNoSchedule(UUID tenantId, UUID userId, UUID attendanceId);
 }

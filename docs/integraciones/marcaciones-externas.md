@@ -151,7 +151,7 @@ curl -X POST "$BASE_URL/api/v1/integrations/attendance" \
 | `employeeCode` | Código de empleado del colaborador en Nexus |
 | `workSiteId` | UUID del centro de trabajo, activo y de tu empresa. Se obtiene con `GET /api/v1/work-sites` o de la URL del centro en el portal (`/work-sites/<id>/edit`) |
 | `eventType` | `ENTRADA`, `SALIDA`, `INICIO_DESCANSO`, `FIN_DESCANSO` o `CAMBIO_SITIO` |
-| `eventTime` | Hora en que ocurrió, ISO-8601 **con desfase horario**. Máximo 72 h atrás y 5 min adelante |
+| `eventTime` | Hora en que ocurrió, ISO-8601 **con desfase horario**. Máximo 72 h atrás y 5 min adelante; una hora futura se guarda como la de llegada, con la bandera `EVENT_TIME_CLAMPED` |
 
 ### Respuestas
 
@@ -174,6 +174,14 @@ curl -X POST "$BASE_URL/api/v1/integrations/attendance" \
 | `INVALID_SEQUENCE` | No encaja en la jornada (por ejemplo, `SALIDA` sin `ENTRADA`) o ya hay una marca posterior aceptada |
 | `OUT_OF_SCHEDULE` | `ENTRADA` fuera de la ventana del turno |
 | `EVENT_TYPE_DISABLED` | La empresa tiene desactivado ese tipo de evento |
+
+| `flags` | Significado |
+|---|---|
+| `EXTERNAL_SOURCE` | Siempre: la marca llegó por esta API |
+| `NO_SCHEDULE` | El colaborador no tiene turno vigente en ese centro. La marca se acepta, pero su `ENTRADA` abre una incidencia `SIN_TURNO` (igual que por QR) |
+| `OUT_OF_SCHEDULE` | Fuera de la ventana del turno; en eventos distintos de `ENTRADA` se acepta y abre una incidencia `FUERA_DE_VENTANA` |
+| `LATE` | `ENTRADA` con retardo; `minutesLate` indica cuántos minutos |
+| `EVENT_TIME_CLAMPED` | `eventTime` venía en el futuro y se guardó con la hora de llegada |
 
 Un rechazo es definitivo para ese `operationUuid`: reenviarlo devuelve el mismo resultado y abre una incidencia para RR.HH. solo la primera vez.
 
