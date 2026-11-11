@@ -31,8 +31,13 @@ class IncidentEventListenerTest {
     }
 
     private AttendanceRegistered registered(String eventKind, int minutesLate, boolean outOfWindow) {
+        return registered(eventKind, minutesLate, outOfWindow, false);
+    }
+
+    private AttendanceRegistered registered(String eventKind, int minutesLate, boolean outOfWindow,
+                                            boolean noSchedule) {
         return AttendanceRegistered.of(tenantId, attendanceId, userId, siteId, eventKind, minutesLate,
-                outOfWindow, Instant.parse("2026-07-21T10:00:00Z"));
+                outOfWindow, noSchedule, Instant.parse("2026-07-21T10:00:00Z"));
     }
 
     @Test
@@ -93,5 +98,34 @@ class IncidentEventListenerTest {
 
         verify(incidents).openForLateArrival(tenantId, userId, attendanceId, 12);
         verify(incidents, never()).openForOutOfWindow(any(), any(), any(), any());
+    }
+
+    /** Quien ficha sin turno vigente se acepta, pero la ENTRADA lo hace visible al supervisor. */
+    @Test
+    void entradaSinTurno_abreIncidenciaSinTurno() {
+        IncidentEventListener listener = new IncidentEventListener(incidents);
+
+        listener.onAttendanceRegistered(registered("ENTRADA", 0, false, true));
+
+        verify(incidents).openForNoSchedule(tenantId, userId, attendanceId);
+    }
+
+    /** Una incidencia por jornada: la SALIDA sin turno no abre otra. */
+    @Test
+    void salidaSinTurno_noAbreIncidencia() {
+        IncidentEventListener listener = new IncidentEventListener(incidents);
+
+        listener.onAttendanceRegistered(registered("SALIDA", 0, false, true));
+
+        verify(incidents, never()).openForNoSchedule(any(), any(), any());
+    }
+
+    @Test
+    void entradaConTurno_noAbreIncidenciaSinTurno() {
+        IncidentEventListener listener = new IncidentEventListener(incidents);
+
+        listener.onAttendanceRegistered(registered("ENTRADA", 0));
+
+        verify(incidents, never()).openForNoSchedule(any(), any(), any());
     }
 }

@@ -208,12 +208,18 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         //      La ventana gobierna CUÁNDO se puede abrir la jornada, así que solo rechaza la ENTRADA:
         //      rechazar una SALIDA tardía dejaba al colaborador sin poder cerrar, con la jornada
         //      abierta hasta que caducara por open_shift_max_hours (RN-12). El resto de eventos se
-        //      aceptan marcados, y esa marca abre una incidencia FUERA_DE_VENTANA.
+        //      aceptan marcados, y esa marca abre una incidencia FUERA_DE_VENTANA. Sin turno vigente la
+        //      marca se acepta igualmente, pero con NO_SCHEDULE: la ENTRADA abre una incidencia
+        //      SIN_TURNO para que el supervisor vea a quien ficha sin horario asignado.
         SchedulePolicyPort.ScheduleDecision schedule =
                 schedulePolicy.check(tenantId, userId, cmd.workSiteId(), eventType, effectiveTime);
         boolean outOfWindow = schedule.outcome() == SchedulePolicyPort.Outcome.OUT_OF_WINDOW;
+        boolean noSchedule = schedule.outcome() == SchedulePolicyPort.Outcome.NO_SCHEDULE;
         if (outOfWindow) {
             flags.add("OUT_OF_SCHEDULE");
+        }
+        if (noSchedule) {
+            flags.add("NO_SCHEDULE");
         }
         if (reason == null && outOfWindow && eventType == AttendanceEventType.ENTRADA) {
             reason = RejectionReason.OUT_OF_SCHEDULE;
@@ -283,7 +289,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
                 reason == null ? null : reason.name(), now, distance, flags, lateMinutes);
         idempotency.save(tenantId, cmd.operationUuid(), result);
 
-        publishEvent(record, reason, lateMinutes, outOfWindow, now);
+        publishEvent(record, reason, lateMinutes, outOfWindow, noSchedule, now);
         return result;
     }
 
@@ -312,10 +318,10 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
     }
 
     private void publishEvent(AttendanceRecord record, RejectionReason reason, int lateMinutes,
-                              boolean outOfWindow, Instant now) {
+                              boolean outOfWindow, boolean noSchedule, Instant now) {
         if (record.isAccepted()) {
             events.publish(AttendanceRegistered.of(record.tenantId(), record.id(), record.userId(),
-                    record.workSiteId(), record.eventType().name(), lateMinutes, outOfWindow, now));
+                    record.workSiteId(), record.eventType().name(), lateMinutes, outOfWindow, noSchedule, now));
         } else {
             events.publish(AttendanceRejected.of(record.tenantId(), record.id(), record.userId(),
                     reason.name(), now));

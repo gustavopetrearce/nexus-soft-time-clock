@@ -95,23 +95,36 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
         Instant now = clock.instant();
         requireInRange(cmd.eventTime(), now);
 
-        Instant eventTime = cmd.eventTime();
         AttendanceEventType eventType = AttendanceEventType.valueOf(cmd.eventType());
         UUID recordId = UUID.randomUUID();
         List<String> flags = new ArrayList<>(List.of(EXTERNAL_FLAG));
         RejectionReason reason = null;
+
+        // La tolerancia a futuro evita perder la marca de un reloj adelantado, pero la hora oficial no
+        // puede pasar de la de llegada: una marca por QR posterior se validaría contra esta y quedaría
+        // fechada antes que ella, desordenando la jornada.
+        Instant eventTime = cmd.eventTime();
+        if (eventTime.isAfter(now)) {
+            eventTime = now;
+            flags.add("EVENT_TIME_CLAMPED");
+        }
 
         if (EventTypeCatalog.isConfigurable(eventType)
                 && !EventTypeCatalog.isEnabled(eventType, eventTypeConfig.findByTenant(tenantId))) {
             reason = RejectionReason.EVENT_TYPE_DISABLED;
         }
 
-        // Mismo criterio que el registro normal: la ventana solo rechaza la ENTRADA (RN-15).
+        // Mismo criterio que el registro normal: la ventana solo rechaza la ENTRADA (RN-15), y sin
+        // turno vigente se acepta con NO_SCHEDULE.
         SchedulePolicyPort.ScheduleDecision schedule =
                 schedulePolicy.check(tenantId, userId, cmd.workSiteId(), eventType, eventTime);
         boolean outOfWindow = schedule.outcome() == SchedulePolicyPort.Outcome.OUT_OF_WINDOW;
+        boolean noSchedule = schedule.outcome() == SchedulePolicyPort.Outcome.NO_SCHEDULE;
         if (outOfWindow) {
             flags.add("OUT_OF_SCHEDULE");
+        }
+        if (noSchedule) {
+            flags.add("NO_SCHEDULE");
         }
         if (reason == null && outOfWindow && eventType == AttendanceEventType.ENTRADA) {
             reason = RejectionReason.OUT_OF_SCHEDULE;
@@ -141,7 +154,7 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
 
         if (record.isAccepted()) {
             events.publish(AttendanceRegistered.of(tenantId, recordId, userId, cmd.workSiteId(),
-                    eventType.name(), lateMinutes, outOfWindow, now));
+                    eventType.name(), lateMinutes, outOfWindow, noSchedule, now));
         } else {
             events.publish(AttendanceRejected.of(tenantId, recordId, userId, reason.name(), now));
         }

@@ -113,7 +113,8 @@ class RegisterExternalAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("ACCEPTED");
         assertThat(result.serverTime()).isEqualTo(eventTime);
-        assertThat(result.flags()).containsExactly("EXTERNAL_SOURCE");
+        // Sin turno vigente (stub por defecto): se acepta igual que por QR, pero marcada.
+        assertThat(result.flags()).containsExactly("EXTERNAL_SOURCE", "NO_SCHEDULE");
 
         AttendanceRecord record = savedRecord();
         assertThat(record.serverTime()).isEqualTo(eventTime);
@@ -126,6 +127,7 @@ class RegisterExternalAttendanceServiceTest {
         verify(events).publish((AttendanceRegistered) event.capture());
         // El evento lleva la hora de llegada: la bitácora no debe poder fecharse hacia atrás.
         assertThat(((AttendanceRegistered) event.getValue()).occurredAt()).isEqualTo(NOW);
+        assertThat(((AttendanceRegistered) event.getValue()).noSchedule()).isTrue();
     }
 
     @Test
@@ -204,10 +206,36 @@ class RegisterExternalAttendanceServiceTest {
                 "EVENT_TIME_OUT_OF_RANGE");
     }
 
+    /**
+     * Se acepta, pero con la hora de llegada: guardada en el futuro, una marca por QR posterior se
+     * validaría contra ella y quedaría fechada antes, desordenando la jornada.
+     */
     @Test
-    void horaFuturaDentroDeTolerancia_seAcepta() {
-        assertThat(service.register(tenantId, clientId, cmd("ENTRADA", NOW.plus(Duration.ofMinutes(5)))).status())
-                .isEqualTo("ACCEPTED");
+    void horaFuturaDentroDeTolerancia_seAceptaConLaHoraDeLlegada() {
+        AttendanceResult result = service.register(tenantId, clientId, cmd("ENTRADA", NOW.plus(Duration.ofMinutes(5))));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(result.serverTime()).isEqualTo(NOW);
+        assertThat(result.flags()).contains("EVENT_TIME_CLAMPED");
+        assertThat(savedRecord().serverTime()).isEqualTo(NOW);
+    }
+
+    @Test
+    void horaPasada_noSeRecorta() {
+        AttendanceResult result = service.register(tenantId, clientId, cmd("ENTRADA", NOW.minusSeconds(1)));
+
+        assertThat(result.serverTime()).isEqualTo(NOW.minusSeconds(1));
+        assertThat(result.flags()).doesNotContain("EVENT_TIME_CLAMPED");
+    }
+
+    @Test
+    void conTurnoVigente_noSeMarcaSinTurno() {
+        when(schedulePolicy.check(eq(tenantId), eq(userId), eq(siteId), any(), any()))
+                .thenReturn(SchedulePolicyPort.ScheduleDecision.withinWindow(0, UUID.randomUUID()));
+
+        AttendanceResult result = service.register(tenantId, clientId, cmd("ENTRADA", NOW));
+
+        assertThat(result.flags()).doesNotContain("NO_SCHEDULE");
     }
 
     @Test

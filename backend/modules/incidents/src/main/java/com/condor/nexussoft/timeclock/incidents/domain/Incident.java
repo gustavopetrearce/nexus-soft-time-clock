@@ -8,7 +8,7 @@ import java.util.UUID;
 public class Incident {
 
     public enum Type { RETARDO, FALTA, REGISTRO_RECHAZADO, PERMISO, JUSTIFICACION, FRAUDE,
-                       FUERA_DE_VENTANA, OTRO }
+                       FUERA_DE_VENTANA, SIN_TURNO, OTRO }
 
     public enum Status { OPEN, APPROVED, REJECTED, RESOLVED }
 
@@ -65,6 +65,16 @@ public class Incident {
     public static Incident openForOutOfWindow(UUID tenantId, UUID userId, UUID attendanceId, String eventKind) {
         return new Incident(UUID.randomUUID(), tenantId, userId, Type.FUERA_DE_VENTANA, Status.OPEN,
                 "LOW", LocalDate.now(), attendanceId, eventKind + " fuera de la ventana del turno",
+                null, null, null, Instant.now());
+    }
+
+    /**
+     * Alta automática por ENTRADA aceptada sin turno vigente. Sin turno no hay ventana ni retardo que
+     * medir, así que la marca se acepta; la incidencia es la señal de que falta asignarle horario.
+     */
+    public static Incident openForNoSchedule(UUID tenantId, UUID userId, UUID attendanceId) {
+        return new Incident(UUID.randomUUID(), tenantId, userId, Type.SIN_TURNO, Status.OPEN,
+                "LOW", LocalDate.now(), attendanceId, "ENTRADA sin turno asignado vigente",
                 null, null, null, Instant.now());
     }
 

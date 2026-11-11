@@ -857,6 +857,7 @@
       "JUSTIFICACION": "Justification",
       "FRAUDE": "Fraud",
       "FUERA_DE_VENTANA": "Outside window",
+      "SIN_TURNO": "No shift",
       "OTRO": "Other"
     },
     "priorities": {

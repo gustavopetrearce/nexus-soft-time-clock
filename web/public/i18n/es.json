@@ -857,6 +857,7 @@
       "JUSTIFICACION": "Justificación",
       "FRAUDE": "Fraude",
       "FUERA_DE_VENTANA": "Fuera de ventana",
+      "SIN_TURNO": "Sin turno",
       "OTRO": "Otro"
     },
     "priorities": {

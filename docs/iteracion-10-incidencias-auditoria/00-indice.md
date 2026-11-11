@@ -29,6 +29,7 @@ Usuario, correo, fecha/hora, IP, user-agent, dispositivo, acción, recurso y los
   - `AttendanceRejected` → incidencia `REGISTRO_RECHAZADO` (prioridad `MEDIUM`).
   - `AttendanceRegistered` con ENTRADA y retardo → incidencia `RETARDO` (RN-16, prioridad `LOW`). El registro sigue aceptado.
   - `AttendanceRegistered` marcado fuera de la ventana del turno → incidencia `FUERA_DE_VENTANA` (RN-15, prioridad `LOW`, migración **V24**). La ventana solo rechaza la ENTRADA, así que una SALIDA tardía se acepta y cierra la jornada; esta incidencia es la señal que le queda al supervisor. Es excluyente con `RETARDO`, que exige estar *dentro* de la ventana.
+  - `AttendanceRegistered` de una ENTRADA aceptada sin turno vigente → incidencia `SIN_TURNO` (prioridad `LOW`, migración **V29**). Sin turno no hay ventana ni retardo que medir, así que la marca se acepta con la bandera `NO_SCHEDULE`, por QR o por reloj externo. La incidencia se abre solo con la ENTRADA, una por jornada, para que el supervisor vea a quien ficha sin horario asignado.
 - `IncidentService`: listado filtrable por estado y **resolución** (aprobar/rechazar/resolver) con transición de estado validada (solo desde `OPEN`) y registro del resolutor + fecha.
 - `GET /api/v1/incidents?status=` y `PATCH /api/v1/incidents/{id}/resolve` (`incident:approve`).
 
