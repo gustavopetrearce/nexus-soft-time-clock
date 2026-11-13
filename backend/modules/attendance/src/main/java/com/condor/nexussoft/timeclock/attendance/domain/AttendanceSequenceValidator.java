@@ -21,8 +21,14 @@ public final class AttendanceSequenceValidator {
     private AttendanceSequenceValidator() {
     }
 
-    /** Último evento aceptado del usuario (estado de la jornada); vacío si nunca registró o ya cerró. */
-    public record LastEvent(AttendanceEventType type, UUID workSiteId) {
+    /**
+     * Último evento aceptado del usuario (estado de la jornada); vacío si nunca registró o ya cerró.
+     * {@code breakTypeId} es la categoría del descanso abierto, que hereda el FIN_DESCANSO (V30).
+     */
+    public record LastEvent(AttendanceEventType type, UUID workSiteId, UUID breakTypeId) {
+        public LastEvent(AttendanceEventType type, UUID workSiteId) {
+            this(type, workSiteId, null);
+        }
     }
 
     /**

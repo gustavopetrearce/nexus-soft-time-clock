@@ -3,6 +3,7 @@ package com.condor.nexussoft.timeclock.attendance.application;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceEventType;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceRecord;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceSequenceValidator.LastEvent;
+import com.condor.nexussoft.timeclock.attendance.domain.BreakType;
 import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRegistered;
 import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRejected;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.AttendanceResult;
@@ -59,6 +60,8 @@ class RegisterExternalAttendanceServiceTest {
     @Mock
     private EventTypeConfigPort eventTypeConfig;
     @Mock
+    private BreakTypePort breakTypes;
+    @Mock
     private CompanyPolicyPort companyPolicy;
     @Mock
     private AttendanceEventPublisherPort events;
@@ -73,7 +76,8 @@ class RegisterExternalAttendanceServiceTest {
     @BeforeEach
     void setUp() {
         service = new RegisterExternalAttendanceService(integration, attendance, idempotency, sitePolicy,
-                schedulePolicy, eventTypeConfig, companyPolicy, events, Clock.fixed(NOW, ZoneOffset.UTC), MAX_AGE_HOURS);
+                schedulePolicy, eventTypeConfig, breakTypes, companyPolicy, events, Clock.fixed(NOW, ZoneOffset.UTC),
+                MAX_AGE_HOURS);
         lenient().when(integration.isClientActive(tenantId, clientId)).thenReturn(true);
         lenient().when(idempotency.find(eq(tenantId), any())).thenReturn(Optional.empty());
         lenient().when(integration.findCollaborator(tenantId, "EMP-1"))
@@ -261,6 +265,64 @@ class RegisterExternalAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("ACCEPTED");
         assertThat(result.flags()).contains("OUT_OF_SCHEDULE");
+    }
+
+    // ---- Categorías de descanso (V30) ----
+
+    private ExternalAttendanceCommand breakCmd(String eventType, String breakTypeCode) {
+        return new ExternalAttendanceCommand(UUID.randomUUID(), "EMP-1", siteId, eventType, NOW, breakTypeCode);
+    }
+
+    private UUID almuerzoStub() {
+        UUID almuerzo = UUID.randomUUID();
+        when(breakTypes.findByTenant(tenantId)).thenReturn(List.of(
+                new BreakType(almuerzo, tenantId, "ALMUERZO", "Almuerzo", true, false, null, 0)));
+        return almuerzo;
+    }
+
+    @Test
+    void inicioDescanso_conCodigoDeCategoria_laResuelveYLaGuarda() {
+        UUID almuerzo = almuerzoStub();
+        when(attendance.findLastAcceptedEventBefore(eq(tenantId), eq(userId), any(), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
+
+        AttendanceResult result = service.register(tenantId, clientId, breakCmd("INICIO_DESCANSO", "almuerzo"));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(savedRecord().breakTypeId()).isEqualTo(almuerzo);
+    }
+
+    @Test
+    void inicioDescanso_sinCodigo_esOpcionalParaElEmisorExterno() {
+        almuerzoStub();
+        when(attendance.findLastAcceptedEventBefore(eq(tenantId), eq(userId), any(), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
+
+        AttendanceResult result = service.register(tenantId, clientId, breakCmd("INICIO_DESCANSO", null));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(savedRecord().breakTypeId()).isNull();
+    }
+
+    @Test
+    void inicioDescanso_conCodigoDesconocido_esRechazado() {
+        almuerzoStub();
+
+        AttendanceResult result = service.register(tenantId, clientId, breakCmd("INICIO_DESCANSO", "SIESTA"));
+
+        assertThat(result.rejectionReason()).isEqualTo("INVALID_BREAK_TYPE");
+    }
+
+    @Test
+    void finDescanso_heredaLaCategoriaDelDescansoAbierto() {
+        UUID almuerzo = UUID.randomUUID();
+        when(attendance.findLastAcceptedEventBefore(eq(tenantId), eq(userId), any(), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.INICIO_DESCANSO, siteId, almuerzo)));
+
+        AttendanceResult result = service.register(tenantId, clientId, breakCmd("FIN_DESCANSO", null));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(savedRecord().breakTypeId()).isEqualTo(almuerzo);
     }
 
     @Test

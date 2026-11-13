@@ -82,6 +82,9 @@
   "attendanceInvalidQr": "This QR code is no longer valid or belongs to another site. Scan your site's current QR code.",
   "attendancePhotoRequiredSiteless": "A photo is required when clocking in without a work site.",
   "attendancePhotoRequiredSite": "This site requires a photo to record your attendance.",
+  "attendanceBreakTypeTitle": "Which break are you starting?",
+  "attendanceBreakTypePaid": "Paid",
+  "attendanceBreakTypeMax": "Up to {minutes} min",
   "attendanceBiometricPrompt": "Confirm your identity to record your attendance",
   "attendanceUnexpected": "Could not complete the record: {error}",
   "attendanceFailedOps": "Unrecorded entries",
@@ -121,6 +124,7 @@
   "rejectPhotoRequired": "photo evidence required",
   "rejectBiometricRequired": "biometric verification required",
   "rejectEventTypeDisabled": "event type not enabled",
+  "rejectInvalidBreakType": "invalid break type",
   "rejectSitelessNotAllowed": "your company does not allow clocking in without a work site",
   "rejectMsgOutOfGeofence": "You're outside the site's allowed area. Move closer and try again.",
   "rejectMsgOutOfGeofenceDistance": "You're {meters} m from the site, outside the allowed area. Move closer and try again.",
@@ -137,6 +141,7 @@
   "rejectMsgPhotoRequired": "This site requires a photo to record your attendance.",
   "rejectMsgBiometricRequired": "This site requires confirming your identity with your fingerprint or face. Try again.",
   "rejectMsgEventTypeDisabled": "This record type isn't enabled for your company. Ask your supervisor.",
+  "rejectMsgInvalidBreakType": "That break type is no longer available. Try again and pick another one.",
   "rejectMsgSitelessNotAllowed": "Your company doesn't allow recording without a work site. Scan your site's QR code.",
 
   "eventEntrada": "Clock in",
@@ -163,6 +168,7 @@
   "reasonPhotoRequired": "Missing photo evidence",
   "reasonBiometricRequired": "Missing biometric verification",
   "reasonEventTypeDisabled": "Event type disabled",
+  "reasonInvalidBreakType": "Invalid break type",
 
   "vacationsRequestAction": "Request",
   "vacationsSummaryError": "Could not load your vacation balance.",

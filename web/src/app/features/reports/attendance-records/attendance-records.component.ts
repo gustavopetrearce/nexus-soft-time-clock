@@ -171,7 +171,7 @@ const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
                       <td class="nx-text-code">{{ row.employeeNumber }}</td>
                       <td><span class="nx-trunc">{{ row.employeeName }}</span></td>
                       <td class="nx-text-numeric">{{ row.serverTime | appDate: 'dd/MM/yyyy HH:mm:ss' }}</td>
-                      <td>{{ eventLabel(row.eventType) }}</td>
+                      <td>{{ eventLabel(row.eventType) }}@if (row.breakType) { · {{ row.breakType }} }</td>
                       <td>
                         <app-status-chip [status]="row.status" [label]="statusLabel(row.status)"
                           [matTooltip]="rejectionTooltip(row)" [matTooltipDisabled]="!rejectionTooltip(row)" />

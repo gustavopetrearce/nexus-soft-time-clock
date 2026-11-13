@@ -8,6 +8,7 @@ import '../../admin_vacations/application/admin_vacations_controller.dart';
 import '../../attendance/application/attendance_controller.dart';
 import '../../attendance/application/today_attendance.dart';
 import '../../attendance/data/attendance_sync_service.dart';
+import '../../attendance/data/break_type_service.dart';
 import '../../attendance/data/event_type_service.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../vacations/data/vacation_repository.dart';
@@ -97,6 +98,8 @@ class AuthController extends Notifier<AuthState> {
     // 3. Descarta marcaciones residuales para que no se atribuyan al próximo usuario
     //    (la cola es global del dispositivo, sin scope de usuario).
     await ref.read(appDatabaseProvider).clearAll();
+    // Categorías de descanso cacheadas para fichar sin red: son de la empresa del usuario saliente.
+    await ref.read(breakTypeServiceProvider).clearCache();
     // 4. Invalida todo el estado cacheado del usuario para que el próximo login refetchee.
     _clearUserScopedState();
     state = const AuthState(status: AuthStatus.unauthenticated);
@@ -108,6 +111,8 @@ class AuthController extends Notifier<AuthState> {
   Future<void> sessionExpired() async {
     await ref.read(secureTokenStoreProvider).clear();
     await ref.read(appDatabaseProvider).clearAll();
+    // Categorías de descanso cacheadas para fichar sin red: son de la empresa del usuario saliente.
+    await ref.read(breakTypeServiceProvider).clearCache();
     _clearUserScopedState();
     state = const AuthState(status: AuthStatus.unauthenticated);
   }

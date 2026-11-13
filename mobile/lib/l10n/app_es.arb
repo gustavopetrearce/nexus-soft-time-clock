@@ -84,6 +84,10 @@
   "attendanceInvalidQr": "Este QR ya no es válido o es de otro centro. Escanea el QR vigente de tu centro.",
   "attendancePhotoRequiredSiteless": "Al registrar sin centro de trabajo, la foto es obligatoria.",
   "attendancePhotoRequiredSite": "Este centro pide una foto para registrar tu asistencia.",
+  "attendanceBreakTypeTitle": "¿Qué descanso inicias?",
+  "attendanceBreakTypePaid": "Pagado",
+  "attendanceBreakTypeMax": "Hasta {minutes} min",
+  "@attendanceBreakTypeMax": { "placeholders": {"minutes": {"type": "int"}} },
   "attendanceBiometricPrompt": "Confirma tu identidad para registrar tu asistencia",
   "attendanceUnexpected": "No se pudo completar el registro: {error}",
   "@attendanceUnexpected": { "placeholders": {"error": {"type": "String"}} },
@@ -120,6 +124,7 @@
   "rejectPhotoRequired": "se requiere evidencia fotográfica",
   "rejectBiometricRequired": "se requiere verificación biométrica",
   "rejectEventTypeDisabled": "tipo de evento no habilitado",
+  "rejectInvalidBreakType": "tipo de descanso no válido",
   "rejectSitelessNotAllowed": "tu empresa no permite registrar sin centro de trabajo",
   "rejectMsgOutOfGeofence": "Estás fuera del área permitida del centro. Acércate e inténtalo de nuevo.",
   "rejectMsgOutOfGeofenceDistance": "Estás a {meters} m del centro, fuera del área permitida. Acércate e inténtalo de nuevo.",
@@ -149,6 +154,7 @@
   "reasonPhotoRequired": "Falta evidencia fotográfica",
   "reasonBiometricRequired": "Falta verificación biométrica",
   "reasonEventTypeDisabled": "Tipo de evento deshabilitado",
+  "reasonInvalidBreakType": "Tipo de descanso no válido",
 
   "vacationsRequestAction": "Solicitar",
   "vacationsSummaryError": "No se pudo cargar tu saldo de vacaciones.",
@@ -257,5 +263,6 @@
   "rejectMsgPhotoRequired": "Este centro pide una foto para registrar tu asistencia.",
   "rejectMsgBiometricRequired": "Este centro pide confirmar tu identidad con tu huella o tu rostro. Inténtalo de nuevo.",
   "rejectMsgEventTypeDisabled": "Este tipo de registro no está habilitado en tu empresa. Pregunta a tu supervisor.",
+  "rejectMsgInvalidBreakType": "Ese tipo de descanso ya no está disponible. Vuelve a intentarlo y elige otro.",
   "rejectMsgSitelessNotAllowed": "Tu empresa no permite registrar sin centro de trabajo. Escanea el QR de tu centro."
 }

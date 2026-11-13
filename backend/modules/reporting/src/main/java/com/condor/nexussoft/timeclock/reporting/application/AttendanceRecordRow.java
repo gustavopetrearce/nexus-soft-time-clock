@@ -14,5 +14,7 @@ public record AttendanceRecordRow(
         String eventType,
         String status,
         String rejectionReason,
-        String workCenter) {
+        String workCenter,
+        /** Etiqueta de la categoría del descanso (V30); nula fuera de descansos o sin categoría. */
+        String breakType) {
 }

@@ -30,7 +30,9 @@ public record RegisterAttendanceRequest(
         String evidenceHash,
         String devicePlatform,
         String deviceModel,
-        String deviceOsVersion) {
+        String deviceOsVersion,
+        // Categoría del descanso (V30): solo se lee en INICIO_DESCANSO.
+        UUID breakTypeId) {
 
     public RegisterAttendanceCommand toCommand() {
         return new RegisterAttendanceCommand(
@@ -43,6 +45,6 @@ public record RegisterAttendanceRequest(
                 deviceTrusted == null || deviceTrusted,          // señal antifraude declarada por el cliente
                 Boolean.TRUE.equals(biometricVerified),
                 evidenceBucket, evidenceKey, evidenceHash,
-                devicePlatform, deviceModel, deviceOsVersion);
+                devicePlatform, deviceModel, deviceOsVersion, breakTypeId);
     }
 }

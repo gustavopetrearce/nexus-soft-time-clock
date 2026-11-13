@@ -92,6 +92,9 @@ public class AttendanceRecordJpaEntity {
     @Column(name = "validations_json", nullable = false)
     private String validationsJson;
 
+    @Column(name = "break_type_id")
+    private UUID breakTypeId;
+
     protected AttendanceRecordJpaEntity() {
     }
 
@@ -102,7 +105,7 @@ public class AttendanceRecordJpaEntity {
                                      Double gpsAccuracyM, Double distanceToSiteM, UUID deviceId, Instant deviceTime,
                                      Integer timeSkewSeconds, String qrNonce, UUID operationUuid, String source,
                                      boolean biometricVerified, String evidenceBucket, String evidenceKey,
-                                     String evidenceHash, String validationsJson) {
+                                     String evidenceHash, String validationsJson, UUID breakTypeId) {
         this.id = id;
         this.tenantId = tenantId;
         this.serverTime = serverTime;
@@ -126,12 +129,14 @@ public class AttendanceRecordJpaEntity {
         this.evidenceKey = evidenceKey;
         this.evidenceHash = evidenceHash;
         this.validationsJson = validationsJson;
+        this.breakTypeId = breakTypeId;
     }
 
     public UUID getId() { return id; }
     public UUID getWorkSiteId() { return workSiteId; }
     public UUID getShiftId() { return shiftId; }
     public String getEventType() { return eventType; }
+    public UUID getBreakTypeId() { return breakTypeId; }
     public String getStatus() { return status; }
     public String getRejectionReason() { return rejectionReason; }
     public Instant getServerTime() { return serverTime; }

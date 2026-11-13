@@ -9,9 +9,11 @@ import '../../../core/ui/nx_ui.dart';
 import '../application/attendance_controller.dart';
 import '../application/attendance_message.dart';
 import '../application/today_attendance.dart';
+import '../data/break_type_service.dart';
 import '../data/evidence_capture_service.dart';
 import '../data/event_type_service.dart';
 import '../data/site_policy_service.dart';
+import '../domain/break_type.dart';
 import '../domain/qr_token.dart';
 import 'attendance_l10n.dart';
 import 'qr_scanner_screen.dart';
@@ -60,6 +62,19 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   Future<void> _register(String eventType) async {
     if (_activeEvent != null) return; // bloquea el doble envío
     setState(() => _notice = null);
+
+    // 0) Al iniciar un descanso, su categoría (almuerzo, comida…) si la empresa las define. Se
+    //    pregunta antes de abrir la cámara: es una decisión del colaborador, no del QR.
+    String? breakTypeId;
+    if (eventType == 'INICIO_DESCANSO') {
+      final types = await ref.read(breakTypeServiceProvider).enabled();
+      if (!mounted) return;
+      if (types.isNotEmpty) {
+        final chosen = await _pickBreakType(types);
+        if (!mounted || chosen == null) return;
+        breakTypeId = chosen.id;
+      }
+    }
 
     // 1) Abrir la cámara y esperar el QR válido (o null si el colaborador cancela).
     final raw = await Navigator.of(context).push<String>(
@@ -124,6 +139,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             biometricVerified: biometricOk,
             evidencePath: evidence?.file.path,
             evidenceSha256: evidence?.sha256,
+            breakTypeId: breakTypeId,
           );
       final result = ref.read(attendanceControllerProvider).message;
       if (!mounted || result == null) return;
@@ -135,6 +151,41 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     } finally {
       if (mounted) setState(() => _activeEvent = null);
     }
+  }
+
+  /// Hoja inferior para elegir la categoría del descanso; `null` si el colaborador la cierra.
+  Future<BreakType?> _pickBreakType(List<BreakType> types) {
+    final l10n = context.l10n;
+    return showModalBottomSheet<BreakType>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(l10n.attendanceBreakTypeTitle, style: Theme.of(sheetContext).textTheme.titleMedium),
+            ),
+            for (final type in types)
+              ListTile(
+                leading: const Icon(Icons.free_breakfast_outlined),
+                title: Text(type.label),
+                subtitle: _breakTypeDetails(l10n, type),
+                onTap: () => Navigator.of(sheetContext).pop(type),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget? _breakTypeDetails(AppLocalizations l10n, BreakType type) {
+    final parts = [
+      if (type.maxMinutes != null) l10n.attendanceBreakTypeMax(type.maxMinutes!),
+      if (type.paid) l10n.attendanceBreakTypePaid,
+    ];
+    return parts.isEmpty ? null : Text(parts.join(' · '));
   }
 
   /// Resultado del registro: Snackbar si quedó registrado o a salvo; Aviso persistente si se

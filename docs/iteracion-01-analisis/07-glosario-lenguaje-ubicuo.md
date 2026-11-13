@@ -18,7 +18,8 @@ Vocabulario compartido entre negocio y desarrollo. Estos términos serán los no
 | **Horario (Schedule)** | Definición de jornada esperada (horas, días). |
 | **Turno (Shift)** | Instancia/asignación de horario a un colaborador en un rango temporal, con tolerancias. |
 | **Registro de asistencia (AttendanceRecord)** | Evento de marcación: ENTRADA, SALIDA o intermedio, con GPS, hora de servidor y resultado de validación. |
-| **Tipo de evento (AttendanceEventType)** | ENTRADA · SALIDA · INICIO_DESCANSO · FIN_DESCANSO · CAMBIO_SITIO (extensible). |
+| **Tipo de evento (AttendanceEventType)** | ENTRADA · SALIDA · INICIO_DESCANSO · FIN_DESCANSO · CAMBIO_SITIO. Catálogo cerrado: cada tipo tiene semántica propia en la secuencia de la jornada (RN-12); la empresa solo los habilita y reetiqueta. |
+| **Tipo de descanso (BreakType)** | Categoría por empresa que califica el par INICIO_DESCANSO/FIN_DESCANSO (almuerzo, comida, café…). No es un tipo de evento: el inicio la elige y el fin la hereda. Puede ser pagado (cuenta como tiempo trabajado) y tener una duración máxima orientativa (V30). |
 | **Jornada (WorkDay)** | Secuencia de eventos de un colaborador entre una ENTRADA y su SALIDA. |
 | **QR de centro (SiteQrToken)** | Token firmado con vigencia y `nonce` que representa a un centro para el escaneo. |
 | **Evidencia (Evidence)** | Foto u otro adjunto asociado a un registro, almacenado de forma segura (MinIO). |

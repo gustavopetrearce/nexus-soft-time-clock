@@ -152,6 +152,7 @@ curl -X POST "$BASE_URL/api/v1/integrations/attendance" \
 | `workSiteId` | UUID del centro de trabajo, activo y de tu empresa. Se obtiene con `GET /api/v1/work-sites` o de la URL del centro en el portal (`/work-sites/<id>/edit`) |
 | `eventType` | `ENTRADA`, `SALIDA`, `INICIO_DESCANSO`, `FIN_DESCANSO` o `CAMBIO_SITIO` |
 | `eventTime` | Hora en que ocurrió, ISO-8601 **con desfase horario**. Máximo 72 h atrás y 5 min adelante; una hora futura se guarda como la de llegada, con la bandera `EVENT_TIME_CLAMPED` |
+| `breakTypeCode` | *Opcional.* Solo en `INICIO_DESCANSO`: código del tipo de descanso de la empresa (por ejemplo `ALMUERZO`), sin distinguir mayúsculas. Los códigos se ven en el portal, en **Tipos de evento → Tipos de descanso**. Si no lo envías, el descanso queda sin categoría. En `FIN_DESCANSO` se ignora: el fin hereda la categoría de su inicio |
 
 ### Respuestas
 
@@ -174,6 +175,7 @@ curl -X POST "$BASE_URL/api/v1/integrations/attendance" \
 | `INVALID_SEQUENCE` | No encaja en la jornada (por ejemplo, `SALIDA` sin `ENTRADA`) o ya hay una marca posterior aceptada |
 | `OUT_OF_SCHEDULE` | `ENTRADA` fuera de la ventana del turno |
 | `EVENT_TYPE_DISABLED` | La empresa tiene desactivado ese tipo de evento |
+| `INVALID_BREAK_TYPE` | `breakTypeCode` no existe en la empresa o está desactivado |
 
 | `flags` | Significado |
 |---|---|
