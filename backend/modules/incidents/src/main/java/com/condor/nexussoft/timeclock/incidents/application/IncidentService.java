@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -59,5 +61,19 @@ public class IncidentService implements IncidentManagementUseCase {
     @Transactional
     public Incident openForNoSchedule(UUID tenantId, UUID userId, UUID attendanceId) {
         return incidents.save(Incident.openForNoSchedule(tenantId, userId, attendanceId));
+    }
+
+    @Override
+    @Transactional
+    public List<Incident> closeForCancelledAttendance(UUID tenantId, UUID attendanceId, String reason,
+                                                      UUID cancelledBy) {
+        Instant now = clock.instant();
+        String note = "Marcación cancelada: " + reason;
+        List<Incident> open = incidents.findOpenByRelatedAttendance(tenantId, attendanceId);
+        open.forEach(incident -> {
+            incident.resolve(Incident.Status.RESOLVED, note, cancelledBy, now);
+            incidents.update(incident);
+        });
+        return open;
     }
 }

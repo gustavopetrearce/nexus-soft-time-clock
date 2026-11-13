@@ -23,7 +23,7 @@ public class AttendanceReportService {
 
     public List<ReportRow> rows(UUID tenantId, Instant from, Instant to, String status) {
         StringBuilder sql = new StringBuilder(
-                "SELECT server_time, user_id, event_type, status, rejection_reason, "
+                "SELECT server_time, user_id, event_type, status, rejection_reason, cancel_reason, "
                         + "ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng "
                         + "FROM attendance_records WHERE tenant_id = ? AND server_time BETWEEN ? AND ?");
         List<Object> args = new ArrayList<>();
@@ -44,7 +44,8 @@ public class AttendanceReportService {
                 rs.getString("rejection_reason"),
                 // getObject y no getDouble: este devuelve 0 con NULL y la marca sin GPS saldría en 0,0.
                 rs.getObject("lat", Double.class),
-                rs.getObject("lng", Double.class)), args.toArray());
+                rs.getObject("lng", Double.class),
+                rs.getString("cancel_reason")), args.toArray());
     }
 
     /**
@@ -56,7 +57,7 @@ public class AttendanceReportService {
         StringBuilder sql = new StringBuilder(
                 "SELECT ar.server_time, u.employee_code, u.first_name, u.last_name, "
                         + "ar.event_type, ar.status, ar.rejection_reason, ws.name AS work_center, "
-                        + "bt.label AS break_type "
+                        + "bt.label AS break_type, ar.cancel_reason "
                         + "FROM attendance_records ar "
                         + "JOIN users u ON u.id = ar.user_id "
                         + "LEFT JOIN work_sites ws ON ws.id = ar.work_site_id "
@@ -85,7 +86,8 @@ public class AttendanceReportService {
                     rs.getString("status"),
                     rs.getString("rejection_reason"),
                     workCenter != null ? workCenter : "—",
-                    rs.getString("break_type"));
+                    rs.getString("break_type"),
+                    rs.getString("cancel_reason"));
         }, args.toArray());
     }
 }

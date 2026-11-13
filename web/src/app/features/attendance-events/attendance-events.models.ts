@@ -24,6 +24,26 @@ export interface AttendanceEvent {
   siteless: boolean;
   /** Etiqueta de la categoría del descanso (almuerzo, comida…); nula fuera de descansos o sin categoría. */
   breakType?: string | null;
+  /** Cancelación (definitiva): causa en texto libre, cuándo y quién. Nulos si no se canceló. */
+  cancelReason?: string | null;
+  cancelledAt?: string | null;
+  cancelledByName?: string | null;
+}
+
+/** Solo una marca que cuenta (o podría contar) se puede cancelar. */
+export const CANCELLABLE_STATUSES: readonly string[] = ['ACCEPTED', 'PENDING_REVIEW'];
+
+/** Máximo de la causa de cancelación (columna `cancel_reason`). */
+export const CANCEL_REASON_MAX = 500;
+
+/** Respuesta de `POST /attendance/{id}/cancel`. */
+export interface CancelledAttendance {
+  recordId: string;
+  serverTime: string;
+  status: 'CANCELLED';
+  cancelReason: string;
+  cancelledBy: string;
+  cancelledAt: string;
 }
 
 /** Tipos de evento en el orden en que se ofrecen en los filtros. */

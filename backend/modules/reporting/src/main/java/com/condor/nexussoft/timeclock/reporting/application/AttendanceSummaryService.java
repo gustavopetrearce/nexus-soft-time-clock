@@ -103,6 +103,11 @@ public class AttendanceSummaryService {
                        count(*) FILTER (WHERE type = 'FALTA' AND status IN ('OPEN', 'REJECTED')) AS unjustified
                 FROM incidents
                 WHERE tenant_id = :tenant AND incident_date >= :fromDate AND incident_date <= :toDate
+                  -- Una marca cancelada (V31) no cuenta, ni el retardo/incidencia que generó.
+                  AND NOT EXISTS (SELECT 1 FROM attendance_records car
+                                  WHERE car.id = incidents.related_attendance_id
+                                    AND car.tenant_id = incidents.tenant_id
+                                    AND car.status = 'CANCELLED')
                 GROUP BY user_id
             ),
             expected AS (

@@ -11,11 +11,13 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,5 +69,24 @@ class IncidentServiceTest {
         assertThat(result.type()).isEqualTo(Incident.Type.RETARDO);
         assertThat(result.status()).isEqualTo(Incident.Status.OPEN);
         assertThat(result.description()).contains("12");
+    }
+
+    @Test
+    void closeForCancelledAttendance_resuelveLasAbiertasLigadasConLaCausa() {
+        IncidentService service = new IncidentService(incidents, clock);
+        UUID attendanceId = UUID.randomUUID();
+        UUID supervisor = UUID.randomUUID();
+        Incident retardo = new Incident(UUID.randomUUID(), tenantId, UUID.randomUUID(), Incident.Type.RETARDO,
+                Incident.Status.OPEN, "LOW", LocalDate.now(clock), attendanceId, "Retardo de 12 min",
+                null, null, null, Instant.now(clock));
+        when(incidents.findOpenByRelatedAttendance(tenantId, attendanceId)).thenReturn(List.of(retardo));
+
+        List<Incident> closed = service.closeForCancelledAttendance(tenantId, attendanceId, "Emergencia", supervisor);
+
+        assertThat(closed).containsExactly(retardo);
+        assertThat(retardo.status()).isEqualTo(Incident.Status.RESOLVED);
+        assertThat(retardo.resolutionNote()).isEqualTo("Marcación cancelada: Emergencia");
+        assertThat(retardo.resolvedBy()).isEqualTo(supervisor);
+        verify(incidents).update(retardo);
     }
 }

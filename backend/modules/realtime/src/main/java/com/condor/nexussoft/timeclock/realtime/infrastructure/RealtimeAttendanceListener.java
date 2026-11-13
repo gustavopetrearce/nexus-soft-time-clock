@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.realtime.infrastructure;
 
+import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceCancelled;
 import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRegistered;
 import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRejected;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -46,6 +47,16 @@ public class RealtimeAttendanceListener {
                 "attendanceId", e.attendanceId().toString(),
                 "userId", e.userId().toString(),
                 "reason", e.reason(),
+                "occurredAt", e.occurredAt().toString()));
+    }
+
+    @org.springframework.context.event.EventListener
+    public void onCancelled(AttendanceCancelled e) {
+        send(e.tenantId(), Map.of(
+                "type", "CANCELLED",
+                "attendanceId", e.attendanceId().toString(),
+                "userId", e.userId().toString(),
+                "eventKind", e.eventKind(),
                 "occurredAt", e.occurredAt().toString()));
     }
 

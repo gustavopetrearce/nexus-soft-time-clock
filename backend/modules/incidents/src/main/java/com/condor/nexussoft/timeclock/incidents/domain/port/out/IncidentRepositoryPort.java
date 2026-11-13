@@ -3,6 +3,7 @@ package com.condor.nexussoft.timeclock.incidents.domain.port.out;
 import com.condor.nexussoft.timeclock.incidents.domain.Incident;
 import com.condor.nexussoft.timeclock.shared.domain.Paged;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,4 +17,6 @@ public interface IncidentRepositoryPort {
 
     /** {@code status} nulo = todas. */
     Paged<Incident> findByTenant(UUID tenantId, String status, int page, int size);
+
+    List<Incident> findOpenByRelatedAttendance(UUID tenantId, UUID attendanceId);
 }

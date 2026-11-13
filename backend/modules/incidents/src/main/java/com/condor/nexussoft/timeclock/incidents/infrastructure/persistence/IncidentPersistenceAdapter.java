@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,6 +48,14 @@ public class IncidentPersistenceAdapter implements IncidentRepositoryPort {
                 : jpa.findByTenantIdAndStatus(tenantId, status, pageable);
         return new Paged<>(result.map(this::toDomain).getContent(),
                 result.getNumber(), result.getSize(), result.getTotalElements());
+    }
+
+    @Override
+    public List<Incident> findOpenByRelatedAttendance(UUID tenantId, UUID attendanceId) {
+        return jpa.findByTenantIdAndRelatedAttendanceIdAndStatus(tenantId, attendanceId,
+                        Incident.Status.OPEN.name()).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     private IncidentJpaEntity toEntity(Incident i) {

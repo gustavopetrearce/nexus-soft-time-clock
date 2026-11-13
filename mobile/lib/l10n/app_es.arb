@@ -139,6 +139,12 @@
   "recordStatusAccepted": "Aceptado",
   "recordStatusRejected": "Rechazado",
   "recordStatusPendingReview": "En revisión",
+  "recordStatusCancelled": "Cancelada",
+  "recordCancelReason": "Cancelada: {reason}",
+  "@recordCancelReason": {
+    "description": "Causa (texto libre) con la que un supervisor canceló la marcación.",
+    "placeholders": { "reason": { "type": "String" } }
+  },
 
   "reasonInvalidQr": "QR inválido",
   "reasonOutOfGeofence": "Fuera de la geocerca",

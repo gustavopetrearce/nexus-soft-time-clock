@@ -11,5 +11,7 @@ public record ReportRow(
         String status,
         String rejectionReason,
         Double latitude,
-        Double longitude) {
+        Double longitude,
+        /** Causa de la cancelación (V31); solo si {@code status} es CANCELLED. */
+        String cancelReason) {
 }

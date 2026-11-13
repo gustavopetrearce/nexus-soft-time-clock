@@ -6,7 +6,8 @@ import { environment } from '../../../environments/environment';
 import { AuthStore } from '../../core/auth/auth.store';
 
 export interface AttendanceEvent {
-  type: 'ACCEPTED' | 'REJECTED';
+  /** `CANCELLED`: una marca ya aceptada se canceló después (mismo `attendanceId`). */
+  type: 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
   attendanceId: string;
   userId: string;
   workSiteId?: string;

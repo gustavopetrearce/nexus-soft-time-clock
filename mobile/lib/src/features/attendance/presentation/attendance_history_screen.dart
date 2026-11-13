@@ -170,6 +170,13 @@ class _RecordTile extends StatelessWidget {
               color: theme.colorScheme.error,
             ),
           ],
+          if (record.isCancelled && record.cancelReason != null) ...[
+            const SizedBox(height: 2),
+            _IconLine(
+              icon: Icons.block,
+              text: context.l10n.recordCancelReason(record.cancelReason!),
+            ),
+          ],
         ],
       ),
       trailing: _StatusChip(record: record, theme: theme),
@@ -200,7 +207,7 @@ class _IconLine extends StatelessWidget {
   }
 }
 
-/// Chip de estado coloreado: aceptado (verde), rechazado (rojo), en revisión (ámbar).
+/// Chip de estado coloreado: aceptado (verde), rechazado (rojo), cancelado (gris), en revisión (ámbar).
 class _StatusChip extends StatelessWidget {
   const _StatusChip({required this.record, required this.theme});
 
@@ -215,6 +222,8 @@ class _StatusChip extends StatelessWidget {
       color = Colors.green.shade600;
     } else if (record.isRejected) {
       color = scheme.error;
+    } else if (record.isCancelled) {
+      color = scheme.onSurfaceVariant;
     } else {
       color = Colors.amber.shade800;
     }

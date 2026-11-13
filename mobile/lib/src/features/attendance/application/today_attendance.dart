@@ -74,7 +74,7 @@ final todayAttendanceProvider = FutureProvider<TodayAttendance>((ref) async {
       .toList();
   try {
     final records = await ref.read(attendanceHistoryServiceProvider).myHistory(from: startOfDay, to: now, limit: 50);
-    final valid = records.where((r) => !r.isRejected && !r.serverTime.isBefore(startOfDay)).toList()
+    final valid = records.where((r) => r.countsAsAttendance && !r.serverTime.isBefore(startOfDay)).toList()
       ..sort((a, b) => b.serverTime.compareTo(a.serverTime));
     return TodayAttendance(
       lastRecord: valid.isEmpty ? null : valid.first,

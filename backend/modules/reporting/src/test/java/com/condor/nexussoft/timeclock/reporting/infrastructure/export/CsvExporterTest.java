@@ -18,7 +18,7 @@ class CsvExporterTest {
     void export_incluyeEncabezadoYFilas() {
         UUID userId = UUID.randomUUID();
         List<ReportRow> rows = List.of(new ReportRow(
-                Instant.parse("2026-07-21T10:00:00Z"), userId, "ENTRADA", "ACCEPTED", null, 19.4326, -99.1332));
+                Instant.parse("2026-07-21T10:00:00Z"), userId, "ENTRADA", "ACCEPTED", null, 19.4326, -99.1332, null));
 
         String csv = new String(exporter.export(rows), StandardCharsets.UTF_8);
 
