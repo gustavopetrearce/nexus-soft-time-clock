@@ -135,6 +135,7 @@ extension AttendanceL10n on AppLocalizations {
         'ACCEPTED' => recordStatusAccepted,
         'REJECTED' => recordStatusRejected,
         'PENDING_REVIEW' => recordStatusPendingReview,
+        'CANCELLED' => recordStatusCancelled,
         _ => prettifyCode(r.status),
       };
 

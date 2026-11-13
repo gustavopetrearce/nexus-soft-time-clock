@@ -56,7 +56,11 @@ public class AttendanceEventsController {
              */
             boolean siteless,
             /** Etiqueta de la categoría del descanso (V30); nula fuera de descansos o sin categoría. */
-            String breakType) {}
+            String breakType,
+            /** Cancelación (V31): causa, momento y quién; nulos si la marca no se canceló. */
+            String cancelReason,
+            OffsetDateTime cancelledAt,
+            String cancelledByName) {}
 
     @GetMapping("/attendance-events")
     public List<AttendanceEventDto> events(
@@ -84,12 +88,16 @@ public class AttendanceEventsController {
                        ar.distance_to_site_m,
                        ar.source,
                        (ar.work_site_id is null) as siteless,
-                       bt.label as break_type
+                       bt.label as break_type,
+                       ar.cancel_reason,
+                       ar.cancelled_at,
+                       nullif(trim(concat(cu.first_name, ' ', cu.last_name)), '') as cancelled_by_name
                 from attendance_records ar
                 join users u on u.id = ar.user_id
                 left join work_sites ws on ws.id = ar.work_site_id
                 left join attendance_break_types bt
                        on bt.id = ar.break_type_id and bt.tenant_id = ar.tenant_id
+                left join users cu on cu.id = ar.cancelled_by
                 where ar.tenant_id = ?
                   and ar.server_time >= ?
                   and ar.server_time < ?
@@ -116,7 +124,10 @@ public class AttendanceEventsController {
                             distanceM,
                             rs.getString("source"),
                             rs.getBoolean("siteless"),
-                            rs.getString("break_type"));
+                            rs.getString("break_type"),
+                            rs.getString("cancel_reason"),
+                            rs.getObject("cancelled_at", OffsetDateTime.class),
+                            rs.getString("cancelled_by_name"));
                 },
                 TenantContext.require(), fromTs, toTs);
     }

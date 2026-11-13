@@ -12,5 +12,7 @@ public record AttendanceSummary(
         String status,
         String rejectionReason,
         Instant serverTime,
-        String workCenter) {
+        String workCenter,
+        /** Causa de la cancelación; solo si {@code status} es CANCELLED. */
+        String cancelReason) {
 }

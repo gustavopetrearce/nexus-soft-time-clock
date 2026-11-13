@@ -1,7 +1,7 @@
 import { AttendanceEventType } from '../../admin/event-types/event-type.models';
 
 /** Estado de un registro de asistencia (coincide con el enum del backend). */
-export type AttendanceRecordStatus = 'ACCEPTED' | 'REJECTED' | 'PENDING_REVIEW';
+export type AttendanceRecordStatus = 'ACCEPTED' | 'REJECTED' | 'PENDING_REVIEW' | 'CANCELLED';
 
 /**
  * Fila del reporte de registros individuales de asistencia (una por marcación). No expone
@@ -19,6 +19,8 @@ export interface AttendanceRecordReport {
   workCenter: string;
   /** Etiqueta de la categoría del descanso (almuerzo, comida…); nula fuera de descansos o sin categoría. */
   breakType?: string | null;
+  /** Causa de la cancelación (texto libre); solo si `status` es CANCELLED. */
+  cancelReason?: string | null;
 }
 
 export type RecordSortColumn = keyof Pick<

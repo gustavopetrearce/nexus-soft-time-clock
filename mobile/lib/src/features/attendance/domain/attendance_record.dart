@@ -10,6 +10,7 @@ class AttendanceRecord {
     required this.serverTime,
     required this.workCenter,
     this.rejectionReason,
+    this.cancelReason,
   });
 
   final String eventType;
@@ -18,8 +19,17 @@ class AttendanceRecord {
   final String workCenter;
   final String? rejectionReason;
 
+  /// Causa (texto libre) con la que un supervisor canceló la marca; solo si [isCancelled].
+  final String? cancelReason;
+
   bool get isAccepted => status == 'ACCEPTED';
   bool get isRejected => status == 'REJECTED';
+
+  /// Cancelada por un supervisor tras registrarse: ya no cuenta como asistencia.
+  bool get isCancelled => status == 'CANCELLED';
+
+  /// Cuenta para el estado de la jornada: aceptada o aún en revisión (no rechazada ni cancelada).
+  bool get countsAsAttendance => status == 'ACCEPTED' || status == 'PENDING_REVIEW';
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) => AttendanceRecord(
         eventType: json['eventType'] as String,
@@ -27,6 +37,7 @@ class AttendanceRecord {
         serverTime: DateTime.parse(json['serverTime'] as String).toLocal(),
         workCenter: (json['workCenter'] as String?) ?? '—',
         rejectionReason: json['rejectionReason'] as String?,
+        cancelReason: json['cancelReason'] as String?,
       );
 }
 

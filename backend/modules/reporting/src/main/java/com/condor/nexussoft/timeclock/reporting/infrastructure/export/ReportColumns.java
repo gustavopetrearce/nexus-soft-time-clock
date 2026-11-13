@@ -6,7 +6,7 @@ import com.condor.nexussoft.timeclock.reporting.application.ReportRow;
 final class ReportColumns {
 
     static final String[] HEADERS = {
-            "Fecha (servidor)", "Usuario", "Evento", "Estado", "Motivo rechazo", "Latitud", "Longitud"
+            "Fecha (servidor)", "Usuario", "Evento", "Estado", "Motivo rechazo", "Latitud", "Longitud", "Causa cancelación"
     };
 
     private ReportColumns() {
@@ -20,7 +20,8 @@ final class ReportColumns {
                 r.status(),
                 r.rejectionReason() == null ? "" : r.rejectionReason(),
                 r.latitude() == null ? "" : String.valueOf(r.latitude()),
-                r.longitude() == null ? "" : String.valueOf(r.longitude())
+                r.longitude() == null ? "" : String.valueOf(r.longitude()),
+                r.cancelReason() == null ? "" : r.cancelReason()
         };
     }
 }

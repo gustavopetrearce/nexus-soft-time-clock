@@ -186,7 +186,11 @@
     "OUT_OF_GEOFENCE": "La ubicación está fuera de la geocerca.",
     "QR_EXPIRED": "El código QR expiró.",
     "SITELESS_ATTENDANCE_DISABLED": "El registro sin centro de trabajo está deshabilitado.",
-    "UNSUPPORTED_MEDIA_TYPE": "El tipo de archivo no está admitido."
+    "UNSUPPORTED_MEDIA_TYPE": "El tipo de archivo no está admitido.",
+    "ATTENDANCE_ALREADY_CANCELLED": "La marcación ya está cancelada.",
+    "ATTENDANCE_NOT_CANCELLABLE": "Solo se pueden cancelar marcaciones aceptadas o en revisión.",
+    "CANCEL_REASON_REQUIRED": "La causa de la cancelación es obligatoria.",
+    "CANCEL_REASON_TOO_LONG": "La causa no puede superar 500 caracteres."
   },
   "companies": {
     "title": "Empresas",
@@ -715,7 +719,8 @@
     "status": {
       "ACCEPTED": "Aceptado",
       "REJECTED": "Rechazado",
-      "PENDING_REVIEW": "En revisión"
+      "PENDING_REVIEW": "En revisión",
+      "CANCELLED": "Cancelada"
     },
     "rejection": {
       "INVALID_QR": "QR inválido",
@@ -768,7 +773,21 @@
       "site": "Centro"
     },
     "openDetail": "Ver el detalle del registro de {{name}}",
-    "count": "{{n}} registros"
+    "count": "{{n}} registros",
+    "cancel": {
+      "action": "Cancelar marcación",
+      "title": "Cancelar marcación",
+      "warning": "La marcación dejará de contar como asistencia y se cerrarán sus incidencias abiertas. Esta acción no se puede deshacer.",
+      "reason": "Causa",
+      "reasonPlaceholder": "Llegada tarde, emergencia, permiso…",
+      "reasonRequired": "Indica la causa de la cancelación.",
+      "confirm": "Cancelar marcación",
+      "back": "Volver",
+      "done": "Marcación cancelada.",
+      "error": "No se pudo cancelar la marcación.",
+      "cancelledBy": "Cancelada por",
+      "cancelledAt": "Cancelada el"
+    }
   },
   "reports": {
     "title": "Reporte de asistencia",

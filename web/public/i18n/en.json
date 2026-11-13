@@ -186,7 +186,11 @@
     "OUT_OF_GEOFENCE": "The location is outside the geofence.",
     "QR_EXPIRED": "The QR code has expired.",
     "SITELESS_ATTENDANCE_DISABLED": "Clocking in without a work site is disabled.",
-    "UNSUPPORTED_MEDIA_TYPE": "The file type is not supported."
+    "UNSUPPORTED_MEDIA_TYPE": "The file type is not supported.",
+    "ATTENDANCE_ALREADY_CANCELLED": "The record is already cancelled.",
+    "ATTENDANCE_NOT_CANCELLABLE": "Only accepted or under-review records can be cancelled.",
+    "CANCEL_REASON_REQUIRED": "The cancellation reason is required.",
+    "CANCEL_REASON_TOO_LONG": "The reason cannot exceed 500 characters."
   },
   "companies": {
     "title": "Companies",
@@ -715,7 +719,8 @@
     "status": {
       "ACCEPTED": "Accepted",
       "REJECTED": "Rejected",
-      "PENDING_REVIEW": "Under review"
+      "PENDING_REVIEW": "Under review",
+      "CANCELLED": "Cancelled"
     },
     "rejection": {
       "INVALID_QR": "Invalid QR code",
@@ -768,7 +773,21 @@
       "site": "Site"
     },
     "openDetail": "View the record details for {{name}}",
-    "count": "{{n}} records"
+    "count": "{{n}} records",
+    "cancel": {
+      "action": "Cancel record",
+      "title": "Cancel attendance record",
+      "warning": "The record will no longer count as attendance and its open incidents will be closed. This cannot be undone.",
+      "reason": "Reason",
+      "reasonPlaceholder": "Late arrival, emergency, leave…",
+      "reasonRequired": "Enter the cancellation reason.",
+      "confirm": "Cancel record",
+      "back": "Back",
+      "done": "Record cancelled.",
+      "error": "The record could not be cancelled.",
+      "cancelledBy": "Cancelled by",
+      "cancelledAt": "Cancelled on"
+    }
   },
   "reports": {
     "title": "Attendance report",

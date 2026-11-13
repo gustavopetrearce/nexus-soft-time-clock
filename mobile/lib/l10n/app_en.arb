@@ -153,6 +153,8 @@
   "recordStatusAccepted": "Accepted",
   "recordStatusRejected": "Rejected",
   "recordStatusPendingReview": "Under review",
+  "recordStatusCancelled": "Cancelled",
+  "recordCancelReason": "Cancelled: {reason}",
 
   "reasonInvalidQr": "Invalid QR code",
   "reasonOutOfGeofence": "Outside the geofence",

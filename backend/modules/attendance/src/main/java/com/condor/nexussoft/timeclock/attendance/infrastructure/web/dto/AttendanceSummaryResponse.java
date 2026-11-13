@@ -9,10 +9,11 @@ import java.time.Instant;
  * solo fecha/hora de servidor, tipo de evento, estado (+ motivo de rechazo) y centro de trabajo.
  */
 public record AttendanceSummaryResponse(String eventType, String status, String rejectionReason,
-                                        Instant serverTime, String workCenter) {
+                                        Instant serverTime, String workCenter,
+                                        String cancelReason) {
 
     public static AttendanceSummaryResponse from(AttendanceSummary s) {
         return new AttendanceSummaryResponse(s.eventType(), s.status(), s.rejectionReason(),
-                s.serverTime(), s.workCenter());
+                s.serverTime(), s.workCenter(), s.cancelReason());
     }
 }

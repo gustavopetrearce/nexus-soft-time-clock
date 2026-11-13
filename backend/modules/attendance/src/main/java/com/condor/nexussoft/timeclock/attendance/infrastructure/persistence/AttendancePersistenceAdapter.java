@@ -2,6 +2,7 @@ package com.condor.nexussoft.timeclock.attendance.infrastructure.persistence;
 
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceEventType;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceRecord;
+import com.condor.nexussoft.timeclock.attendance.domain.AttendanceRecordRef;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceSequenceValidator.LastEvent;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceStatus;
 import com.condor.nexussoft.timeclock.attendance.domain.Evidence;
@@ -79,7 +80,8 @@ public class AttendancePersistenceAdapter implements AttendanceRepositoryPort {
             UUID tenantId, UUID userId, Instant from, Instant toExclusive, int limit) {
 
         StringBuilder sql = new StringBuilder(
-                "SELECT ar.event_type, ar.status, ar.rejection_reason, ar.server_time, ws.name AS work_center "
+                "SELECT ar.event_type, ar.status, ar.rejection_reason, ar.server_time, ws.name AS work_center, "
+                        + "ar.cancel_reason "
                         + "FROM attendance_records ar "
                         + "LEFT JOIN work_sites ws ON ws.id = ar.work_site_id "
                         + "WHERE ar.tenant_id = :tenant AND ar.user_id = :user");
@@ -102,6 +104,48 @@ public class AttendancePersistenceAdapter implements AttendanceRepositoryPort {
                 rs.getString("status"),
                 rs.getString("rejection_reason"),
                 rs.getTimestamp("server_time").toInstant(),
-                rs.getString("work_center")));
+                rs.getString("work_center"),
+                rs.getString("cancel_reason")));
+    }
+
+    @Override
+    public Optional<AttendanceRecordRef> findRef(UUID tenantId, UUID id, Instant serverTime) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT id, tenant_id, server_time, user_id, event_type, status FROM attendance_records "
+                        + "WHERE tenant_id = :tenant AND id = :id");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenant", tenantId)
+                .addValue("id", id);
+        if (serverTime != null) {
+            sql.append(" AND server_time = :serverTime");
+            params.addValue("serverTime", Timestamp.from(serverTime));
+        }
+        return jdbc.query(sql.toString(), params, (rs, i) -> new AttendanceRecordRef(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("tenant_id", UUID.class),
+                        rs.getTimestamp("server_time").toInstant(),
+                        rs.getObject("user_id", UUID.class),
+                        AttendanceEventType.valueOf(rs.getString("event_type")),
+                        AttendanceStatus.valueOf(rs.getString("status"))))
+                .stream().findFirst();
+    }
+
+    @Override
+    public boolean markCancelled(UUID tenantId, UUID id, Instant serverTime, String reason, UUID cancelledBy,
+                                 Instant cancelledAt) {
+        // server_time en el WHERE: la tabla está particionada por esa columna (PK id+server_time).
+        int updated = jdbc.update(
+                "UPDATE attendance_records SET status = 'CANCELLED', cancel_reason = :reason, "
+                        + "cancelled_by = :by, cancelled_at = :at "
+                        + "WHERE tenant_id = :tenant AND id = :id AND server_time = :serverTime "
+                        + "AND status IN ('ACCEPTED', 'PENDING_REVIEW')",
+                new MapSqlParameterSource()
+                        .addValue("reason", reason)
+                        .addValue("by", cancelledBy)
+                        .addValue("at", Timestamp.from(cancelledAt))
+                        .addValue("tenant", tenantId)
+                        .addValue("id", id)
+                        .addValue("serverTime", Timestamp.from(serverTime)));
+        return updated > 0;
     }
 }

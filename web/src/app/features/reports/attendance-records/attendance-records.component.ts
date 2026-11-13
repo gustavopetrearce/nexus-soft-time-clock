@@ -48,7 +48,7 @@ const COLUMNS: readonly ColumnDef[] = [
   { key: 'workCenter', label: 'attendanceEvents.col.site' },
 ];
 
-const STATUS_OPTIONS: readonly AttendanceRecordStatus[] = ['ACCEPTED', 'REJECTED', 'PENDING_REVIEW'];
+const STATUS_OPTIONS: readonly AttendanceRecordStatus[] = ['ACCEPTED', 'REJECTED', 'PENDING_REVIEW', 'CANCELLED'];
 
 const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
 
@@ -298,6 +298,9 @@ export class AttendanceRecordsComponent {
   }
 
   protected rejectionTooltip(row: AttendanceRecordReport): string {
+    if (row.cancelReason) {
+      return row.cancelReason;
+    }
     if (!row.rejectionReason) {
       return '';
     }

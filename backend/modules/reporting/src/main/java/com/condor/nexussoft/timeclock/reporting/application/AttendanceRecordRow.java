@@ -16,5 +16,7 @@ public record AttendanceRecordRow(
         String rejectionReason,
         String workCenter,
         /** Etiqueta de la categoría del descanso (V30); nula fuera de descansos o sin categoría. */
-        String breakType) {
+        String breakType,
+        /** Causa de la cancelación (V31); solo si {@code status} es CANCELLED. */
+        String cancelReason) {
 }

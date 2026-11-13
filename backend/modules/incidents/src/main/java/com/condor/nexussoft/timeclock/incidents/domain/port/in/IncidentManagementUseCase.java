@@ -3,6 +3,7 @@ package com.condor.nexussoft.timeclock.incidents.domain.port.in;
 import com.condor.nexussoft.timeclock.incidents.domain.Incident;
 import com.condor.nexussoft.timeclock.shared.domain.Paged;
 
+import java.util.List;
 import java.util.UUID;
 
 /** Gestión de incidencias (RF-09). */
@@ -23,4 +24,10 @@ public interface IncidentManagementUseCase {
 
     /** Alta automática por ENTRADA aceptada sin turno vigente (consumida de un evento). */
     Incident openForNoSchedule(UUID tenantId, UUID userId, UUID attendanceId);
+
+    /**
+     * Resuelve las incidencias aún abiertas ligadas a una marca que se canceló (V31): la marca ya no
+     * cuenta, así que tampoco su retardo, ventana o falta de turno. Las ya resueltas no se tocan.
+     */
+    List<Incident> closeForCancelledAttendance(UUID tenantId, UUID attendanceId, String reason, UUID cancelledBy);
 }

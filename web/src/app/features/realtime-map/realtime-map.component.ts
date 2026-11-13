@@ -129,6 +129,8 @@ const FEED_SIZE = 30;
                   </div>
                   @if (e.type === 'REJECTED') {
                     <div class="nx-lista__trail"><span class="nx-chip nx-chip--error">{{ 'attendance.status.REJECTED' | transloco }}</span></div>
+                  } @else if (e.type === 'CANCELLED') {
+                    <div class="nx-lista__trail"><span class="nx-chip nx-chip--neutral">{{ 'attendance.status.CANCELLED' | transloco }}</span></div>
                   }
                 </li>
               }
@@ -235,6 +237,16 @@ export class RealtimeMapComponent implements AfterViewInit, OnDestroy {
 
   private onEvent(event: AttendanceEvent): void {
     this.lastUpdate.set(new Date());
+    if (event.type === 'CANCELLED') {
+      // Comparte attendanceId con la marca original: se marca esa fila en vez de duplicarla.
+      const shown = this.feed().some((e) => e.attendanceId === event.attendanceId);
+      this.feed.update((list) =>
+        shown
+          ? list.map((e) => (e.attendanceId === event.attendanceId ? { ...e, type: 'CANCELLED' as const } : e))
+          : [event, ...list].slice(0, FEED_SIZE),
+      );
+      return;
+    }
     this.feed.update((list) => [event, ...list].slice(0, FEED_SIZE));
     if (event.type === 'ACCEPTED' && event.workSiteId) {
       const times = this.hits.get(event.workSiteId) ?? [];

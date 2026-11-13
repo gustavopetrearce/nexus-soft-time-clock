@@ -1,8 +1,11 @@
 package com.condor.nexussoft.timeclock.attendance.infrastructure.web;
 
+import com.condor.nexussoft.timeclock.attendance.domain.port.in.CancelAttendanceUseCase;
+import com.condor.nexussoft.timeclock.attendance.domain.port.in.CancelAttendanceUseCase.CancelledAttendance;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.RegisterAttendanceUseCase;
 import com.condor.nexussoft.timeclock.attendance.infrastructure.web.dto.AttendanceResponse;
 import com.condor.nexussoft.timeclock.attendance.infrastructure.web.dto.AttendanceSummaryResponse;
+import com.condor.nexussoft.timeclock.attendance.infrastructure.web.dto.CancelAttendanceRequest;
 import com.condor.nexussoft.timeclock.attendance.infrastructure.web.dto.RegisterAttendanceRequest;
 import com.condor.nexussoft.timeclock.platform.tenant.TenantContext;
 import jakarta.validation.Valid;
@@ -26,9 +29,11 @@ import java.util.UUID;
 public class AttendanceController {
 
     private final RegisterAttendanceUseCase attendance;
+    private final CancelAttendanceUseCase cancellation;
 
-    public AttendanceController(RegisterAttendanceUseCase attendance) {
+    public AttendanceController(RegisterAttendanceUseCase attendance, CancelAttendanceUseCase cancellation) {
         this.attendance = attendance;
+        this.cancellation = cancellation;
     }
 
     @PostMapping
@@ -54,6 +59,17 @@ public class AttendanceController {
         return attendance.history(TenantContext.require(), currentUserId(), fromInstant, toInstant, limit).stream()
                 .map(AttendanceSummaryResponse::from)
                 .toList();
+    }
+
+    /**
+     * Cancela una marca ya registrada (V31): deja de contar como asistencia y cierra sus incidencias
+     * abiertas. Definitiva. 404 si no existe en el tenant, 409 si ya no es cancelable.
+     */
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAuthority('attendance:cancel')")
+    public CancelledAttendance cancel(@PathVariable UUID id, @Valid @RequestBody CancelAttendanceRequest request) {
+        return cancellation.cancel(TenantContext.require(), id, request.serverTime(), request.reason(),
+                currentUserId());
     }
 
     /** Convierte una fecha {@code yyyy-MM-dd} al instante de inicio de día en UTC; nulo/vacío = sin cota. */

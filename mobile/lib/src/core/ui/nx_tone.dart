@@ -27,11 +27,12 @@ extension NxToneColors on NxTone {
 }
 
 /// Tono de `attendance_records.status` (HIFI/08): ACCEPTED → success, PENDING_REVIEW → warning,
-/// REJECTED → error. Lo que aún está en la cola local («Pendiente de enviar») va en info.
+/// REJECTED → error, CANCELLED → neutral. Lo que aún está en la cola local («Pendiente de enviar») va en info.
 NxTone attendanceStatusTone(String status) => switch (status) {
       'ACCEPTED' => NxTone.success,
       'REJECTED' => NxTone.error,
       'PENDING_REVIEW' => NxTone.warning,
+      'CANCELLED' => NxTone.neutral,
       _ => NxTone.info,
     };
 

@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.incidents.infrastructure;
 
+import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceCancelled;
 import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRegistered;
 import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRejected;
 import com.condor.nexussoft.timeclock.incidents.domain.port.in.IncidentManagementUseCase;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
  * cada rechazo de asistencia abre una incidencia REGISTRO_RECHAZADO, cada ENTRADA aceptada con
  * retardo (RN-16) abre una incidencia RETARDO, y cada marca aceptada fuera de la ventana del turno
  * (RN-15) abre una FUERA_DE_VENTANA. Una ENTRADA aceptada sin turno vigente abre una SIN_TURNO.
+ * Cancelar una marca (V31) resuelve las incidencias que siguieran abiertas por ella.
  */
 @Component
 public class IncidentEventListener {
@@ -45,5 +47,11 @@ public class IncidentEventListener {
         if (ENTRADA.equals(event.eventKind()) && event.noSchedule()) {
             incidents.openForNoSchedule(event.tenantId(), event.userId(), event.attendanceId());
         }
+    }
+
+    @EventListener
+    public void onAttendanceCancelled(AttendanceCancelled event) {
+        incidents.closeForCancelledAttendance(event.tenantId(), event.attendanceId(), event.reason(),
+                event.cancelledBy());
     }
 }

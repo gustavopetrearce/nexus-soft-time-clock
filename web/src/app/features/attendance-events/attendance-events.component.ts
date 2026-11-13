@@ -35,7 +35,7 @@ type Period = 'week' | 'fortnight' | 'month' | 'range';
 type FilterKey = 'date' | 'user' | 'event' | 'site' | 'status';
 
 const PERIODS: readonly Period[] = ['week', 'fortnight', 'month', 'range'];
-const STATUS_CODES = ['ACCEPTED', 'REJECTED', 'PENDING_REVIEW'] as const;
+const STATUS_CODES = ['ACCEPTED', 'REJECTED', 'PENDING_REVIEW', 'CANCELLED'] as const;
 const DATE_TIME = 'dd/MM/yyyy HH:mm:ss';
 
 /**
@@ -322,10 +322,16 @@ export class AttendanceEventsComponent {
 
   /** Abre el detalle de la marcación, con su evidencia fotográfica si la tiene (P41, HU-13). */
   protected openDetail(event: AttendanceEvent): void {
-    this.dialog.open(AttendanceDetailDialogComponent, {
-      data: event,
-      ariaLabel: this.transloco.translate('attendanceEvents.detail.title'),
-    });
+    this.dialog
+      .open<AttendanceDetailDialogComponent, AttendanceEvent, AttendanceEvent>(AttendanceDetailDialogComponent, {
+        data: event,
+        ariaLabel: this.transloco.translate('attendanceEvents.detail.title'),
+      })
+      .afterClosed()
+      .subscribe((updated) => {
+        // Se canceló desde el detalle: se refleja en la fila sin recargar el periodo.
+        if (updated) this.events.update((rows) => rows.map((r) => (r.recordId === updated.recordId ? updated : r)));
+      });
   }
 
   // La evidencia no se incluye en la exportación: su URL caduca a los pocos minutos y dentro de
@@ -365,8 +371,9 @@ export class AttendanceEventsComponent {
     return code === 'ENTRADA' || code === 'SALIDA';
   }
 
-  /** Motivo de rechazo legible para el tooltip del estado (vacío si no aplica). */
+  /** Causa de cancelación o motivo de rechazo legible para el tooltip del estado (vacío si no aplica). */
   protected rejectionTooltip(e: AttendanceEvent): string {
+    if (e.cancelReason) return e.cancelReason;
     if (!e.rejectionReason) return '';
     return rejectionLabel(e.rejectionReason);
   }
