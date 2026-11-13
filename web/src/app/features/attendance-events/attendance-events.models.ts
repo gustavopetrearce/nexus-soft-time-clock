@@ -22,6 +22,8 @@ export interface AttendanceEvent {
    * mismo que un centro borrado: aquel también deja `workSite` vacío pero sí pasó por su geocerca.
    */
   siteless: boolean;
+  /** Etiqueta de la categoría del descanso (almuerzo, comida…); nula fuera de descansos o sin categoría. */
+  breakType?: string | null;
 }
 
 /** Tipos de evento en el orden en que se ofrecen en los filtros. */
@@ -30,6 +32,12 @@ export const EVENT_CODES = ['ENTRADA', 'SALIDA', 'INICIO_DESCANSO', 'FIN_DESCANS
 /** Etiqueta del tipo de evento en el idioma activo (`attendance.event.<CODE>`); si no existe, el código. */
 export function eventLabel(code: string): string {
   return translateOr(`attendance.event.${code}`, code);
+}
+
+/** Tipo de evento con la categoría del descanso si la tiene: «Inicio de descanso · Almuerzo». */
+export function eventWithBreakLabel(code: string, breakType?: string | null): string {
+  const label = eventLabel(code);
+  return breakType ? `${label} · ${breakType}` : label;
 }
 
 /** Estado del registro en el idioma activo (`attendance.status.<CODE>`). */

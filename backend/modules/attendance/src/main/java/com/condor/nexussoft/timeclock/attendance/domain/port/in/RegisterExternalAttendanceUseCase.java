@@ -9,8 +9,14 @@ import java.util.UUID;
  */
 public interface RegisterExternalAttendanceUseCase {
 
+    /** {@code breakTypeCode}: código de la categoría de descanso (V30), opcional aunque la empresa las use. */
     record ExternalAttendanceCommand(UUID operationUuid, String employeeCode, UUID workSiteId,
-                                     String eventType, Instant eventTime) {}
+                                     String eventType, Instant eventTime, String breakTypeCode) {
+        public ExternalAttendanceCommand(UUID operationUuid, String employeeCode, UUID workSiteId,
+                                         String eventType, Instant eventTime) {
+            this(operationUuid, employeeCode, workSiteId, eventType, eventTime, null);
+        }
+    }
 
     AttendanceResult register(UUID tenantId, UUID apiClientId, ExternalAttendanceCommand command);
 }

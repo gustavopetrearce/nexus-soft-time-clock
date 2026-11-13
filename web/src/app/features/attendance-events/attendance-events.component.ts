@@ -21,7 +21,14 @@ import { PageHeaderComponent } from '../../core/ui/page-header.component';
 import { ScrollDirective } from '../../core/ui/scroll.directive';
 import { StatusChipComponent } from '../../core/ui/status-chip.component';
 import { AttendanceDetailDialogComponent } from './attendance-detail-dialog.component';
-import { AttendanceEvent, EVENT_CODES, eventLabel, recordStatusLabel, rejectionLabel } from './attendance-events.models';
+import {
+  AttendanceEvent,
+  EVENT_CODES,
+  eventLabel,
+  eventWithBreakLabel,
+  recordStatusLabel,
+  rejectionLabel,
+} from './attendance-events.models';
 import { AttendanceEventsService } from './attendance-events.service';
 
 type Period = 'week' | 'fortnight' | 'month' | 'range';
@@ -164,7 +171,7 @@ const DATE_TIME = 'dd/MM/yyyy HH:mm:ss';
                         {{ e.employeeName || e.userId }}
                         @if (e.employeeCode) { <br /><span class="nx-text-small nx-sec">{{ e.employeeCode }}</span> }
                       </td>
-                      <td><span class="nx-chip nx-chip--{{ isInOut(e.eventType) ? 'info' : 'neutral' }}">{{ eventLabel(e.eventType) }}</span></td>
+                      <td><span class="nx-chip nx-chip--{{ isInOut(e.eventType) ? 'info' : 'neutral' }}">{{ eventWithBreakLabel(e.eventType, e.breakType) }}</span></td>
                       <td>
                         @if (e.siteless) {
                           <span class="nx-chip nx-chip--neutral" [matTooltip]="'attendanceEvents.sitelessTooltip' | transloco">{{ 'attendanceEvents.siteless' | transloco }}</span>
@@ -335,7 +342,7 @@ export class AttendanceEventsComponent {
         ].map((k) => this.transloco.translate(k));
         const rows = rowsToExport.map((e) => [
           this.fmt(e.serverTime), e.employeeName ?? e.userId, e.employeeCode ?? '',
-          this.eventLabel(e.eventType), e.siteless ? this.transloco.translate('attendanceEvents.siteless') : (e.workSite ?? ''),
+          eventWithBreakLabel(e.eventType, e.breakType), e.siteless ? this.transloco.translate('attendanceEvents.siteless') : (e.workSite ?? ''),
           this.statusLabel(e.status), this.rejectionTooltip(e),
         ]);
         const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
@@ -350,6 +357,7 @@ export class AttendanceEventsComponent {
 
   // ---- helpers ----
   protected eventLabel(code: string): string { return eventLabel(code); }
+  protected eventWithBreakLabel(code: string, breakType?: string | null): string { return eventWithBreakLabel(code, breakType); }
   protected statusLabel(code: string): string { return recordStatusLabel(code); }
 
   /** Entrada y salida van en tono informativo; descansos y cambio de sitio, en neutral. */

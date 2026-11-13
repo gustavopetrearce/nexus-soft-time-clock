@@ -55,10 +55,13 @@ public class AttendanceReportService {
     public List<AttendanceRecordRow> records(UUID tenantId, Instant from, Instant to, String status) {
         StringBuilder sql = new StringBuilder(
                 "SELECT ar.server_time, u.employee_code, u.first_name, u.last_name, "
-                        + "ar.event_type, ar.status, ar.rejection_reason, ws.name AS work_center "
+                        + "ar.event_type, ar.status, ar.rejection_reason, ws.name AS work_center, "
+                        + "bt.label AS break_type "
                         + "FROM attendance_records ar "
                         + "JOIN users u ON u.id = ar.user_id "
                         + "LEFT JOIN work_sites ws ON ws.id = ar.work_site_id "
+                        + "LEFT JOIN attendance_break_types bt "
+                        + "ON bt.id = ar.break_type_id AND bt.tenant_id = ar.tenant_id "
                         + "WHERE ar.tenant_id = ? AND ar.server_time BETWEEN ? AND ?");
         List<Object> args = new ArrayList<>();
         args.add(tenantId);
@@ -81,7 +84,8 @@ public class AttendanceReportService {
                     rs.getString("event_type"),
                     rs.getString("status"),
                     rs.getString("rejection_reason"),
-                    workCenter != null ? workCenter : "—");
+                    workCenter != null ? workCenter : "—",
+                    rs.getString("break_type"));
         }, args.toArray());
     }
 }

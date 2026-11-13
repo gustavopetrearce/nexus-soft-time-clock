@@ -43,7 +43,7 @@ public class AttendancePersistenceAdapter implements AttendanceRepositoryPort {
                 r.deviceTime(), r.timeSkewSeconds(), r.qrNonce(), r.operationUuid(), r.source(),
                 r.biometricVerified(),
                 e == null ? null : e.bucket(), e == null ? null : e.key(), e == null ? null : e.hash(),
-                r.validationsJson()));
+                r.validationsJson(), r.breakTypeId()));
     }
 
     @Override
@@ -51,14 +51,16 @@ public class AttendancePersistenceAdapter implements AttendanceRepositoryPort {
         // La cota por server_time acota la jornada (RN-12) y además permite podar particiones.
         return jpa.findFirstByTenantIdAndUserIdAndStatusAndServerTimeGreaterThanEqualOrderByServerTimeDesc(
                         tenantId, userId, AttendanceStatus.ACCEPTED.name(), since)
-                .map(e -> new LastEvent(AttendanceEventType.valueOf(e.getEventType()), e.getWorkSiteId()));
+                .map(e -> new LastEvent(AttendanceEventType.valueOf(e.getEventType()), e.getWorkSiteId(),
+                        e.getBreakTypeId()));
     }
 
     @Override
     public Optional<LastEvent> findLastAcceptedEventBefore(UUID tenantId, UUID userId, Instant since, Instant before) {
         return jpa.findFirstByTenantIdAndUserIdAndStatusAndServerTimeGreaterThanEqualAndServerTimeLessThanOrderByServerTimeDesc(
                         tenantId, userId, AttendanceStatus.ACCEPTED.name(), since, before)
-                .map(e -> new LastEvent(AttendanceEventType.valueOf(e.getEventType()), e.getWorkSiteId()));
+                .map(e -> new LastEvent(AttendanceEventType.valueOf(e.getEventType()), e.getWorkSiteId(),
+                        e.getBreakTypeId()));
     }
 
     @Override

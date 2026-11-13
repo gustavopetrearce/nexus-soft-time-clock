@@ -15,6 +15,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -47,6 +48,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
     private final WorkSitePolicyPort sitePolicy;
     private final SchedulePolicyPort schedulePolicy;
     private final EventTypeConfigPort eventTypeConfig;
+    private final BreakTypePort breakTypes;
     private final EvidenceStoragePort evidenceStorage;
     private final CompanyPolicyPort companyPolicy;
     private final AttendanceEventPublisherPort events;
@@ -70,7 +72,8 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
                                      GeofenceCheckPort geofenceCheck, FraudCheckPort fraudCheck,
                                      DeviceRecognitionPort deviceRecognition,
                                      WorkSitePolicyPort sitePolicy, SchedulePolicyPort schedulePolicy,
-                                     EventTypeConfigPort eventTypeConfig, EvidenceStoragePort evidenceStorage,
+                                     EventTypeConfigPort eventTypeConfig, BreakTypePort breakTypes,
+                                     EvidenceStoragePort evidenceStorage,
                                      CompanyPolicyPort companyPolicy,
                                      AttendanceEventPublisherPort events,
                                      Clock clock,
@@ -86,6 +89,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         this.sitePolicy = sitePolicy;
         this.schedulePolicy = schedulePolicy;
         this.eventTypeConfig = eventTypeConfig;
+        this.breakTypes = breakTypes;
         this.evidenceStorage = evidenceStorage;
         this.companyPolicy = companyPolicy;
         this.events = events;
@@ -146,6 +150,16 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         if (reason == null && EventTypeCatalog.isConfigurable(eventType)
                 && !EventTypeCatalog.isEnabled(eventType, eventTypeConfig.findByTenant(tenantId))) {
             reason = RejectionReason.EVENT_TYPE_DISABLED;
+        }
+
+        // 1.55) Categoría del descanso (V30). INICIO_DESCANSO la elige —obligatoria si la empresa
+        //        tiene categorías habilitadas—; FIN_DESCANSO la hereda del descanso abierto (3.5).
+        UUID breakTypeId = null;
+        if (reason == null && eventType == AttendanceEventType.INICIO_DESCANSO) {
+            BreakTypePolicy.Resolution breakType = BreakTypePolicy.resolve(eventType, cmd.breakTypeId(),
+                    breakTypes.findByTenant(tenantId), Optional.empty(), true);
+            breakTypeId = breakType.breakTypeId();
+            reason = breakType.rejection();
         }
 
         // 1.6) El camino sin centro es opt-in por empresa. Se comprueba aquí, y no solo al emitir el
@@ -233,10 +247,12 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
             // cierra las jornadas huérfanas. Ventana deslizante —no día natural— para no partir en
             // dos un turno nocturno.
             Instant since = now.minus(company.openShiftMaxHours(), ChronoUnit.HOURS);
-            reason = AttendanceSequenceValidator
-                    .validate(attendance.findLastAcceptedEvent(tenantId, userId, since),
-                            eventType, cmd.workSiteId())
-                    .orElse(null);
+            Optional<AttendanceSequenceValidator.LastEvent> last =
+                    attendance.findLastAcceptedEvent(tenantId, userId, since);
+            reason = AttendanceSequenceValidator.validate(last, eventType, cmd.workSiteId()).orElse(null);
+            if (eventType == AttendanceEventType.FIN_DESCANSO) {
+                breakTypeId = BreakTypePolicy.resolve(eventType, null, List.of(), last, false).breakTypeId();
+            }
         }
 
         // 3.6) Evidencia fotográfica (HU-13). La clave la emitió el servidor al prefirmar la subida;
@@ -282,7 +298,8 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         // La evidencia verificada se persiste aunque el registro se rechace por otro motivo: es la
         // prueba de un intento real (útil para incidencias) y hace exacta la regla de huérfanos.
         AttendanceRecord record = buildRecord(recordId, tenantId, userId, cmd, now, status, reason,
-                qrOk ? qr.nonce() : null, distance, flags, lateMinutes, evidence, source, schedule.shiftId());
+                qrOk ? qr.nonce() : null, distance, flags, lateMinutes, evidence, source, schedule.shiftId(),
+                breakTypeId);
         attendance.save(record);
 
         AttendanceResult result = new AttendanceResult(recordId, status.name(),
@@ -305,7 +322,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
     private AttendanceRecord buildRecord(UUID recordId, UUID tenantId, UUID userId, RegisterAttendanceCommand cmd,
                                          Instant now, AttendanceStatus status, RejectionReason reason,
                                          String nonce, Double distance, List<String> flags, int lateMinutes,
-                                         Evidence evidence, String source, UUID shiftId) {
+                                         Evidence evidence, String source, UUID shiftId, UUID breakTypeId) {
         Instant deviceTime = cmd.deviceTimeEpochMs() == null ? null : Instant.ofEpochMilli(cmd.deviceTimeEpochMs());
         Integer skew = deviceTime == null ? null : (int) (now.getEpochSecond() - deviceTime.getEpochSecond());
         GpsFix gps = new GpsFix(cmd.latitude(), cmd.longitude(), cmd.accuracyM());
@@ -314,7 +331,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
                 AttendanceEventType.valueOf(cmd.eventType()), status, reason, gps, distance,
                 cmd.deviceId(), deviceTime, skew, nonce, cmd.operationUuid(),
                 source, cmd.biometricVerified(), evidence,
-                buildValidationsJson(flags, reason, distance, lateMinutes));
+                buildValidationsJson(flags, reason, distance, lateMinutes), breakTypeId);
     }
 
     private void publishEvent(AttendanceRecord record, RejectionReason reason, int lateMinutes,

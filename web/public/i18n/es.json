@@ -554,6 +554,19 @@
     "updated": "Tipos de evento actualizados.",
     "type": "Tipo"
   },
+  "breakTypes": {
+    "title": "Tipos de descanso",
+    "subtitle": "Categorías que el colaborador elige al iniciar un descanso (almuerzo, comida, café…). Si defines alguna, elegir una es obligatorio en la app.",
+    "add": "Agregar tipo de descanso",
+    "empty": "Sin tipos de descanso",
+    "emptyHint": "Los descansos se registran sin categoría. Agrega tipos para distinguir, por ejemplo, almuerzo y comida.",
+    "breaksDisabled": "Habilita «Inicio de descanso» para configurar tipos de descanso.",
+    "code": "Código",
+    "maxMinutes": "Máx. minutos",
+    "paid": "Pagado",
+    "invalid": "Revisa los tipos de descanso: la etiqueta es obligatoria y el código debe ser único, en mayúsculas, números o guion bajo.",
+    "deactivatedInUse": "Cambios guardados. Los tipos de descanso con registros se desactivaron en lugar de eliminarse."
+  },
   "scheduling": {
     "subtitle": "Define y administra los horarios y turnos utilizados por los colaboradores",
     "new": "Nuevo horario",
@@ -695,8 +708,8 @@
     "event": {
       "ENTRADA": "Hora entrada",
       "SALIDA": "Hora salida",
-      "INICIO_DESCANSO": "Salida a comida",
-      "FIN_DESCANSO": "Regreso de comida",
+      "INICIO_DESCANSO": "Inicio de descanso",
+      "FIN_DESCANSO": "Fin de descanso",
       "CAMBIO_SITIO": "Cambio de sitio"
     },
     "status": {
@@ -719,7 +732,8 @@
       "PHOTO_REQUIRED": "Falta evidencia fotográfica",
       "BIOMETRIC_REQUIRED": "Falta verificación biométrica",
       "EVENT_TYPE_DISABLED": "Tipo de evento deshabilitado",
-      "SITELESS_NOT_ALLOWED": "La empresa no permite registrar sin centro de trabajo"
+      "SITELESS_NOT_ALLOWED": "La empresa no permite registrar sin centro de trabajo",
+      "INVALID_BREAK_TYPE": "Tipo de descanso no válido"
     }
   },
   "attendanceEvents": {

@@ -34,10 +34,14 @@ final class JourneySegmentsSql {
                        ar.shift_id,
                        ar.event_type,
                        ar.server_time,
+                       -- Descanso de una categoría pagada (V30): su tramo cuenta como trabajado.
+                       COALESCE(bt.paid, false) AS paid_break,
                        count(*) FILTER (WHERE ar.event_type = 'ENTRADA')
                            OVER (PARTITION BY ar.user_id ORDER BY ar.server_time
                                  ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS journey_no
                 FROM attendance_records ar
+                LEFT JOIN attendance_break_types bt
+                       ON bt.id = ar.break_type_id AND bt.tenant_id = ar.tenant_id
                 WHERE ar.tenant_id = :tenant AND ar.status = 'ACCEPTED'
                   AND ar.server_time >= :fromTs AND ar.server_time < :toTsExcl
             ),
@@ -68,6 +72,7 @@ final class JourneySegmentsSql {
                        p.journey_no,
                        p.work_site_id,
                        p.event_type,
+                       p.paid_break,
                        p.server_time AS started_at,
                        lead(p.server_time) OVER (PARTITION BY p.user_id, p.journey_no
                                                  ORDER BY p.server_time) AS ended_at
@@ -76,7 +81,8 @@ final class JourneySegmentsSql {
             ),
             -- Solo cuenta el tramo que arranca con el colaborador trabajando —el mismo criterio que
             -- AttendanceSequenceValidator.isWorking—: el que abre INICIO_DESCANSO es el descanso, y
-            -- tras la SALIDA no hay nada. Una jornada sin SALIDA no suma horas.
+            -- tras la SALIDA no hay nada. Una jornada sin SALIDA no suma horas. Excepción: el
+            -- descanso de una categoría pagada (V30) cuenta como trabajado.
             segment_work AS (
                 SELECT s.user_id,
                        s.journey_no,
@@ -85,7 +91,8 @@ final class JourneySegmentsSql {
                        (j.entry_at)::date AS d,
                        j.shift_id,
                        CASE WHEN s.ended_at IS NOT NULL
-                                 AND s.event_type IN ('ENTRADA', 'FIN_DESCANSO', 'CAMBIO_SITIO')
+                                 AND (s.event_type IN ('ENTRADA', 'FIN_DESCANSO', 'CAMBIO_SITIO')
+                                      OR (s.event_type = 'INICIO_DESCANSO' AND s.paid_break))
                                  AND j.exit_at IS NOT NULL AND j.exit_at > j.entry_at
                             THEN EXTRACT(EPOCH FROM (s.ended_at - s.started_at)) / 60.0
                             ELSE 0 END AS worked_min

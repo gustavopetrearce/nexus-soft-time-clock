@@ -3,7 +3,10 @@ package com.condor.nexussoft.timeclock.attendance.application;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceEventType;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceRecord;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceSequenceValidator;
+import com.condor.nexussoft.timeclock.attendance.domain.AttendanceSequenceValidator.LastEvent;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceStatus;
+import com.condor.nexussoft.timeclock.attendance.domain.BreakType;
+import com.condor.nexussoft.timeclock.attendance.domain.BreakTypePolicy;
 import com.condor.nexussoft.timeclock.attendance.domain.EventTypeCatalog;
 import com.condor.nexussoft.timeclock.attendance.domain.RejectionReason;
 import com.condor.nexussoft.timeclock.attendance.domain.event.AttendanceRegistered;
@@ -23,6 +26,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -45,12 +49,16 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
     /** Margen para relojes desfasados: un minuto de más en el emisor no debe perder la marca. */
     private static final Duration FUTURE_TOLERANCE = Duration.ofMinutes(5);
 
+    /** Centinela para un código de descanso que no existe: ningún id real coincide con él. */
+    private static final UUID UNKNOWN_BREAK_TYPE = new UUID(0L, 0L);
+
     private final ExternalIntegrationPort integration;
     private final AttendanceRepositoryPort attendance;
     private final IdempotencyStorePort idempotency;
     private final WorkSitePolicyPort sitePolicy;
     private final SchedulePolicyPort schedulePolicy;
     private final EventTypeConfigPort eventTypeConfig;
+    private final BreakTypePort breakTypes;
     private final CompanyPolicyPort companyPolicy;
     private final AttendanceEventPublisherPort events;
     private final Clock clock;
@@ -59,7 +67,7 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
     public RegisterExternalAttendanceService(ExternalIntegrationPort integration, AttendanceRepositoryPort attendance,
                                              IdempotencyStorePort idempotency, WorkSitePolicyPort sitePolicy,
                                              SchedulePolicyPort schedulePolicy, EventTypeConfigPort eventTypeConfig,
-                                             CompanyPolicyPort companyPolicy, AttendanceEventPublisherPort events,
+                                             BreakTypePort breakTypes, CompanyPolicyPort companyPolicy, AttendanceEventPublisherPort events,
                                              Clock clock,
                                              @Value("${attendance.offline.max-age-hours:72}") long maxAgeHours) {
         this.integration = integration;
@@ -68,6 +76,7 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
         this.sitePolicy = sitePolicy;
         this.schedulePolicy = schedulePolicy;
         this.eventTypeConfig = eventTypeConfig;
+        this.breakTypes = breakTypes;
         this.companyPolicy = companyPolicy;
         this.events = events;
         this.clock = clock;
@@ -114,6 +123,15 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
             reason = RejectionReason.EVENT_TYPE_DISABLED;
         }
 
+        // Categoría del descanso por código (V30). Opcional aquí: el sistema emisor puede no conocer
+        // las categorías de la empresa; si manda una, debe existir y estar habilitada.
+        UUID breakTypeId = null;
+        if (reason == null && eventType == AttendanceEventType.INICIO_DESCANSO) {
+            BreakTypePolicy.Resolution breakType = resolveBreakTypeCode(tenantId, cmd.breakTypeCode());
+            breakTypeId = breakType.breakTypeId();
+            reason = breakType.rejection();
+        }
+
         // Mismo criterio que el registro normal: la ventana solo rechaza la ENTRADA (RN-15), y sin
         // turno vigente se acepta con NO_SCHEDULE.
         SchedulePolicyPort.ScheduleDecision schedule =
@@ -131,7 +149,12 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
         }
 
         if (reason == null) {
-            reason = validateSequence(tenantId, userId, cmd.workSiteId(), eventType, eventTime);
+            SequenceCheck sequence = validateSequence(tenantId, userId, cmd.workSiteId(), eventType, eventTime);
+            reason = sequence.rejection();
+            if (eventType == AttendanceEventType.FIN_DESCANSO) {
+                breakTypeId = BreakTypePolicy.resolve(eventType, null, List.of(), sequence.last(), false)
+                        .breakTypeId();
+            }
         }
 
         int lateMinutes = 0;
@@ -145,7 +168,7 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
         AttendanceRecord record = new AttendanceRecord(recordId, tenantId, eventTime, userId, cmd.workSiteId(),
                 schedule.shiftId(), eventType, status, reason, null, null, null, null, null, null,
                 cmd.operationUuid(), SOURCE, false, null,
-                validationsJson(flags, reason, lateMinutes, apiClientId));
+                validationsJson(flags, reason, lateMinutes, apiClientId), breakTypeId);
         attendance.save(record);
 
         AttendanceResult result = new AttendanceResult(recordId, status.name(),
@@ -188,16 +211,35 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
      * ya aceptada se rechaza en vez de intercalarse, porque podría invalidar lo que ya se dio por
      * bueno: de ahí que el emisor deba enviar en orden cronológico por colaborador.
      */
-    private RejectionReason validateSequence(UUID tenantId, UUID userId, UUID workSiteId,
-                                             AttendanceEventType eventType, Instant eventTime) {
+    private SequenceCheck validateSequence(UUID tenantId, UUID userId, UUID workSiteId,
+                                           AttendanceEventType eventType, Instant eventTime) {
         if (attendance.existsAcceptedEventSince(tenantId, userId, eventTime)) {
-            return RejectionReason.INVALID_SEQUENCE;
+            return new SequenceCheck(RejectionReason.INVALID_SEQUENCE, Optional.empty());
         }
         Instant since = eventTime.minus(companyPolicy.find(tenantId).openShiftMaxHours(), ChronoUnit.HOURS);
-        return AttendanceSequenceValidator
-                .validate(attendance.findLastAcceptedEventBefore(tenantId, userId, since, eventTime),
-                        eventType, workSiteId)
-                .orElse(null);
+        Optional<LastEvent> last = attendance.findLastAcceptedEventBefore(tenantId, userId, since, eventTime);
+        return new SequenceCheck(
+                AttendanceSequenceValidator.validate(last, eventType, workSiteId).orElse(null), last);
+    }
+
+    /** Resultado de la secuencia y el estado de la jornada en el que se evaluó (FIN_DESCANSO hereda de él). */
+    private record SequenceCheck(RejectionReason rejection, Optional<LastEvent> last) {
+    }
+
+    private BreakTypePolicy.Resolution resolveBreakTypeCode(UUID tenantId, String code) {
+        List<BreakType> tenantTypes = breakTypes.findByTenant(tenantId);
+        if (code == null || code.isBlank()) {
+            return BreakTypePolicy.resolve(AttendanceEventType.INICIO_DESCANSO, null, tenantTypes,
+                    Optional.empty(), false);
+        }
+        // Un código desconocido se traduce a un id que no casa con ninguna categoría → rechazo.
+        UUID requested = tenantTypes.stream()
+                .filter(t -> t.code().equalsIgnoreCase(code.trim()))
+                .map(BreakType::id)
+                .findFirst()
+                .orElse(UNKNOWN_BREAK_TYPE);
+        return BreakTypePolicy.resolve(AttendanceEventType.INICIO_DESCANSO, requested, tenantTypes,
+                Optional.empty(), false);
     }
 
     private String validationsJson(List<String> flags, RejectionReason reason, int lateMinutes, UUID apiClientId) {

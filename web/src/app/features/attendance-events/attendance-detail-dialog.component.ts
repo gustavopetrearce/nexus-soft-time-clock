@@ -8,7 +8,7 @@ import { AppNumberPipe } from '../../core/i18n/app-number.pipe';
 import { AlertComponent } from '../../core/ui/alert.component';
 import { LoadingBarComponent } from '../../core/ui/loading-bar.component';
 import { ScrollDirective } from '../../core/ui/scroll.directive';
-import { AttendanceEvent, eventLabel, recordStatusLabel, rejectionLabel } from './attendance-events.models';
+import { AttendanceEvent, eventWithBreakLabel, recordStatusLabel, rejectionLabel } from './attendance-events.models';
 import { AttendanceEventsService } from './attendance-events.service';
 
 /**
@@ -30,7 +30,7 @@ import { AttendanceEventsService } from './attendance-events.service';
   ],
   template: `
     <div class="nx-capa__enc">
-      <h2 class="nx-text-heading-3" id="detalle-registro">{{ eventLabel(data.eventType) }}</h2>
+      <h2 class="nx-text-heading-3" id="detalle-registro">{{ eventWithBreakLabel(data.eventType, data.breakType) }}</h2>
     </div>
 
     <div class="nx-capa__cuerpo nx-scroll" nxScroll>
@@ -139,8 +139,8 @@ export class AttendanceDetailDialogComponent {
     return source === 'EXTERNAL' ? 'attendanceEvents.detail.external' : 'attendanceEvents.detail.online';
   }
 
-  protected eventLabel(code: string): string {
-    return eventLabel(code);
+  protected eventWithBreakLabel(code: string, breakType?: string | null): string {
+    return eventWithBreakLabel(code, breakType);
   }
 
   protected statusLabel(code: string): string {

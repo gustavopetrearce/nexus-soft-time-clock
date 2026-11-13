@@ -54,7 +54,9 @@ public class AttendanceEventsController {
              * de geocerca. Se distingue explícitamente de un centro borrado, que también dejaría
              * {@code workSite} nulo pero sí pasó por su geocerca en su momento.
              */
-            boolean siteless) {}
+            boolean siteless,
+            /** Etiqueta de la categoría del descanso (V30); nula fuera de descansos o sin categoría. */
+            String breakType) {}
 
     @GetMapping("/attendance-events")
     public List<AttendanceEventDto> events(
@@ -81,10 +83,13 @@ public class AttendanceEventsController {
                        ar.gps_accuracy_m,
                        ar.distance_to_site_m,
                        ar.source,
-                       (ar.work_site_id is null) as siteless
+                       (ar.work_site_id is null) as siteless,
+                       bt.label as break_type
                 from attendance_records ar
                 join users u on u.id = ar.user_id
                 left join work_sites ws on ws.id = ar.work_site_id
+                left join attendance_break_types bt
+                       on bt.id = ar.break_type_id and bt.tenant_id = ar.tenant_id
                 where ar.tenant_id = ?
                   and ar.server_time >= ?
                   and ar.server_time < ?
@@ -110,7 +115,8 @@ public class AttendanceEventsController {
                             accuracyM,
                             distanceM,
                             rs.getString("source"),
-                            rs.getBoolean("siteless"));
+                            rs.getBoolean("siteless"),
+                            rs.getString("break_type"));
                 },
                 TenantContext.require(), fromTs, toTs);
     }

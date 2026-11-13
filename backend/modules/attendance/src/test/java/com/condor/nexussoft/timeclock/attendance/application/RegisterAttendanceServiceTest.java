@@ -2,6 +2,7 @@ package com.condor.nexussoft.timeclock.attendance.application;
 
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceEventType;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceSequenceValidator.LastEvent;
+import com.condor.nexussoft.timeclock.attendance.domain.BreakType;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.AttendanceResult;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.RegisterAttendanceCommand;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.*;
@@ -34,6 +35,7 @@ class RegisterAttendanceServiceTest {
     @Mock WorkSitePolicyPort sitePolicy;
     @Mock SchedulePolicyPort schedulePolicy;
     @Mock EventTypeConfigPort eventTypeConfig;
+    @Mock BreakTypePort breakTypes;
     @Mock EvidenceStoragePort evidenceStorage;
     @Mock CompanyPolicyPort companyPolicy;
     @Mock AttendanceEventPublisherPort events;
@@ -54,7 +56,7 @@ class RegisterAttendanceServiceTest {
     void setUp() {
         service = new RegisterAttendanceService(attendance, idempotency, qrValidation,
                 geofenceCheck, fraudCheck, deviceRecognition, sitePolicy, schedulePolicy,
-                eventTypeConfig, evidenceStorage, companyPolicy, events, clock, OFFLINE_MAX_AGE_HOURS,
+                eventTypeConfig, breakTypes, evidenceStorage, companyPolicy, events, clock, OFFLINE_MAX_AGE_HOURS,
                 DEFAULT_GPS_ACCURACY_MAX_M);
         lenient().when(companyPolicy.find(tenantId)).thenReturn(
                 new CompanyPolicyPort.CompanyPolicy(null, false, false, OPEN_SHIFT_HOURS, false));
@@ -401,6 +403,87 @@ class RegisterAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("REJECTED");
         assertThat(result.rejectionReason()).isEqualTo("INVALID_SEQUENCE");
+    }
+
+    // ---- Categorías de descanso (V30) ----
+
+    final UUID almuerzo = UUID.randomUUID();
+    final UUID cafe = UUID.randomUUID();
+
+    private void breakTypesStub() {
+        when(breakTypes.findByTenant(tenantId)).thenReturn(List.of(
+                new BreakType(almuerzo, tenantId, "ALMUERZO", "Almuerzo", true, false, 60, 0),
+                new BreakType(cafe, tenantId, "CAFE", "Café", false, true, 15, 1)));
+    }
+
+    private RegisterAttendanceCommand breakCmd(String eventType, UUID breakTypeId) {
+        return new RegisterAttendanceCommand(UUID.randomUUID(), siteId, "qr", 19.4326, -99.1332, 10.0,
+                eventType, "dev-1", null, "ONLINE", false, false, false, false, true, false,
+                null, null, null, "ANDROID", "Pixel 7", "14", breakTypeId);
+    }
+
+    @Test
+    void inicioDescanso_conCategoriaHabilitada_seAceptaYLaGuarda() {
+        validationsUpToSequenceStubs();
+        allEventTypesEnabledStub();
+        breakTypesStub();
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
+
+        AttendanceResult result = service.register(tenantId, userId, breakCmd("INICIO_DESCANSO", almuerzo));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(savedRecord().breakTypeId()).isEqualTo(almuerzo);
+    }
+
+    @Test
+    void inicioDescanso_sinCategoria_cuandoLaEmpresaLasUsa_esRechazado() {
+        validationsUpToSequenceStubs();
+        allEventTypesEnabledStub();
+        breakTypesStub();
+
+        AttendanceResult result = service.register(tenantId, userId, breakCmd("INICIO_DESCANSO", null));
+
+        assertThat(result.rejectionReason()).isEqualTo("INVALID_BREAK_TYPE");
+    }
+
+    @Test
+    void inicioDescanso_conCategoriaDeshabilitadaODesconocida_esRechazado() {
+        validationsUpToSequenceStubs();
+        allEventTypesEnabledStub();
+        breakTypesStub();
+
+        assertThat(service.register(tenantId, userId, breakCmd("INICIO_DESCANSO", cafe)).rejectionReason())
+                .isEqualTo("INVALID_BREAK_TYPE");
+        assertThat(service.register(tenantId, userId, breakCmd("INICIO_DESCANSO", UUID.randomUUID()))
+                .rejectionReason()).isEqualTo("INVALID_BREAK_TYPE");
+    }
+
+    @Test
+    void inicioDescanso_sinCategoriasDefinidas_seAceptaGenerico() {
+        validationsUpToSequenceStubs();
+        allEventTypesEnabledStub();
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
+
+        AttendanceResult result = service.register(tenantId, userId, breakCmd("INICIO_DESCANSO", null));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(savedRecord().breakTypeId()).isNull();
+    }
+
+    @Test
+    void finDescanso_heredaLaCategoriaDelDescansoAbierto_eIgnoraLaDelCliente() {
+        validationsUpToSequenceStubs();
+        allEventTypesEnabledStub();
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.INICIO_DESCANSO, siteId, almuerzo)));
+
+        AttendanceResult result = service.register(tenantId, userId, breakCmd("FIN_DESCANSO", cafe));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(savedRecord().breakTypeId()).isEqualTo(almuerzo);
+        verifyNoInteractions(breakTypes);
     }
 
     /** Como validationsUpToSequenceStubs pero permite fijar la política del centro. */

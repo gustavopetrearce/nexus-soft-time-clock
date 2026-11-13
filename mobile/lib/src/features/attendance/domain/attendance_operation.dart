@@ -24,6 +24,7 @@ class AttendanceOperation {
     this.evidenceBucket,
     this.evidenceKey,
     this.evidenceHash,
+    this.breakTypeId,
   });
 
   final String operationUuid;
@@ -54,6 +55,9 @@ class AttendanceOperation {
   final String? evidenceKey;
   final String? evidenceHash;
 
+  /// Categoría elegida al iniciar un descanso (almuerzo, comida…); el fin la hereda en el servidor.
+  final String? breakTypeId;
+
   Map<String, dynamic> toJson() => {
         'operationUuid': operationUuid,
         if (workSiteId != null) 'workSiteId': workSiteId,
@@ -77,5 +81,6 @@ class AttendanceOperation {
         if (evidenceBucket != null) 'evidenceBucket': evidenceBucket,
         if (evidenceKey != null) 'evidenceKey': evidenceKey,
         if (evidenceHash != null) 'evidenceHash': evidenceHash,
+        if (breakTypeId != null) 'breakTypeId': breakTypeId,
       };
 }

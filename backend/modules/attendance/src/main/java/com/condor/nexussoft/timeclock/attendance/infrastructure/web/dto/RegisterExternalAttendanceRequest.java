@@ -4,6 +4,7 @@ import com.condor.nexussoft.timeclock.attendance.domain.port.in.RegisterExternal
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -14,9 +15,12 @@ public record RegisterExternalAttendanceRequest(
         @NotBlank String employeeCode,
         @NotNull UUID workSiteId,
         @NotNull @Pattern(regexp = "ENTRADA|SALIDA|INICIO_DESCANSO|FIN_DESCANSO|CAMBIO_SITIO") String eventType,
-        @NotNull OffsetDateTime eventTime) {
+        @NotNull OffsetDateTime eventTime,
+        // Código de la categoría de descanso (V30), p. ej. "ALMUERZO"; opcional.
+        @Size(max = 30) String breakTypeCode) {
 
     public ExternalAttendanceCommand toCommand() {
-        return new ExternalAttendanceCommand(operationUuid, employeeCode, workSiteId, eventType, eventTime.toInstant());
+        return new ExternalAttendanceCommand(operationUuid, employeeCode, workSiteId, eventType, eventTime.toInstant(),
+                breakTypeCode);
     }
 }

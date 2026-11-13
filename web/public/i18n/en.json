@@ -554,6 +554,19 @@
     "updated": "Event types updated.",
     "type": "Type"
   },
+  "breakTypes": {
+    "title": "Break types",
+    "subtitle": "Categories staff choose when starting a break (lunch, meal, coffee…). Once you define any, choosing one is required in the app.",
+    "add": "Add break type",
+    "empty": "No break types",
+    "emptyHint": "Breaks are recorded without a category. Add types to tell apart, for example, lunch and meal breaks.",
+    "breaksDisabled": "Enable \"Break start\" to configure break types.",
+    "code": "Code",
+    "maxMinutes": "Max. minutes",
+    "paid": "Paid",
+    "invalid": "Check the break types: the label is required and the code must be unique, using uppercase letters, digits or underscores.",
+    "deactivatedInUse": "Changes saved. Break types that already have records were deactivated instead of deleted."
+  },
   "scheduling": {
     "subtitle": "Define and manage the schedules and shifts used by employees",
     "new": "New schedule",
@@ -695,8 +708,8 @@
     "event": {
       "ENTRADA": "Clock-in",
       "SALIDA": "Clock-out",
-      "INICIO_DESCANSO": "Lunch start",
-      "FIN_DESCANSO": "Lunch end",
+      "INICIO_DESCANSO": "Break start",
+      "FIN_DESCANSO": "Break end",
       "CAMBIO_SITIO": "Site change"
     },
     "status": {
@@ -719,7 +732,8 @@
       "PHOTO_REQUIRED": "Missing photo evidence",
       "BIOMETRIC_REQUIRED": "Missing biometric verification",
       "EVENT_TYPE_DISABLED": "Event type disabled",
-      "SITELESS_NOT_ALLOWED": "The company does not allow clocking in without a work site"
+      "SITELESS_NOT_ALLOWED": "The company does not allow clocking in without a work site",
+      "INVALID_BREAK_TYPE": "Invalid break type"
     }
   },
   "attendanceEvents": {

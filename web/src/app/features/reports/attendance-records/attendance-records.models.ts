@@ -17,6 +17,8 @@ export interface AttendanceRecordReport {
   status: AttendanceRecordStatus;
   rejectionReason?: string | null;
   workCenter: string;
+  /** Etiqueta de la categoría del descanso (almuerzo, comida…); nula fuera de descansos o sin categoría. */
+  breakType?: string | null;
 }
 
 export type RecordSortColumn = keyof Pick<

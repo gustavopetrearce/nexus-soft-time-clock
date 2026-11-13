@@ -75,6 +75,7 @@ extension AttendanceL10n on AppLocalizations {
         'BIOMETRIC_REQUIRED' => rejectMsgBiometricRequired,
         'EVENT_TYPE_DISABLED' => rejectMsgEventTypeDisabled,
         'SITELESS_NOT_ALLOWED' => rejectMsgSitelessNotAllowed,
+        'INVALID_BREAK_TYPE' => rejectMsgInvalidBreakType,
         _ => attendanceNotRegistered(rejectionPhrase(reason)),
       };
 
@@ -104,6 +105,7 @@ extension AttendanceL10n on AppLocalizations {
         'BIOMETRIC_REQUIRED' => rejectBiometricRequired,
         'EVENT_TYPE_DISABLED' => rejectEventTypeDisabled,
         'SITELESS_NOT_ALLOWED' => rejectSitelessNotAllowed,
+        'INVALID_BREAK_TYPE' => rejectInvalidBreakType,
         null => failureUnknown,
         _ => reason,
       };
@@ -155,6 +157,7 @@ extension AttendanceL10n on AppLocalizations {
       'PHOTO_REQUIRED' => reasonPhotoRequired,
       'BIOMETRIC_REQUIRED' => reasonBiometricRequired,
       'EVENT_TYPE_DISABLED' => reasonEventTypeDisabled,
+      'INVALID_BREAK_TYPE' => reasonInvalidBreakType,
       _ => prettifyCode(reason),
     };
   }

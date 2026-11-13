@@ -65,6 +65,7 @@ class AttendanceController extends Notifier<AttendanceUiState> {
   /// aquí: viaja con la cola, para que una marcación sin conexión no dependa de la red.
   ///
   /// [workSiteId] nulo = marcación con QR de empresa: sin centro y sin validación de geocerca.
+  /// [breakTypeId] es la categoría elegida al iniciar un descanso, si la empresa las usa.
   Future<void> register({
     required String eventType,
     required String qrToken,
@@ -72,6 +73,7 @@ class AttendanceController extends Notifier<AttendanceUiState> {
     bool biometricVerified = false,
     String? evidencePath,
     String? evidenceSha256,
+    String? breakTypeId,
   }) async {
     state = state.copyWith(busy: true, message: null);
 
@@ -102,6 +104,7 @@ class AttendanceController extends Notifier<AttendanceUiState> {
       mockLocation: position.isMocked,
       gpsDisabled: !gpsEnabled,
       biometricVerified: biometricVerified,
+      breakTypeId: breakTypeId,
     );
 
     final db = ref.read(appDatabaseProvider);

@@ -16,6 +16,8 @@ public enum RejectionReason {
     PHOTO_REQUIRED,
     BIOMETRIC_REQUIRED,
     EVENT_TYPE_DISABLED,
+    /** Categoría de descanso ausente (si la empresa las exige), desconocida o deshabilitada (V30). */
+    INVALID_BREAK_TYPE,
     /** La empresa no admite registrar sin centro de trabajo (V25). */
     SITELESS_NOT_ALLOWED
 }
