@@ -18,10 +18,7 @@ import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
 import { NotificationService } from '../../../core/ui/notification.service';
 import { localizedProblem } from '../../../core/ui/problem-detail';
 import { ScrollDirective } from '../../../core/ui/scroll.directive';
-import { User } from '../users/user.models';
-import { UserService } from '../users/user.service';
-import { WorkSite } from '../work-sites/work-site.models';
-import { WorkSiteService } from '../work-sites/work-site.service';
+import { DirectoryOptionsService, EmployeeOption, WorkSiteOption, employeeLabel } from '../../../core/directory/directory-options.service';
 import { Assignment, Schedule, Shift } from './scheduling.models';
 import { SchedulingService } from './scheduling.service';
 
@@ -84,7 +81,7 @@ interface ShiftOption extends Shift {
         <mat-label>{{ 'scheduling.collaborator' | transloco }}</mat-label>
         <mat-select formControlName="userId" required>
           @for (u of users(); track u.id) {
-            <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}@if (u.employeeCode) { · {{ u.employeeCode }} }</mat-option>
+            <mat-option [value]="u.id">{{ label(u) }}</mat-option>
           }
         </mat-select>
       </mat-form-field>
@@ -149,8 +146,7 @@ export class AssignShiftDrawerComponent {
   private readonly data = inject<AssignShiftData>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<AssignShiftDrawerComponent, boolean>>(MatDialogRef);
   private readonly service = inject(SchedulingService);
-  private readonly userService = inject(UserService);
-  private readonly workSiteService = inject(WorkSiteService);
+  private readonly directory = inject(DirectoryOptionsService);
   private readonly notify = inject(NotificationService);
   private readonly transloco = inject(TranslocoService);
   private readonly fb = inject(FormBuilder);
@@ -158,8 +154,9 @@ export class AssignShiftDrawerComponent {
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly problem = signal<string | null>(null);
-  protected readonly users = signal<User[]>([]);
-  protected readonly workSites = signal<WorkSite[]>([]);
+  protected readonly users = signal<EmployeeOption[]>([]);
+  protected readonly workSites = signal<WorkSiteOption[]>([]);
+  protected readonly label = employeeLabel;
   protected readonly shiftOptions = signal<ShiftOption[]>([]);
   protected readonly assignments = signal<Assignment[]>([]);
 
@@ -182,15 +179,15 @@ export class AssignShiftDrawerComponent {
   constructor() {
     debouncedSearch(this.userSearch.valueChanges)
       .pipe(
-        switchMap((term) => this.userService.list(0, 50, term.trim() || undefined).pipe(catchError(() => of(null)))),
+        switchMap((term) => this.directory.employees(term, 50).pipe(catchError(() => of(null)))),
         takeUntilDestroyed(),
       )
-      .subscribe((page) => page && this.users.set(page.content));
+      .subscribe((list) => list && this.users.set(list));
     this.form.controls.userId.valueChanges.pipe(takeUntilDestroyed()).subscribe((id) => this.loadAssignments(id));
 
     forkJoin({
-      users: this.userService.list(0, 50),
-      sites: this.workSiteService.list(0, 200),
+      users: this.directory.employees(undefined, 50),
+      sites: this.directory.workSites(),
       // forkJoin de una lista vacía no emite: sin horarios no hay turnos que pedir.
       shifts: this.data.schedules.length
         ? forkJoin(
@@ -204,8 +201,8 @@ export class AssignShiftDrawerComponent {
         : of([] as ShiftOption[]),
     }).subscribe({
       next: ({ users, sites, shifts }) => {
-        this.users.set(users.content);
-        this.workSites.set(sites.content);
+        this.users.set(users);
+        this.workSites.set(sites);
         this.shiftOptions.set(shifts);
         this.loading.set(false);
       },
