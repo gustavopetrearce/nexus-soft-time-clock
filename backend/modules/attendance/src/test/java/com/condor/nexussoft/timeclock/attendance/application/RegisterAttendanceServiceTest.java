@@ -38,6 +38,7 @@ class RegisterAttendanceServiceTest {
     @Mock BreakTypePort breakTypes;
     @Mock EvidenceStoragePort evidenceStorage;
     @Mock CompanyPolicyPort companyPolicy;
+    @Mock ContractPolicyPort contractPolicy;
     @Mock AttendanceEventPublisherPort events;
 
     RegisterAttendanceService service;
@@ -56,8 +57,11 @@ class RegisterAttendanceServiceTest {
     void setUp() {
         service = new RegisterAttendanceService(attendance, idempotency, qrValidation,
                 geofenceCheck, fraudCheck, deviceRecognition, sitePolicy, schedulePolicy,
-                eventTypeConfig, breakTypes, evidenceStorage, companyPolicy, events, clock, OFFLINE_MAX_AGE_HOURS,
+                eventTypeConfig, breakTypes, evidenceStorage, companyPolicy, contractPolicy, events, clock,
+                OFFLINE_MAX_AGE_HOURS,
                 DEFAULT_GPS_ACCURACY_MAX_M);
+        lenient().when(contractPolicy.check(any(), any(), any(), any()))
+                .thenReturn(ContractPolicyPort.ContractDecision.none());
         lenient().when(companyPolicy.find(tenantId)).thenReturn(
                 new CompanyPolicyPort.CompanyPolicy(null, false, false, OPEN_SHIFT_HOURS, false));
         // Por defecto el dispositivo es reconocido (device binding no interfiere). Lenient: el caso de
@@ -737,6 +741,53 @@ class RegisterAttendanceServiceTest {
         assertThat(result.status()).isEqualTo("ACCEPTED");
         assertThat(result.flags()).contains("NO_SCHEDULE");
         assertThat(publishedRegistered().noSchedule()).isTrue();
+    }
+
+    /** RN-67: la marca se atribuye al proyecto del contrato vigente, sin ninguna señal. */
+    @Test
+    void contratoPorProyectoVigente_atribuyeElProyectoSinMarcar() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        withinWindowStub(0);
+        UUID project = UUID.randomUUID();
+        when(contractPolicy.check(eq(tenantId), eq(userId), any(), any())).thenReturn(
+                new ContractPolicyPort.ContractDecision(ContractPolicyPort.Outcome.WITHIN_VALIDITY, project));
+
+        AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(result.flags()).doesNotContain("OUT_OF_CONTRACT");
+        assertThat(savedRecord().projectId()).isEqualTo(project);
+        assertThat(publishedRegistered().projectId()).isEqualTo(project);
+        assertThat(publishedRegistered().outOfContract()).isFalse();
+    }
+
+    /** RN-66: fuera de vigencia se ACEPTA, marcada, y el evento lleva la señal para la incidencia. */
+    @Test
+    void contratoPorProyectoFueraDeVigencia_seAceptaMarcadaYLoSenalaEnElEvento() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        withinWindowStub(0);
+        UUID project = UUID.randomUUID();
+        when(contractPolicy.check(eq(tenantId), eq(userId), any(), any())).thenReturn(
+                new ContractPolicyPort.ContractDecision(ContractPolicyPort.Outcome.OUT_OF_VALIDITY, project));
+
+        AttendanceResult result = service.register(tenantId, userId, cmd("ENTRADA"));
+
+        assertThat(result.status()).isEqualTo("ACCEPTED");
+        assertThat(result.rejectionReason()).isNull();
+        assertThat(result.flags()).contains("OUT_OF_CONTRACT");
+        assertThat(savedRecord().projectId()).isEqualTo(project);
+        assertThat(publishedRegistered().outOfContract()).isTrue();
+    }
+
+    @Test
+    void sinContratoPorProyecto_noAtribuyeProyecto() {
+        baseStubsWithPolicy(WorkSitePolicyPort.SitePolicy.permissive());
+        withinWindowStub(0);
+
+        service.register(tenantId, userId, cmd("ENTRADA"));
+
+        assertThat(savedRecord().projectId()).isNull();
+        assertThat(publishedRegistered().outOfContract()).isFalse();
     }
 
     @Test

@@ -51,6 +51,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
     private final BreakTypePort breakTypes;
     private final EvidenceStoragePort evidenceStorage;
     private final CompanyPolicyPort companyPolicy;
+    private final ContractPolicyPort contractPolicy;
     private final AttendanceEventPublisherPort events;
     private final Clock clock;
 
@@ -75,6 +76,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
                                      EventTypeConfigPort eventTypeConfig, BreakTypePort breakTypes,
                                      EvidenceStoragePort evidenceStorage,
                                      CompanyPolicyPort companyPolicy,
+                                     ContractPolicyPort contractPolicy,
                                      AttendanceEventPublisherPort events,
                                      Clock clock,
                                      @Value("${attendance.offline.max-age-hours:72}") long offlineMaxAgeHours,
@@ -92,6 +94,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         this.breakTypes = breakTypes;
         this.evidenceStorage = evidenceStorage;
         this.companyPolicy = companyPolicy;
+        this.contractPolicy = contractPolicy;
         this.events = events;
         this.clock = clock;
         this.offlineMaxAgeHours = offlineMaxAgeHours;
@@ -239,6 +242,16 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
             reason = RejectionReason.OUT_OF_SCHEDULE;
         }
 
+        // 3.45) Contrato del colaborador (V33). La marca se atribuye al proyecto de su contrato
+        //       (RN-67) y, si cae fuera de la vigencia del contrato o del proyecto, se ACEPTA marcada
+        //       con OUT_OF_CONTRACT (RN-66): la ENTRADA abre una incidencia FUERA_DE_VIGENCIA. Un dato
+        //       administrativo atrasado no debe impedir que alguien que está trabajando fiche.
+        ContractPolicyPort.ContractDecision contract =
+                contractPolicy.check(tenantId, userId, cmd.workSiteId(), effectiveTime);
+        if (contract.outOfValidity()) {
+            flags.add("OUT_OF_CONTRACT");
+        }
+
         // 3.5) Secuencia coherente de la jornada (RN-12): entrada/salida emparejadas en el mismo
         //       centro (HU-11 CA1), sin dobles descansos ni eventos fuera de orden (HU-12 CA2).
         if (reason == null) {
@@ -299,14 +312,14 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         // prueba de un intento real (útil para incidencias) y hace exacta la regla de huérfanos.
         AttendanceRecord record = buildRecord(recordId, tenantId, userId, cmd, now, status, reason,
                 qrOk ? qr.nonce() : null, distance, flags, lateMinutes, evidence, source, schedule.shiftId(),
-                breakTypeId);
+                breakTypeId, contract.projectId());
         attendance.save(record);
 
         AttendanceResult result = new AttendanceResult(recordId, status.name(),
                 reason == null ? null : reason.name(), now, distance, flags, lateMinutes);
         idempotency.save(tenantId, cmd.operationUuid(), result);
 
-        publishEvent(record, reason, lateMinutes, outOfWindow, noSchedule, now);
+        publishEvent(record, reason, lateMinutes, outOfWindow, noSchedule, contract.outOfValidity(), now);
         return result;
     }
 
@@ -322,7 +335,8 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
     private AttendanceRecord buildRecord(UUID recordId, UUID tenantId, UUID userId, RegisterAttendanceCommand cmd,
                                          Instant now, AttendanceStatus status, RejectionReason reason,
                                          String nonce, Double distance, List<String> flags, int lateMinutes,
-                                         Evidence evidence, String source, UUID shiftId, UUID breakTypeId) {
+                                         Evidence evidence, String source, UUID shiftId, UUID breakTypeId,
+                                         UUID projectId) {
         Instant deviceTime = cmd.deviceTimeEpochMs() == null ? null : Instant.ofEpochMilli(cmd.deviceTimeEpochMs());
         Integer skew = deviceTime == null ? null : (int) (now.getEpochSecond() - deviceTime.getEpochSecond());
         GpsFix gps = new GpsFix(cmd.latitude(), cmd.longitude(), cmd.accuracyM());
@@ -331,14 +345,15 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
                 AttendanceEventType.valueOf(cmd.eventType()), status, reason, gps, distance,
                 cmd.deviceId(), deviceTime, skew, nonce, cmd.operationUuid(),
                 source, cmd.biometricVerified(), evidence,
-                buildValidationsJson(flags, reason, distance, lateMinutes), breakTypeId);
+                buildValidationsJson(flags, reason, distance, lateMinutes), breakTypeId, projectId);
     }
 
     private void publishEvent(AttendanceRecord record, RejectionReason reason, int lateMinutes,
-                              boolean outOfWindow, boolean noSchedule, Instant now) {
+                              boolean outOfWindow, boolean noSchedule, boolean outOfContract, Instant now) {
         if (record.isAccepted()) {
             events.publish(AttendanceRegistered.of(record.tenantId(), record.id(), record.userId(),
-                    record.workSiteId(), record.eventType().name(), lateMinutes, outOfWindow, noSchedule, now));
+                    record.workSiteId(), record.eventType().name(), lateMinutes, outOfWindow, noSchedule,
+                    record.projectId(), outOfContract, now));
         } else {
             events.publish(AttendanceRejected.of(record.tenantId(), record.id(), record.userId(),
                     reason.name(), now));

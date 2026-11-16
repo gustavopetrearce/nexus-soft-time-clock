@@ -64,6 +64,8 @@ class RegisterExternalAttendanceServiceTest {
     @Mock
     private CompanyPolicyPort companyPolicy;
     @Mock
+    private ContractPolicyPort contractPolicy;
+    @Mock
     private AttendanceEventPublisherPort events;
 
     private final UUID tenantId = UUID.randomUUID();
@@ -76,9 +78,12 @@ class RegisterExternalAttendanceServiceTest {
     @BeforeEach
     void setUp() {
         service = new RegisterExternalAttendanceService(integration, attendance, idempotency, sitePolicy,
-                schedulePolicy, eventTypeConfig, breakTypes, companyPolicy, events, Clock.fixed(NOW, ZoneOffset.UTC),
+                schedulePolicy, eventTypeConfig, breakTypes, companyPolicy, contractPolicy, events,
+                Clock.fixed(NOW, ZoneOffset.UTC),
                 MAX_AGE_HOURS);
         lenient().when(integration.isClientActive(tenantId, clientId)).thenReturn(true);
+        lenient().when(contractPolicy.check(any(), any(), any(), any()))
+                .thenReturn(ContractPolicyPort.ContractDecision.none());
         lenient().when(idempotency.find(eq(tenantId), any())).thenReturn(Optional.empty());
         lenient().when(integration.findCollaborator(tenantId, "EMP-1"))
                 .thenReturn(Optional.of(new Collaborator(userId, Eligibility.ELIGIBLE)));

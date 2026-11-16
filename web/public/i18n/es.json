@@ -900,6 +900,7 @@
       "FRAUDE": "Fraude",
       "FUERA_DE_VENTANA": "Fuera de ventana",
       "SIN_TURNO": "Sin turno",
+      "FUERA_DE_VIGENCIA": "Fuera de vigencia del contrato",
       "OTRO": "Otro"
     },
     "priorities": {

@@ -3,6 +3,7 @@ package com.condor.nexussoft.timeclock.attendance.infrastructure.integration;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceEventType;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.SchedulePolicyPort;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.ShiftZonePort;
+import com.condor.nexussoft.timeclock.scheduling.domain.Schedule;
 import com.condor.nexussoft.timeclock.scheduling.domain.Shift;
 import com.condor.nexussoft.timeclock.scheduling.domain.ShiftAssignment;
 import com.condor.nexussoft.timeclock.scheduling.domain.port.in.SchedulingUseCase;
@@ -101,6 +102,35 @@ class SchedulePolicyAdapterTest {
         stubShifts(t1);
         when(scheduling.listAssignments(tenantId, userId))
                 .thenReturn(List.of(asignacion(turno1, UUID.randomUUID())));
+
+        assertThat(check(AttendanceEventType.ENTRADA, 8, 0).outcome())
+                .isEqualTo(SchedulePolicyPort.Outcome.NO_SCHEDULE);
+    }
+
+    /**
+     * Una asignación sin centro es el turno del colaborador en cualquier centro. Antes se descartaba
+     * en cuanto la marca traía centro y la ENTRADA salía como SIN_TURNO.
+     */
+    @Test
+    void asignacionSinCentro_valeEnCualquierCentro() {
+        Shift t1 = turno("Turno 1", LocalTime.of(8, 0), LocalTime.of(14, 0));
+        turno1 = t1.id();
+        stubShifts(t1);
+        when(scheduling.listAssignments(tenantId, userId)).thenReturn(List.of(asignacion(turno1, null)));
+
+        SchedulePolicyPort.ScheduleDecision d = check(AttendanceEventType.ENTRADA, 8, 20);
+
+        assertThat(d.outcome()).isEqualTo(SchedulePolicyPort.Outcome.WITHIN_WINDOW);
+        assertThat(d.shiftId()).isEqualTo(turno1);
+        assertThat(d.minutesLate()).isEqualTo(10);
+    }
+
+    /** Un horario desactivado deja de regir: su turno no reclama la marca. */
+    @Test
+    void horarioInactivo_noReclamaLaMarca() {
+        unTurno();
+        when(scheduling.findSchedule(tenantId, scheduleId)).thenReturn(Optional.of(
+                new Schedule(scheduleId, tenantId, "H1", "Horario", null, Schedule.Status.INACTIVE)));
 
         assertThat(check(AttendanceEventType.ENTRADA, 8, 0).outcome())
                 .isEqualTo(SchedulePolicyPort.Outcome.NO_SCHEDULE);

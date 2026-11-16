@@ -25,6 +25,9 @@ public interface IncidentManagementUseCase {
     /** Alta automática por ENTRADA aceptada sin turno vigente (consumida de un evento). */
     Incident openForNoSchedule(UUID tenantId, UUID userId, UUID attendanceId);
 
+    /** Alta automática por ENTRADA aceptada fuera de la vigencia de un contrato por proyecto (RN-66). */
+    Incident openForOutOfContract(UUID tenantId, UUID userId, UUID attendanceId);
+
     /**
      * Resuelve las incidencias aún abiertas ligadas a una marca que se canceló (V31): la marca ya no
      * cuenta, así que tampoco su retardo, ventana o falta de turno. Las ya resueltas no se tocan.

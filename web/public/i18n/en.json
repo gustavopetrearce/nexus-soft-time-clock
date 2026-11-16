@@ -900,6 +900,7 @@
       "FRAUDE": "Fraud",
       "FUERA_DE_VENTANA": "Outside window",
       "SIN_TURNO": "No shift",
+      "FUERA_DE_VIGENCIA": "Outside contract validity",
       "OTRO": "Other"
     },
     "priorities": {

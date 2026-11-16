@@ -55,7 +55,7 @@ El desarrollo es **incremental**; cada iteración debe quedar funcional, compila
 | 11 | Reportes, dashboards y monitoreo en tiempo real | ✅ Completada |
 | 12 | Notificaciones, integraciones y optimización | ✅ Completada |
 | 13 | Pruebas, documentación y preparación para producción | ✅ Completada |
-| 14 | Tipos de contrato por colaborador (proyecto / turno) | 🔄 Fase 1 de 3 completada (contratos + portal) |
+| 14 | Tipos de contrato por colaborador (proyecto / turno) | 🔄 Fases 1–2 de 3 completadas (contratos + marcación) |
 
 > **Estado:** las 13 iteraciones están completas. El backend (16 módulos) compila y sus **23 pruebas unitarias pasan**; el portal Angular compila. La verificación en runtime (JDK 21 + Docker) queda lista vía `mvn verify` y `docker compose up`. Ver [`docs/iteracion-13-produccion`](docs/iteracion-13-produccion/).
 

@@ -60,6 +60,7 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
     private final EventTypeConfigPort eventTypeConfig;
     private final BreakTypePort breakTypes;
     private final CompanyPolicyPort companyPolicy;
+    private final ContractPolicyPort contractPolicy;
     private final AttendanceEventPublisherPort events;
     private final Clock clock;
     private final long maxAgeHours;
@@ -67,7 +68,8 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
     public RegisterExternalAttendanceService(ExternalIntegrationPort integration, AttendanceRepositoryPort attendance,
                                              IdempotencyStorePort idempotency, WorkSitePolicyPort sitePolicy,
                                              SchedulePolicyPort schedulePolicy, EventTypeConfigPort eventTypeConfig,
-                                             BreakTypePort breakTypes, CompanyPolicyPort companyPolicy, AttendanceEventPublisherPort events,
+                                             BreakTypePort breakTypes, CompanyPolicyPort companyPolicy,
+                                             ContractPolicyPort contractPolicy, AttendanceEventPublisherPort events,
                                              Clock clock,
                                              @Value("${attendance.offline.max-age-hours:72}") long maxAgeHours) {
         this.integration = integration;
@@ -78,6 +80,7 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
         this.eventTypeConfig = eventTypeConfig;
         this.breakTypes = breakTypes;
         this.companyPolicy = companyPolicy;
+        this.contractPolicy = contractPolicy;
         this.events = events;
         this.clock = clock;
         this.maxAgeHours = maxAgeHours;
@@ -148,6 +151,14 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
             reason = RejectionReason.OUT_OF_SCHEDULE;
         }
 
+        // Contrato (RN-66/67), igual que el registro normal: se atribuye el proyecto y, fuera de
+        // vigencia, la marca se acepta marcada.
+        ContractPolicyPort.ContractDecision contract =
+                contractPolicy.check(tenantId, userId, cmd.workSiteId(), eventTime);
+        if (contract.outOfValidity()) {
+            flags.add("OUT_OF_CONTRACT");
+        }
+
         if (reason == null) {
             SequenceCheck sequence = validateSequence(tenantId, userId, cmd.workSiteId(), eventType, eventTime);
             reason = sequence.rejection();
@@ -168,7 +179,7 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
         AttendanceRecord record = new AttendanceRecord(recordId, tenantId, eventTime, userId, cmd.workSiteId(),
                 schedule.shiftId(), eventType, status, reason, null, null, null, null, null, null,
                 cmd.operationUuid(), SOURCE, false, null,
-                validationsJson(flags, reason, lateMinutes, apiClientId), breakTypeId);
+                validationsJson(flags, reason, lateMinutes, apiClientId), breakTypeId, contract.projectId());
         attendance.save(record);
 
         AttendanceResult result = new AttendanceResult(recordId, status.name(),
@@ -177,7 +188,8 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
 
         if (record.isAccepted()) {
             events.publish(AttendanceRegistered.of(tenantId, recordId, userId, cmd.workSiteId(),
-                    eventType.name(), lateMinutes, outOfWindow, noSchedule, now));
+                    eventType.name(), lateMinutes, outOfWindow, noSchedule, contract.projectId(),
+                    contract.outOfValidity(), now));
         } else {
             events.publish(AttendanceRejected.of(tenantId, recordId, userId, reason.name(), now));
         }

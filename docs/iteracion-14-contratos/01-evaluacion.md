@@ -127,7 +127,7 @@ Va en el módulo `hr`, junto a `EmployeeProfile` y `Permit`. **Un contrato `PROJ
 |---|---|---|
 | 0 ✅ | Esta evaluación | Este documento |
 | 1 ✅ | V33, contratos en `hr`, validación de fechas de proyecto, pantallas web | CRUD de contratos funcionando (ver §7) |
-| 2 | Integración con la marcación, `FUERA_DE_VIGENCIA`, corrección de `SchedulePolicyAdapter` (asignación sin centro y horario inactivo) | Marcas asociadas al proyecto, con su incidencia |
+| 2 ✅ | Integración con la marcación, `FUERA_DE_VIGENCIA`, corrección de `SchedulePolicyAdapter` (asignación sin centro y horario inactivo) | Marcas asociadas al proyecto, con su incidencia |
 | 3 | Reportes por proyecto y días esperados por contrato; perfil en móvil | CU-09 cumplido |
 
 **Fuera de alcance** (se anota como deuda):
@@ -188,3 +188,37 @@ Va en el módulo `hr`, junto a `EmployeeProfile` y `Permit`. **Un contrato `PROJ
 - `ProjectTest` (3).
 - `ContractIT` (2, con PostgreSQL real): API, seguridad, SQL nativo y restricciones de la BD.
 - `contract.models.spec.ts` (4).
+
+---
+
+### 8. Fase 2 — lo implementado
+
+**Qué contrato cuenta para una marca** (`attendance/.../ContractPolicyAdapter`)
+
+La fecha se mide en la zona del centro, o de la empresa si el centro no tiene, o UTC.
+
+1. **El contrato no cancelado que cubre la fecha.** Si es por proyecto, la marca se atribuye al proyecto. Queda *fuera de vigencia* si el proyecto no está `ACTIVE` o si la fecha cae fuera de las fechas del proyecto.
+2. **Si ninguno la cubre, el más cercano en el tiempo.** Si es por proyecto, la marca también se atribuye a ese proyecto, pero *fuera de vigencia*. Es el caso de quien sigue fichando después de terminar su asignación, o antes de que empiece.
+3. **Un contrato por turno, o ninguno,** no atribuye proyecto ni señala nada.
+
+**Efecto en la marcación**
+
+Aplica igual por QR, sync offline y reloj externo.
+- **RN-67:** `attendance_records.project_id` guarda el proyecto atribuido.
+- **RN-66:** fuera de vigencia la marca **se acepta** con la bandera `OUT_OF_CONTRACT`, sea cual sea el evento.
+- El evento `AttendanceRegistered` lleva dos campos nuevos: `projectId` y `outOfContract`.
+- Solo la **ENTRADA** abre la incidencia **`FUERA_DE_VIGENCIA`** (prioridad media), una por jornada, como `SIN_TURNO`.
+- **V34** añade el tipo `FUERA_DE_VIGENCIA` al CHECK de `incidents.type`.
+- El portal ya traduce el tipo nuevo.
+
+**Correcciones en `SchedulePolicyAdapter`**
+- Una asignación de turno **sin centro** vale para cualquier centro. Antes se descartaba si la marca traía centro y la ENTRADA salía como `SIN_TURNO`.
+- Los turnos de un horario **`INACTIVE`** ya no reclaman marcas.
+
+**Pruebas**
+- Unitarias: 3 casos nuevos en `RegisterAttendanceServiceTest`, 3 en `IncidentEventListenerTest` y 2 en `SchedulePolicyAdapterTest`.
+- `ContractAttendanceIT` (4, con PostgreSQL real): marca, `project_id`, paso por el outbox y la incidencia creada. Casos:
+  - contrato vigente;
+  - contrato terminado;
+  - proyecto cerrado;
+  - contrato por turno.
