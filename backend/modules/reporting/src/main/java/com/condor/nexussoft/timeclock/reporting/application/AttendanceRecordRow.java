@@ -18,5 +18,7 @@ public record AttendanceRecordRow(
         /** Etiqueta de la categoría del descanso (V30); nula fuera de descansos o sin categoría. */
         String breakType,
         /** Causa de la cancelación (V31); solo si {@code status} es CANCELLED. */
-        String cancelReason) {
+        String cancelReason,
+        /** Proyecto de la marca, "CÓDIGO · nombre" (RN-67); nulo si no se atribuyó a ninguno. */
+        String project) {
 }

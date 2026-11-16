@@ -859,7 +859,10 @@
       "late": "{{n}} retardo(s)",
       "lateOver": "{{n}} retardos (supera el umbral de {{threshold}})"
     },
-    "exportFormat": "Formato de exportación"
+    "exportFormat": "Formato de exportación",
+    "project": "Proyecto",
+    "hoursByProject": "Horas por proyecto",
+    "noProject": "Sin proyecto"
   },
   "records": {
     "title": "Registros de asistencia",

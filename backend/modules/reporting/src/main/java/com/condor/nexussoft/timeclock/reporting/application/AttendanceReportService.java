@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** Consulta las filas del reporte de asistencia con filtros (rango, estado). */
+/** Consulta las filas del reporte de asistencia con filtros (rango, estado, proyecto). */
 @Service
 public class AttendanceReportService {
 
@@ -22,6 +22,11 @@ public class AttendanceReportService {
     }
 
     public List<ReportRow> rows(UUID tenantId, Instant from, Instant to, String status) {
+        return rows(tenantId, from, to, status, null);
+    }
+
+    /** {@code projectId} nulo = todas las marcas; si no, solo las atribuidas al proyecto (CU-09). */
+    public List<ReportRow> rows(UUID tenantId, Instant from, Instant to, String status, UUID projectId) {
         StringBuilder sql = new StringBuilder(
                 "SELECT server_time, user_id, event_type, status, rejection_reason, cancel_reason, "
                         + "ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng "
@@ -33,6 +38,10 @@ public class AttendanceReportService {
         if (status != null && !status.isBlank()) {
             sql.append(" AND status = ?");
             args.add(status);
+        }
+        if (projectId != null) {
+            sql.append(" AND project_id = ?");
+            args.add(projectId);
         }
         sql.append(" ORDER BY server_time DESC LIMIT ").append(MAX_ROWS);
 
@@ -54,15 +63,23 @@ public class AttendanceReportService {
      * {@code users} y {@code work_sites}; filtra por rango y estado opcional, más reciente primero.
      */
     public List<AttendanceRecordRow> records(UUID tenantId, Instant from, Instant to, String status) {
+        return records(tenantId, from, to, status, null);
+    }
+
+    /** {@code projectId} nulo = todas las marcas; si no, solo las atribuidas al proyecto (CU-09). */
+    public List<AttendanceRecordRow> records(UUID tenantId, Instant from, Instant to, String status,
+                                             UUID projectId) {
         StringBuilder sql = new StringBuilder(
                 "SELECT ar.server_time, u.employee_code, u.first_name, u.last_name, "
                         + "ar.event_type, ar.status, ar.rejection_reason, ws.name AS work_center, "
-                        + "bt.label AS break_type, ar.cancel_reason "
+                        + "bt.label AS break_type, ar.cancel_reason, pr.code AS project_code, "
+                        + "pr.name AS project_name "
                         + "FROM attendance_records ar "
                         + "JOIN users u ON u.id = ar.user_id "
                         + "LEFT JOIN work_sites ws ON ws.id = ar.work_site_id "
                         + "LEFT JOIN attendance_break_types bt "
                         + "ON bt.id = ar.break_type_id AND bt.tenant_id = ar.tenant_id "
+                        + "LEFT JOIN projects pr ON pr.id = ar.project_id "
                         + "WHERE ar.tenant_id = ? AND ar.server_time BETWEEN ? AND ?");
         List<Object> args = new ArrayList<>();
         args.add(tenantId);
@@ -72,12 +89,17 @@ public class AttendanceReportService {
             sql.append(" AND ar.status = ?");
             args.add(status);
         }
+        if (projectId != null) {
+            sql.append(" AND ar.project_id = ?");
+            args.add(projectId);
+        }
         sql.append(" ORDER BY ar.server_time DESC LIMIT ").append(MAX_ROWS);
 
         return jdbc.query(sql.toString(), (rs, i) -> {
             String code = rs.getString("employee_code");
             String name = (rs.getString("first_name") + " " + rs.getString("last_name")).trim();
             String workCenter = rs.getString("work_center");
+            String projectCode = rs.getString("project_code");
             return new AttendanceRecordRow(
                     code != null ? code : "—",
                     name,
@@ -87,7 +109,8 @@ public class AttendanceReportService {
                     rs.getString("rejection_reason"),
                     workCenter != null ? workCenter : "—",
                     rs.getString("break_type"),
-                    rs.getString("cancel_reason"));
+                    rs.getString("cancel_reason"),
+                    projectCode == null ? null : projectCode + " · " + rs.getString("project_name"));
         }, args.toArray());
     }
 }

@@ -27,8 +27,12 @@ public class SiteHoursService {
 
     private static final int MAX_ROWS = 5000;
 
-    private static final String SQL = ("""
-            WITH """ + JourneySegmentsSql.CTES + """
+    private static final String SQL = sql(false);
+    private static final String SQL_BY_PROJECT = sql(true);
+
+    private static String sql(boolean byProject) {
+        return ("""
+            WITH """ + JourneySegmentsSql.ctes(byProject) + """
             ,
             emp AS (
                 SELECT id, employee_code, first_name, last_name
@@ -51,6 +55,7 @@ public class SiteHoursService {
             ORDER BY e.first_name, e.last_name, ws.name
             LIMIT %d
             """).formatted(MAX_ROWS);
+    }
 
     private final NamedParameterJdbcTemplate jdbc;
 
@@ -59,12 +64,18 @@ public class SiteHoursService {
     }
 
     public List<SiteHoursRow> byWorkSite(UUID tenantId, LocalDate from, LocalDate to) {
+        return byWorkSite(tenantId, from, to, null);
+    }
+
+    /** {@code projectId} nulo = todas las marcas; si no, solo las atribuidas al proyecto (CU-09). */
+    public List<SiteHoursRow> byWorkSite(UUID tenantId, LocalDate from, LocalDate to, UUID projectId) {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("tenant", tenantId)
+                .addValue("project", projectId)
                 .addValue("fromTs", Timestamp.from(from.atStartOfDay().toInstant(ZoneOffset.UTC)))
                 .addValue("toTsExcl", Timestamp.from(to.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC)));
 
-        return jdbc.query(SQL, params, (rs, i) -> {
+        return jdbc.query(projectId != null ? SQL_BY_PROJECT : SQL, params, (rs, i) -> {
             String code = rs.getString("employee_code");
             String name = (rs.getString("first_name") + " " + rs.getString("last_name")).trim();
             return SiteHoursRow.of(

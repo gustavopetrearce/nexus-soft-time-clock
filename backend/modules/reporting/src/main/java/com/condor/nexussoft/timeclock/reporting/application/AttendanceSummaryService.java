@@ -28,25 +28,59 @@ import java.util.UUID;
  *   <li><b>Días asistidos</b>: días distintos con al menos una ENTRADA, fechados por la ENTRADA que
  *       abre la jornada, de modo que un turno nocturno cuenta como un día y no como dos.</li>
  *   <li><b>Días esperados</b>: días hábiles (lunes-viernes) del rango, acotados a la vigencia de las
- *       asignaciones de turno cuando existen. La personalización por {@code schedule.config_json}
+ *       asignaciones de turno cuando existen, a la fecha de ingreso ({@code hire_date}) y, si el
+ *       colaborador tiene contratos (iteración 14), a los días que cubre alguno no cancelado: fuera
+ *       de contrato no se le espera. La personalización por {@code schedule.config_json}
  *       queda como extensión futura (hoy ese JSON no almacena la máscara de días).</li>
  *   <li><b>Colaboradores</b>: usuarios del tenant que no son administradores de plataforma; se incluyen
  *       activos e inactivos (el front filtra por estado).</li>
  * </ul>
+ *
+ * <p><b>Filtro por proyecto</b> (CU-09): solo cuentan las marcas atribuidas al proyecto; aparecen
+ * quienes tuvieron contrato con él en el rango o marcaron en él, y los días esperados y las
+ * incidencias se limitan a los días que cubre su contrato con ese proyecto.</p>
  */
 @Service
 public class AttendanceSummaryService {
 
     private static final int MAX_ROWS = 5000;
 
+    private static final String SQL = sql(false);
+    private static final String SQL_BY_PROJECT = sql(true);
+
     /** Una sola consulta con CTEs; el llamador acota por tenant. */
-    private static final String SQL = ("""
-            WITH """ + JourneySegmentsSql.CTES + """
+    private static String sql(boolean byProject) {
+        String contractProject = byProject ? " AND c.project_id = :project" : "";
+        // Con proyecto solo se espera en los días de su contrato con él; sin filtro, quien no tiene
+        // ningún contrato conserva el cálculo previo (días hábiles acotados a sus turnos).
+        String coverage = byProject
+                ? "EXISTS (SELECT 1 FROM contract_cov cc WHERE cc.user_id = e.id AND g::date BETWEEN cc.starts_on AND cc.ends_on)"
+                : "(hc.user_id IS NULL OR EXISTS (SELECT 1 FROM contract_cov cc WHERE cc.user_id = e.id "
+                  + "AND g::date BETWEEN cc.starts_on AND cc.ends_on))";
+        String incidentScope = byProject
+                ? " AND EXISTS (SELECT 1 FROM contract_cov cc WHERE cc.user_id = i.user_id "
+                  + "AND i.incident_date BETWEEN cc.starts_on AND cc.ends_on)"
+                : "";
+        String empScope = byProject
+                ? " AND (id IN (SELECT user_id FROM contract_cov WHERE starts_on <= :toDate AND ends_on >= :fromDate)"
+                  + " OR id IN (SELECT user_id FROM punch))"
+                : "";
+        return ("""
+            WITH """ + JourneySegmentsSql.ctes(byProject) + """
             ,
+            -- Contratos no cancelados (V33); un fin abierto se trata como sin fin.
+            contract_cov AS (
+                SELECT c.user_id, c.starts_on, COALESCE(c.ends_on, 'infinity'::date) AS ends_on
+                FROM employment_contracts c
+                WHERE c.tenant_id = :tenant AND c.status <> 'CANCELLED'%1$s
+            ),
+            has_contract AS (
+                SELECT DISTINCT user_id FROM contract_cov
+            ),
             emp AS (
                 SELECT id, employee_code, first_name, last_name, status
                 FROM users
-                WHERE tenant_id = :tenant AND is_platform_admin = false
+                WHERE tenant_id = :tenant AND is_platform_admin = false%4$s
             ),
             -- Vigencia agregada de las asignaciones: acota los días esperados. Se toma el rango
             -- completo y no "la asignación más reciente", que con varios turnos era una elección
@@ -114,7 +148,7 @@ public class AttendanceSummaryService {
                   AND NOT EXISTS (SELECT 1 FROM attendance_records car
                                   WHERE car.id = i.related_attendance_id
                                     AND car.tenant_id = i.tenant_id
-                                    AND car.status = 'CANCELLED')
+                                    AND car.status = 'CANCELLED')%3$s
             ),
             inc AS (
                 SELECT user_id,
@@ -130,12 +164,16 @@ public class AttendanceSummaryService {
             expected AS (
                 SELECT e.id AS user_id,
                        (SELECT count(*) FROM generate_series(
-                                GREATEST(:fromDate, COALESCE(a.valid_from, :fromDate)),
+                                GREATEST(:fromDate, COALESCE(a.valid_from, :fromDate), COALESCE(ep.hire_date, :fromDate)),
                                 LEAST(:toDate, COALESCE(a.valid_to, :toDate)),
                                 interval '1 day') g
-                        WHERE EXTRACT(dow FROM g) BETWEEN 1 AND 5) AS expected_days
+                        WHERE EXTRACT(dow FROM g) BETWEEN 1 AND 5
+                          AND %2$s) AS expected_days
                 FROM emp e
                 LEFT JOIN assign_span a ON a.user_id = e.id
+                LEFT JOIN has_contract hc ON hc.user_id = e.id
+                -- Antes del ingreso no se le espera (V15).
+                LEFT JOIN employee_profiles ep ON ep.user_id = e.id AND ep.tenant_id = :tenant
             )
             SELECT e.employee_code,
                    e.first_name,
@@ -157,8 +195,9 @@ public class AttendanceSummaryService {
             LEFT JOIN assign_site a2 ON a2.user_id = e.id
             LEFT JOIN work_sites asite ON asite.id = a2.work_site_id
             ORDER BY e.first_name, e.last_name
-            LIMIT %d
-            """).formatted(MAX_ROWS);
+            LIMIT %5$d
+            """).formatted(contractProject, coverage, incidentScope, empScope, MAX_ROWS);
+    }
 
     private final NamedParameterJdbcTemplate jdbc;
 
@@ -167,14 +206,20 @@ public class AttendanceSummaryService {
     }
 
     public List<AttendanceSummaryRow> summary(UUID tenantId, LocalDate from, LocalDate to) {
+        return summary(tenantId, from, to, null);
+    }
+
+    /** {@code projectId} nulo = todos los proyectos (y las marcas sin proyecto). */
+    public List<AttendanceSummaryRow> summary(UUID tenantId, LocalDate from, LocalDate to, UUID projectId) {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("tenant", tenantId)
+                .addValue("project", projectId)
                 .addValue("fromDate", from)
                 .addValue("toDate", to)
                 .addValue("fromTs", Timestamp.from(from.atStartOfDay().toInstant(ZoneOffset.UTC)))
                 .addValue("toTsExcl", Timestamp.from(to.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC)));
 
-        return jdbc.query(SQL, params, (rs, i) -> {
+        return jdbc.query(projectId != null ? SQL_BY_PROJECT : SQL, params, (rs, i) -> {
             String code = rs.getString("employee_code");
             String name = (rs.getString("first_name") + " " + rs.getString("last_name")).trim();
             String workCenter = rs.getString("work_center");

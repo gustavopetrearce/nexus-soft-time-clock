@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 
@@ -19,6 +20,8 @@ import { exportToCsv, exportToExcel, exportToPdf } from './report-export.util';
 import {
   AttendanceReport,
   NumericColumn,
+  ProjectHours,
+  ReportProject,
   ReportFilters,
   SortColumn,
   SortState,
@@ -52,6 +55,7 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
     MatInputModule,
     MatMenuModule,
     MatPaginatorModule,
+    MatSelectModule,
     TranslocoPipe,
     AppNumberPipe,
     EmptyStateComponent,
@@ -64,6 +68,9 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
       p { margin: var(--nx-space-0); }
       mat-form-field { width: 100%; }
       .exportar .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
+      .proyectos { margin-top: var(--nx-space-gap-section); }
+      .proyectos h2 { margin: var(--nx-space-0) var(--nx-space-0) var(--nx-space-gap-inline); font-size: var(--nx-font-size-16); font-weight: var(--nx-font-weight-semibold); }
+      .proyectos td.num, .proyectos th.num { text-align: right; }
     `,
   ],
   template: `
@@ -90,6 +97,15 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
             <mat-label>{{ 'period.to' | transloco }}</mat-label>
             <input matInput type="date" formControlName="to" />
           </mat-form-field>
+          @if (projects().length > 0) {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'reports.project' | transloco }}</mat-label>
+              <mat-select formControlName="projectId">
+                <mat-option value="">{{ 'common.all' | transloco }}</mat-option>
+                @for (p of projects(); track p.id) { <mat-option [value]="p.id">{{ p.code }} · {{ p.name }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+          }
 
           <div class="nx-filtros__acciones">
             <button mat-button type="button" (click)="clearFilters()" [disabled]="activeFilters() === 0">
@@ -140,6 +156,44 @@ const NUMERIC_COLUMNS: readonly NumericColumn[] = [
           />
         }
       </section>
+
+      <!-- CU-09: solo si alguna marca del periodo está atribuida a un proyecto. -->
+      @if (hasProjectHours()) {
+        <section class="nx-panel nx-panel--listado proyectos">
+          <h2>{{ 'reports.hoursByProject' | transloco }}</h2>
+          <div class="nx-tabla">
+            <div class="nx-tabla__scroll nx-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{{ 'reports.field.employeeNumber' | transloco }}</th>
+                    <th scope="col">{{ 'common.name' | transloco }}</th>
+                    <th scope="col">{{ 'reports.project' | transloco }}</th>
+                    <th scope="col" class="num">{{ 'reports.field.workedHours' | transloco }}</th>
+                    <th scope="col" class="num">{{ 'reports.field.overtimeHours' | transloco }}</th>
+                    <th scope="col" class="num">{{ 'reports.field.totalHours' | transloco }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of projectHours(); track $index) {
+                    <tr>
+                      <td class="nx-text-code">{{ row.employeeNumber }}</td>
+                      <td><span class="nx-trunc">{{ row.employeeName }}</span></td>
+                      <td>
+                        @if (row.projectCode) { {{ row.projectCode }} · {{ row.projectName }} }
+                        @else { <span class="nx-text-caption">{{ 'reports.noProject' | transloco }}</span> }
+                      </td>
+                      <td class="num nx-text-numeric">{{ row.workedHours | appNumber }}</td>
+                      <td class="num nx-text-numeric">{{ row.overtimeHours | appNumber }}</td>
+                      <td class="num nx-text-numeric">{{ row.totalHours | appNumber }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      }
     }
   `,
 })
@@ -154,6 +208,9 @@ export class ReportsComponent {
 
   // --- Estado de datos ---
   private readonly rawRows = signal<AttendanceReport[]>([]);
+  protected readonly projects = signal<ReportProject[]>([]);
+  protected readonly projectHours = signal<ProjectHours[]>([]);
+  protected readonly hasProjectHours = computed(() => this.projectHours().some((r) => r.projectCode !== null));
   protected readonly loading = signal(false);
   protected readonly error = signal(false);
   protected readonly exporting = signal(false);
@@ -200,6 +257,8 @@ export class ReportsComponent {
     const to$ = this.form.get('to')!.valueChanges;
     from$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
     to$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
+    this.form.get('projectId')!.valueChanges.pipe(distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
+    this.service.projects().subscribe({ next: (p) => this.projects.set(p), error: () => void 0 });
 
     // Vuelve a la primera página cuando cambian los filtros (evita quedar en una página vacía).
     this.form.valueChanges.pipe(debounceTime(150), takeUntilDestroyed()).subscribe(() => this.pageIndex.set(0));
@@ -209,10 +268,15 @@ export class ReportsComponent {
 
   /** (Re)carga el reporte para el rango de fechas actual. */
   protected reload(): void {
-    const { from, to } = this.form.getRawValue() as ReportFilters;
+    const { from, to, projectId } = this.form.getRawValue() as ReportFilters;
     this.loading.set(true);
     this.error.set(false);
-    this.service.summary(from, to).subscribe({
+    // El desglose por proyecto es complementario: si falla, el reporte principal sigue.
+    this.service.hoursByProject(from, to, projectId).subscribe({
+      next: (rows) => this.projectHours.set(rows),
+      error: () => this.projectHours.set([]),
+    });
+    this.service.summary(from, to, projectId).subscribe({
       next: (rows) => {
         this.rawRows.set(rows);
         this.loading.set(false);
@@ -314,6 +378,7 @@ export class ReportsComponent {
     return this.fb.group({
       from: this.fb.nonNullable.control(d.from),
       to: this.fb.nonNullable.control(d.to),
+      projectId: this.fb.nonNullable.control(d.projectId),
       search: this.fb.nonNullable.control(d.search),
       employeeNumber: this.fb.nonNullable.control(d.employeeNumber),
       employeeName: this.fb.nonNullable.control(d.employeeName),

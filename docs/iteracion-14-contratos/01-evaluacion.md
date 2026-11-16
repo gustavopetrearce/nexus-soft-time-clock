@@ -128,7 +128,7 @@ Va en el módulo `hr`, junto a `EmployeeProfile` y `Permit`. **Un contrato `PROJ
 | 0 ✅ | Esta evaluación | Este documento |
 | 1 ✅ | V33, contratos en `hr`, validación de fechas de proyecto, pantallas web | CRUD de contratos funcionando (ver §7) |
 | 2 ✅ | Integración con la marcación, `FUERA_DE_VIGENCIA`, corrección de `SchedulePolicyAdapter` (asignación sin centro y horario inactivo) | Marcas asociadas al proyecto, con su incidencia |
-| 3 | Reportes por proyecto y días esperados por contrato; perfil en móvil | CU-09 cumplido |
+| 3 ✅ | Reportes por proyecto y días esperados por contrato; perfil en móvil | CU-09 cumplido (ver §9) |
 
 **Fuera de alcance** (se anota como deuda):
 
@@ -222,3 +222,47 @@ Aplica igual por QR, sync offline y reloj externo.
   - contrato terminado;
   - proyecto cerrado;
   - contrato por turno.
+
+### 9. Fase 3 — lo implementado
+
+**Reportes por proyecto (CU-09)** — módulo `reporting`, permiso `report:export`
+
+- `JourneySegmentsSql` lleva el proyecto de cada tramo (el de la marca que lo abre) y admite filtrar por `:project`. Resumen, desglose por centro y desglose por proyecto salen de los mismos tramos, así que cuadran entre sí.
+- Filtro `projectId` en `/reports/attendance-summary`, `/reports/hours-by-site`, `/reports/attendance-records` y la exportación `/reports/attendance`.
+- En el resumen filtrado por proyecto:
+  - solo cuentan las marcas atribuidas al proyecto;
+  - aparecen quienes tuvieron contrato con él en el rango o marcaron en él;
+  - los días esperados y las incidencias se limitan a los días que cubre su contrato con ese proyecto.
+- Nuevo `GET /reports/hours-by-project`: una fila por colaborador y proyecto. Las horas sin proyecto van en su propia fila, con el proyecto nulo.
+- Nuevo `GET /reports/projects`: el catálogo para el filtro, porque quien exporta no tiene por qué gestionar proyectos.
+- Los registros individuales muestran el proyecto de cada marca.
+
+**Días esperados** (`AttendanceSummaryService`)
+
+Siguen siendo los días hábiles del rango acotados a las asignaciones de turno, con dos límites nuevos:
+- **Fecha de ingreso** (`employee_profiles.hire_date`): antes de ella no se espera al colaborador.
+- **Contratos:** si el colaborador tiene alguno no cancelado, solo se le espera en los días que cubre alguno. Quien no tiene contratos conserva el cálculo anterior.
+
+**Portal**
+- Reporte por colaborador:
+  - selector de proyecto, visible si la empresa tiene proyectos;
+  - panel "Horas por proyecto", visible si alguna marca del periodo tiene proyecto.
+- Registros de asistencia: el mismo selector, y el proyecto bajo el centro en cada fila.
+
+**App móvil**
+- `GET /me/contract` devuelve el contrato que cubre hoy o, si no hay, el próximo por empezar; sin ninguno responde 204.
+- "Mi perfil" muestra, en datos de la empresa:
+  - el tipo de contrato, marcado como "próximo" si aún no empieza;
+  - el proyecto;
+  - la vigencia.
+- `myContractProvider` se invalida en el cierre de sesión, junto con el resto de datos del usuario.
+
+**Pruebas**
+- `ProjectReportsIT` (7, con PostgreSQL real):
+  - horas por proyecto y sin proyecto;
+  - resumen y desglose por centro filtrados por proyecto;
+  - exclusión de quien no tuvo nada que ver con el proyecto;
+  - días esperados acotados por contrato, por contrato cancelado y por fecha de ingreso;
+  - registros filtrados con su proyecto.
+- `ContractIT`: `/me/contract` con y sin contrato.
+- Móvil: `profile_contract_test.dart` (4).

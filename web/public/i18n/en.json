@@ -859,7 +859,10 @@
       "late": "{{n}} late arrival(s)",
       "lateOver": "{{n}} late arrivals (above the threshold of {{threshold}})"
     },
-    "exportFormat": "Export format"
+    "exportFormat": "Export format",
+    "project": "Project",
+    "hoursByProject": "Hours by project",
+    "noProject": "No project"
   },
   "records": {
     "title": "Attendance records",

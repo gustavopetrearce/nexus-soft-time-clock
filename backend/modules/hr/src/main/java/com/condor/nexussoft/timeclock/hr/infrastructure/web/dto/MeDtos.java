@@ -29,4 +29,14 @@ public final class MeDtos {
             int pendingDays,    // días en solicitudes pendientes
             int availableDays   // disponibles = max(0, entitled - taken)
     ) {}
+
+    /** Contrato propio: el vigente hoy ({@code current}) o el próximo por empezar. */
+    public record MeContractResponse(
+            String type,          // PROJECT | SHIFT
+            String projectCode,   // solo PROJECT
+            String projectName,
+            LocalDate startsOn,
+            LocalDate endsOn,     // null = indefinido
+            boolean current
+    ) {}
 }

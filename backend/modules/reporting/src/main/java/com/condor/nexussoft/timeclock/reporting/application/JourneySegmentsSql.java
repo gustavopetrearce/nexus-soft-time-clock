@@ -16,21 +16,37 @@ package com.condor.nexussoft.timeclock.reporting.application;
  * <p>Por construcción la suma de los tramos de una jornada es su total,
  * {@code (salida − entrada) − descansos}.</p>
  *
- * <p>Requiere los parámetros {@code :tenant}, {@code :fromTs} y {@code :toTsExcl}.</p>
+ * <p>Cada tramo lleva el proyecto de la marca que lo abre (RN-67, iteración 14), para el desglose por
+ * proyecto. Con {@link #ctes(boolean) ctes(true)} solo entran las marcas de un proyecto: así el
+ * resumen y el desglose por centro se filtran por proyecto sin repetir la lógica.</p>
+ *
+ * <p>Requiere los parámetros {@code :tenant}, {@code :fromTs} y {@code :toTsExcl}, y
+ * {@code :project} si se filtra por proyecto.</p>
  */
 final class JourneySegmentsSql {
 
     private JourneySegmentsSql() {
     }
 
-    /** Sin el {@code WITH} inicial ni la coma final: el llamador encadena sus propios CTEs. */
-    static final String CTES = """
+    /** Sin filtro de proyecto. */
+    static final String CTES = ctes(false);
+
+    /**
+     * Sin el {@code WITH} inicial ni la coma final: el llamador encadena sus propios CTEs.
+     * {@code byProject} limita las marcas a {@code :project}.
+     */
+    static String ctes(boolean byProject) {
+        return TEMPLATE.replace("/*PROJECT*/", byProject ? " AND ar.project_id = :project" : "");
+    }
+
+    private static final String TEMPLATE = """
             -- Marcas aceptadas del rango, numerando la jornada: el contador acumulado de ENTRADAs
             -- cambia de valor justo en cada ENTRADA, así que agrupa cada bloque ENTRADA..(antes de
             -- la siguiente). Las marcas anteriores a la primera ENTRADA del rango quedan en 0.
             punch AS (
                 SELECT ar.user_id,
                        ar.work_site_id,
+                       ar.project_id,
                        ar.shift_id,
                        ar.event_type,
                        ar.server_time,
@@ -43,7 +59,7 @@ final class JourneySegmentsSql {
                 LEFT JOIN attendance_break_types bt
                        ON bt.id = ar.break_type_id AND bt.tenant_id = ar.tenant_id
                 WHERE ar.tenant_id = :tenant AND ar.status = 'ACCEPTED'
-                  AND ar.server_time >= :fromTs AND ar.server_time < :toTsExcl
+                  AND ar.server_time >= :fromTs AND ar.server_time < :toTsExcl/*PROJECT*/
             ),
             journey AS (
                 SELECT p.user_id,
@@ -71,6 +87,7 @@ final class JourneySegmentsSql {
                 SELECT p.user_id,
                        p.journey_no,
                        p.work_site_id,
+                       p.project_id,
                        p.event_type,
                        p.paid_break,
                        p.server_time AS started_at,
@@ -87,6 +104,7 @@ final class JourneySegmentsSql {
                 SELECT s.user_id,
                        s.journey_no,
                        s.work_site_id,
+                       s.project_id,
                        s.started_at,
                        (j.entry_at)::date AS d,
                        j.shift_id,
@@ -111,7 +129,7 @@ final class JourneySegmentsSql {
             -- Minutos trabajados acumulados desde el FINAL de la jornada: sirve para saber qué parte
             -- de cada tramo cae dentro de los últimos minutos, que son los que son extra.
             segment_tail AS (
-                SELECT sw.user_id, sw.journey_no, sw.work_site_id, sw.started_at, sw.d, sw.worked_min,
+                SELECT sw.user_id, sw.journey_no, sw.work_site_id, sw.project_id, sw.started_at, sw.d, sw.worked_min,
                        sum(sw.worked_min) OVER (PARTITION BY sw.user_id, sw.journey_no
                                                 ORDER BY sw.started_at DESC
                                                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS tail_min
@@ -121,7 +139,7 @@ final class JourneySegmentsSql {
             -- centro donde se produjeron: si el excedente cabe en el último tramo va entero ahí, y si
             -- lo desborda, el resto sube al tramo anterior.
             segment_final AS (
-                SELECT st.user_id, st.work_site_id, st.started_at, st.d, st.worked_min,
+                SELECT st.user_id, st.work_site_id, st.project_id, st.started_at, st.d, st.worked_min,
                        GREATEST(0, LEAST(st.tail_min, COALESCE(jo.overtime_min, 0))
                                    - (st.tail_min - st.worked_min)) AS overtime_min
                 FROM segment_tail st
