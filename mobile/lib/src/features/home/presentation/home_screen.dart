@@ -171,6 +171,12 @@ class _Accesos extends StatelessWidget {
         subtitle: l10n.homeVacationsSubtitle,
         onTap: () => context.push('/vacations'),
       ),
+      NxTarjetaAcceso(
+        icon: Icons.event_busy_outlined,
+        title: l10n.homePermitsTitle,
+        subtitle: l10n.homePermitsSubtitle,
+        onTap: () => context.push('/permits'),
+      ),
       if (canApprove)
         NxTarjetaAcceso(
           icon: Icons.fact_check_outlined,

@@ -25,6 +25,9 @@ Vocabulario compartido entre negocio y desarrollo. Estos términos serán los no
 | **Evidencia (Evidence)** | Foto u otro adjunto asociado a un registro, almacenado de forma segura (MinIO). |
 | **Bandera antifraude (FraudFlag)** | Indicador de una condición sospechosa detectada (mock location, root, spoofing, replay…). |
 | **Incidencia (Incident)** | Situación que requiere atención: retardo, falta, registro rechazado, justificación, permiso. |
+| **Permiso de ausencia (Permit)** | Autorización que registra el personal (admin, RR. HH., supervisor) para un colaborador: entrada tarde o salida temprano (un día, con hora) o falta (rango de días), con motivo de lista fija. Nace aprobado; justifica la falta/retardo en el reporte (V32). No confundir con *Permiso (Permission)* de RBAC. |
+| **Goce de sueldo (PayStatus)** | Decisión de RR. HH. sobre un permiso: con goce, sin goce o pendiente de revisión. Independiente de quién aprobó el permiso. |
+| **Incapacidad** | Permiso de falta con motivo INCAPACIDAD; tiene reporte propio con goce, periodo y estatus. |
 | **Operación de sincronización (SyncOperation)** | Registro creado offline con UUID, encolado para envío idempotente al servidor. |
 | **Cola de sincronización (SyncQueue)** | Estructura local (móvil) que almacena operaciones pendientes de enviar. |
 | **Evento de dominio (DomainEvent)** | Hecho de negocio publicado para desacoplar contextos (p.ej. `AttendanceRegistered`). |

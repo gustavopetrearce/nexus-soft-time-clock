@@ -93,7 +93,9 @@
       "eventTypes": "Tipos de evento",
       "vacations": "Vacaciones",
       "notifications": "Notificaciones",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "permits": "Permisos",
+      "incapacities": "Incapacidades"
     },
     "closeMenu": "Cerrar menú",
     "home": "Nexus Soft Time Clock: ir al Panel",
@@ -991,6 +993,86 @@
     "connection": {
       "title": "No se pudo conectar con el servidor.",
       "description": "Revisa tu conexión e inténtalo de nuevo."
+    }
+  },
+  "permits": {
+    "newPermit": "Registrar permiso",
+    "search": "Buscar colaborador o número",
+    "collaborator": "Colaborador",
+    "type": "Tipo",
+    "reason": "Motivo",
+    "period": "Periodo",
+    "date": "Fecha",
+    "days": "Días",
+    "pay": "Goce de sueldo",
+    "notes": "Observaciones",
+    "note": "Nota",
+    "grantedBy": "Otorgado por",
+    "decidedBy": "Decidido por",
+    "arrivalTime": "Hora de llegada autorizada",
+    "departureTime": "Hora de salida autorizada",
+    "payAction": "Goce",
+    "cancelAction": "Cancelar permiso",
+    "empty": "No hay permisos registrados.",
+    "alreadyCancelled": "El permiso ya fue cancelado por otra persona.",
+    "payDecided": "Goce de sueldo actualizado.",
+    "cancelled": "Permiso cancelado.",
+    "actionError": "No se pudo completar la acción.",
+    "types": {
+      "LATE_ARRIVAL": "Entrada tarde",
+      "EARLY_DEPARTURE": "Salida temprano",
+      "ABSENCE": "Falta"
+    },
+    "reasons": {
+      "PERSONAL": "Personal",
+      "INCAPACIDAD": "Incapacidad",
+      "MEDICO": "Cita médica",
+      "FAMILIAR": "Asunto familiar",
+      "TRAMITE": "Trámite",
+      "OTRO": "Otro"
+    },
+    "status": {
+      "APPROVED": "Aprobado",
+      "CANCELLED": "Cancelado"
+    },
+    "payStatus": {
+      "PENDING_REVIEW": "Pendiente de revisión",
+      "WITH_PAY": "Con goce",
+      "WITHOUT_PAY": "Sin goce"
+    },
+    "phase": {
+      "label": "Vigencia",
+      "UPCOMING": "Próxima",
+      "IN_PROGRESS": "En curso",
+      "FINISHED": "Concluida"
+    },
+    "dialog": {
+      "title": "Registrar permiso",
+      "subtitle": "El permiso queda aprobado al registrarlo.",
+      "payHint": "El goce de sueldo lo decide RR. HH.; quedará pendiente de revisión.",
+      "submit": "Registrar",
+      "created": "Permiso registrado.",
+      "overlap": "El colaborador ya tiene un permiso de este tipo en ese periodo.",
+      "createError": "No se pudo registrar el permiso."
+    },
+    "payDialog": {
+      "title": "Goce de sueldo",
+      "submit": "Guardar decisión"
+    },
+    "cancelDialog": {
+      "title": "Cancelar permiso",
+      "message": "La cancelación es definitiva: el permiso dejará de justificar faltas o retardos.",
+      "submit": "Cancelar permiso"
+    },
+    "incapacities": {
+      "title": "Reporte de incapacidades",
+      "empty": "No hay incapacidades en el periodo.",
+      "fileName": "incapacidades",
+      "sheet": "Incapacidades",
+      "kpi": {
+        "total": "Incapacidades",
+        "days": "Días aprobados"
+      }
     }
   }
 }

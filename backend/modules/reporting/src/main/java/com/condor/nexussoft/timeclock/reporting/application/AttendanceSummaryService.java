@@ -95,19 +95,36 @@ public class AttendanceSummaryService {
                 ) t
                 ORDER BY t.user_id, t.worked_min DESC, t.last_at DESC
             ),
-            inc AS (
-                SELECT user_id,
-                       count(*) FILTER (WHERE type = 'RETARDO') AS retardos,
-                       count(*) FILTER (WHERE type IN ('PERMISO', 'JUSTIFICACION')
-                                           OR (type = 'FALTA' AND status IN ('APPROVED', 'RESOLVED'))) AS justified,
-                       count(*) FILTER (WHERE type = 'FALTA' AND status IN ('OPEN', 'REJECTED')) AS unjustified
-                FROM incidents
-                WHERE tenant_id = :tenant AND incident_date >= :fromDate AND incident_date <= :toDate
+            -- Permisos aprobados (V32): una FALTA en un día cubierto por un permiso de falta cuenta
+            -- como justificada, y un RETARDO en un día con permiso de entrada tarde no cuenta. Las
+            -- incidencias no se modifican; solo cambia cómo se clasifican aquí.
+            inc_src AS (
+                SELECT i.user_id, i.type, i.status,
+                       EXISTS (SELECT 1 FROM permits pm
+                               WHERE pm.tenant_id = i.tenant_id AND pm.user_id = i.user_id
+                                 AND pm.status = 'APPROVED' AND pm.type = 'ABSENCE'
+                                 AND i.incident_date BETWEEN pm.start_date AND pm.end_date) AS absence_permit,
+                       EXISTS (SELECT 1 FROM permits pm
+                               WHERE pm.tenant_id = i.tenant_id AND pm.user_id = i.user_id
+                                 AND pm.status = 'APPROVED' AND pm.type = 'LATE_ARRIVAL'
+                                 AND i.incident_date = pm.start_date) AS late_permit
+                FROM incidents i
+                WHERE i.tenant_id = :tenant AND i.incident_date >= :fromDate AND i.incident_date <= :toDate
                   -- Una marca cancelada (V31) no cuenta, ni el retardo/incidencia que generó.
                   AND NOT EXISTS (SELECT 1 FROM attendance_records car
-                                  WHERE car.id = incidents.related_attendance_id
-                                    AND car.tenant_id = incidents.tenant_id
+                                  WHERE car.id = i.related_attendance_id
+                                    AND car.tenant_id = i.tenant_id
                                     AND car.status = 'CANCELLED')
+            ),
+            inc AS (
+                SELECT user_id,
+                       count(*) FILTER (WHERE type = 'RETARDO' AND NOT late_permit) AS retardos,
+                       count(*) FILTER (WHERE type IN ('PERMISO', 'JUSTIFICACION')
+                                           OR (type = 'FALTA' AND (status IN ('APPROVED', 'RESOLVED')
+                                                                   OR absence_permit))) AS justified,
+                       count(*) FILTER (WHERE type = 'FALTA' AND status IN ('OPEN', 'REJECTED')
+                                          AND NOT absence_permit) AS unjustified
+                FROM inc_src
                 GROUP BY user_id
             ),
             expected AS (

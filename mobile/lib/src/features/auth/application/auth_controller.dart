@@ -10,6 +10,7 @@ import '../../attendance/application/today_attendance.dart';
 import '../../attendance/data/attendance_sync_service.dart';
 import '../../attendance/data/break_type_service.dart';
 import '../../attendance/data/event_type_service.dart';
+import '../../permits/data/permit_repository.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../vacations/data/vacation_repository.dart';
 import '../data/auth_repository.dart';
@@ -124,6 +125,7 @@ class AuthController extends Notifier<AuthState> {
     ref.invalidate(myProfileProvider);
     ref.invalidate(vacationSummaryProvider);
     ref.invalidate(myVacationsProvider);
+    ref.invalidate(myPermitsProvider);
     ref.invalidate(enabledIntermediateEventTypesProvider);
     ref.invalidate(attendanceControllerProvider);
     ref.invalidate(todayAttendanceProvider);

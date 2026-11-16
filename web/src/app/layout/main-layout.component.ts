@@ -72,6 +72,8 @@ const NAV: readonly NavGroup[] = [
       { route: '/scheduling', icon: 'event', key: 'scheduling', permission: 'schedule:manage' },
       { route: '/event-types', icon: 'tune', key: 'eventTypes', permission: 'schedule:manage' },
       { route: '/vacations', icon: 'beach_access', key: 'vacations', permission: 'vacation:approve' },
+      { route: '/permits', icon: 'event_busy', key: 'permits', permission: 'permit:manage' },
+      { route: '/permits/incapacities', icon: 'personal_injury', key: 'incapacities', permission: 'permit:manage' },
     ],
   },
   {
@@ -178,7 +180,7 @@ const NAV: readonly NavGroup[] = [
                 class="nx-nav__item"
                 [routerLink]="item.route"
                 routerLinkActive="is-active"
-                [routerLinkActiveOptions]="{ exact: item.route === '/reports' }"
+                [routerLinkActiveOptions]="{ exact: item.route === '/reports' || item.route === '/permits' }"
                 ariaCurrentWhenActive="page"
                 #rla="routerLinkActive"
               >

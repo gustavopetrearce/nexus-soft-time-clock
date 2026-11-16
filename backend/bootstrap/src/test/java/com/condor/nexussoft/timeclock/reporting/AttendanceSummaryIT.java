@@ -205,7 +205,45 @@ class AttendanceSummaryIT extends PostgisIntegrationTest {
         assertThat(fila(LUNES, LUNES).workedHours()).isEqualTo(4.0);
     }
 
+    /** V32: una FALTA cubierta por un permiso de falta aprobado cuenta como justificada. */
+    @Test
+    void faltaCubiertaPorPermiso_cuentaComoJustificada() {
+        incidencia("FALTA", LUNES);
+        incidencia("FALTA", LUNES.plusDays(1));
+        incidencia("FALTA", LUNES.plusDays(3));
+        permiso("ABSENCE", LUNES, LUNES.plusDays(1), null, "APPROVED");
+        // Un permiso cancelado no justifica nada.
+        permiso("ABSENCE", LUNES.plusDays(3), LUNES.plusDays(3), null, "CANCELLED");
+
+        AttendanceSummaryRow f = fila(LUNES, LUNES.plusDays(4));
+        assertThat(f.justifiedAbsences()).isEqualTo(2);
+        assertThat(f.unjustifiedAbsences()).isEqualTo(1);
+    }
+
+    /** V32: un RETARDO en un día con permiso de entrada tarde aprobado no cuenta como retardo. */
+    @Test
+    void retardoConPermisoDeEntradaTarde_noCuenta() {
+        incidencia("RETARDO", LUNES);
+        incidencia("RETARDO", LUNES.plusDays(1));
+        permiso("LATE_ARRIVAL", LUNES, LUNES, LocalTime.of(10, 0), "APPROVED");
+        // Una salida temprano no cubre un retardo.
+        permiso("EARLY_DEPARTURE", LUNES.plusDays(1), LUNES.plusDays(1), LocalTime.of(15, 0), "APPROVED");
+
+        assertThat(fila(LUNES, LUNES.plusDays(4)).lateArrivals()).isEqualTo(1);
+    }
+
     // --- utilidades ------------------------------------------------------------------------
+
+    private void incidencia(String tipo, LocalDate dia) {
+        jdbc.update("INSERT INTO incidents (tenant_id, user_id, type, incident_date) VALUES (?, ?, ?, ?)",
+                tenantId, userId, tipo, dia);
+    }
+
+    private void permiso(String tipo, LocalDate desde, LocalDate hasta, LocalTime hora, String estado) {
+        jdbc.update("INSERT INTO permits (tenant_id, user_id, type, reason, start_date, end_date, days, time_at, status) "
+                        + "VALUES (?, ?, ?, 'PERSONAL', ?, ?, 1, ?, ?)",
+                tenantId, userId, tipo, desde, hasta, hora, estado);
+    }
 
     private UUID turno(String nombre, LocalTime inicio, LocalTime fin, int descansoMin, boolean cruzaMedianoche) {
         UUID id = UUID.randomUUID();

@@ -46,6 +46,15 @@ Si la empresa agotó su cupo (ver arriba), el alta, la reactivación y la asigna
 ### Incidencias
 `/api/v1/incidents` → revisar incidencias (retardos, rechazos), **aprobar/rechazar** con comentario. Las incidencias por registro rechazado se crean automáticamente.
 
+### Permisos (entradas tarde, salidas temprano, faltas)
+Portal **Permisos** (`permit:manage`: administrador, RR. HH., supervisor) → **Registrar permiso** para un colaborador: tipo (entrada tarde / salida temprano con la hora autorizada, o falta con rango de fechas), motivo (personal, incapacidad, cita médica, asunto familiar, trámite, otro) y observaciones. El permiso **queda aprobado** al registrarlo; no puede haber dos del mismo tipo traslapados. **Cancelar permiso** es definitivo.
+
+**Goce de sueldo** (`permit:pay`, solo **RR. HH.**): al registrar o después, sobre cualquier permiso aprobado —también los que aprobó un supervisor— RR. HH. decide *con goce* o *sin goce* (con nota); mientras no lo haga queda *pendiente de revisión*. La bandeja filtra por goce para encontrar los pendientes.
+
+Efecto en el reporte de asistencia: una falta en un día cubierto por un permiso de falta cuenta como **justificada**, y un retardo en un día con permiso de entrada tarde **no cuenta**. Las incidencias no se modifican.
+
+**Reporte de incapacidades** (Permisos → Incapacidades): faltas con motivo *incapacidad* en el periodo, con goce (con/sin/pendiente), periodo, días y estatus (aprobado/cancelado y vigencia: próxima, en curso, concluida); totales y exportación Excel/PDF/CSV. API: `GET/POST /api/v1/permits`, `PATCH /permits/{id}/cancel`, `PATCH /permits/{id}/pay`, `GET /permits/incapacities`.
+
 ### Dashboards y tiempo real
 `/admin/dashboard` → KPIs (asistencias/rechazos del día, incidencias abiertas, usuarios/centros activos). El canal WebSocket (`/ws`, tópico `/topic/tenant/{id}/attendance`) alimenta el mapa/monitor en vivo.
 
