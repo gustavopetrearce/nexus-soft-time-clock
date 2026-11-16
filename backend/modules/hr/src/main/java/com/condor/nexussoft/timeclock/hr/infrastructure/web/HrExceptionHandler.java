@@ -3,6 +3,7 @@ package com.condor.nexussoft.timeclock.hr.infrastructure.web;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.springframework.core.Ordered;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +19,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(basePackageClasses = {EmployeeProfileController.class, VacationController.class,
-        PermitController.class})
+        PermitController.class, ContractController.class})
 public class HrExceptionHandler {
+
+    /** Carrera contra una restricción de la BD (p. ej. el traslape de contratos, V33): conflicto, no 500. */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> integrity(DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "El cambio choca con otro registro; actualiza la vista e inténtalo de nuevo."));
+    }
 
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, String>> notFound(NoSuchElementException ex) {

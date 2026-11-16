@@ -95,7 +95,8 @@
       "notifications": "Notifications",
       "settings": "Settings",
       "permits": "Permits",
-      "incapacities": "Sick leave"
+      "incapacities": "Sick leave",
+      "contracts": "Contracts"
     },
     "closeMenu": "Close menu",
     "home": "Nexus Soft Time Clock: go to Dashboard",
@@ -128,7 +129,8 @@
     "PENDING": "Pending",
     "READ": "Read",
     "SENT": "Sent",
-    "CANCELLED": "Cancelled"
+    "CANCELLED": "Cancelled",
+    "ENDED": "Ended"
   },
   "login": {
     "email": "Email",
@@ -510,7 +512,12 @@
     },
     "search": "Search project",
     "startsOn": "Start",
-    "endsOn": "End"
+    "endsOn": "End",
+    "contracts": "Assigned collaborators",
+    "contractsHint": "Project contracts registered on this project.",
+    "assign": "Assign collaborator",
+    "noContracts": "No collaborators are assigned to this project yet.",
+    "rangeInvalid": "The end date cannot be before the start date."
   },
   "apiClients": {
     "title": "Integrations",
@@ -1073,6 +1080,71 @@
         "total": "Sick leaves",
         "days": "Approved days"
       }
+    }
+  },
+  "contracts": {
+    "newContract": "New contract",
+    "search": "Search collaborator or number",
+    "collaborator": "Collaborator",
+    "type": "Contract type",
+    "project": "Project",
+    "workSite": "Work site",
+    "period": "Validity",
+    "startsOn": "Start",
+    "endsOn": "End",
+    "notes": "Notes",
+    "activeOn": "Active on",
+    "indefinite": "Open-ended",
+    "noLimit": "no limit",
+    "createdBy": "Registered by",
+    "needsReview": "Needs review",
+    "needsReviewHint": "The project changed: the contract no longer fits its validity or the project is not active.",
+    "endAction": "End",
+    "cancelAction": "Cancel contract",
+    "empty": "There are no contracts yet.",
+    "ended": "Contract ended.",
+    "cancelled": "Contract cancelled.",
+    "actionError": "The action could not be completed.",
+    "types": {
+      "PROJECT": "Per project",
+      "SHIFT": "Per shift / schedule"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "ENDED": "Ended",
+      "CANCELLED": "Cancelled"
+    },
+    "phase": {
+      "label": "Timing",
+      "UPCOMING": "Upcoming",
+      "IN_PROGRESS": "Current",
+      "FINISHED": "Finished"
+    },
+    "dialog": {
+      "title": "New contract",
+      "editTitle": "Edit contract",
+      "subtitle": "A project contract is the assignment to the project and stays within its validity.",
+      "projectValidity": "Project validity",
+      "endProjectHint": "Empty: until the project ends.",
+      "endShiftHint": "Empty: open-ended.",
+      "rangeInvalid": "The end date cannot be before the start date.",
+      "outOfProject": "The period must fall within the project validity.",
+      "submit": "Register",
+      "created": "Contract registered.",
+      "updated": "Contract updated.",
+      "saveError": "The contract could not be saved."
+    },
+    "endDialog": {
+      "title": "End contract",
+      "message": "The validity is cut to the given date. To extend it, edit the contract.",
+      "date": "End date",
+      "submit": "End"
+    },
+    "cancelDialog": {
+      "title": "Cancel contract",
+      "message": "Use this only if the contract was registered by mistake. It cannot be undone.",
+      "reason": "Reason",
+      "submit": "Cancel contract"
     }
   }
 }
