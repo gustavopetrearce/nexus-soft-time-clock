@@ -22,6 +22,9 @@ El servidor valida cada registro. Motivos frecuentes:
 
 Un rechazo genera una **incidencia** que tu supervisor/RR.HH. puede revisar, y recibes una **notificación**.
 
+## Mis permisos
+En **Mis permisos** ves los permisos que te registró tu supervisor, RR. HH. o el administrador (entrada tarde, salida temprano o falta), su motivo, si son **con o sin goce de sueldo** (o si RR. HH. aún no lo decide) y si siguen vigentes o fueron cancelados.
+
 ## Pendientes de sincronizar
 El icono de sincronización muestra cuántos registros están **pendientes**. Puedes forzar la sincronización pulsándolo. Ningún registro se pierde por falta de conexión.
 

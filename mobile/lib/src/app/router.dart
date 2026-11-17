@@ -12,6 +12,7 @@ import '../features/home/presentation/home_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../core/i18n/l10n.dart';
 import '../core/ui/nx_ui.dart';
+import '../features/permits/presentation/permits_screen.dart';
 import '../features/vacations/presentation/vacations_screen.dart';
 
 /// Router de la app (GoRouter) con redirect basado en la sesión: mientras se restaura la
@@ -66,6 +67,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ChangePasswordScreen(),
       ),
       GoRoute(path: '/vacations', name: 'vacations', builder: (context, state) => const VacationsScreen()),
+      GoRoute(path: '/permits', name: 'permits', builder: (context, state) => const PermitsScreen()),
       GoRoute(
         path: '/admin/vacations',
         name: 'adminVacations',

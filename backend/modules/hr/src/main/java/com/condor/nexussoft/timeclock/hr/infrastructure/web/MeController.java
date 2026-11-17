@@ -5,11 +5,13 @@ import com.condor.nexussoft.timeclock.hr.domain.VacationPolicy;
 import com.condor.nexussoft.timeclock.hr.domain.VacationRequest;
 import com.condor.nexussoft.timeclock.hr.domain.VacationStatus;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.EmployeeProfileUseCase;
+import com.condor.nexussoft.timeclock.hr.domain.port.in.PermitUseCase;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.VacationPolicyUseCase;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.VacationRequestUseCase;
 import com.condor.nexussoft.timeclock.hr.infrastructure.persistence.EmployeeDirectoryQuery;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.MeDtos.MeProfileResponse;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.MeDtos.MeVacationSummaryResponse;
+import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.PermitDtos.PermitResponse;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.VacationDtos.VacationRequestResponse;
 import java.time.LocalDate;
 import java.util.List;
@@ -35,13 +37,16 @@ public class MeController {
     private final EmployeeProfileUseCase profiles;
     private final VacationPolicyUseCase policies;
     private final VacationRequestUseCase requests;
+    private final PermitUseCase permits;
     private final EmployeeDirectoryQuery directory;
 
     public MeController(EmployeeProfileUseCase profiles, VacationPolicyUseCase policies,
-                        VacationRequestUseCase requests, EmployeeDirectoryQuery directory) {
+                        VacationRequestUseCase requests, PermitUseCase permits,
+                        EmployeeDirectoryQuery directory) {
         this.profiles = profiles;
         this.policies = policies;
         this.requests = requests;
+        this.permits = permits;
         this.directory = directory;
     }
 
@@ -96,6 +101,13 @@ public class MeController {
                 r.startDate(), r.endDate(), r.days(), r.reason(), r.status().name(),
                 r.resolutionNote(), r.resolvedBy() == null ? null : r.resolvedBy().toString(),
                 r.resolvedAt(), r.createdAt())).toList();
+    }
+
+    /** Permisos propios (entradas tarde, salidas temprano, faltas), con su goce de sueldo. */
+    @GetMapping("/permits")
+    public List<PermitResponse> permits(Authentication auth) {
+        return PermitController.toResponses(
+                permits.listForUser(CurrentUser.tenantId(auth), CurrentUser.userId(auth)), directory);
     }
 
     private static int completedYears(LocalDate from, LocalDate to) {

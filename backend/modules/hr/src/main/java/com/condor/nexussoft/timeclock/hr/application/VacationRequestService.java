@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.hr.application;
 
+import com.condor.nexussoft.timeclock.hr.domain.DayCounter;
 import com.condor.nexussoft.timeclock.hr.domain.PagedResult;
 import com.condor.nexussoft.timeclock.hr.domain.VacationPolicy;
 import com.condor.nexussoft.timeclock.hr.domain.VacationRequest;
@@ -7,7 +8,6 @@ import com.condor.nexussoft.timeclock.hr.domain.VacationStatus;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.VacationRequestUseCase;
 import com.condor.nexussoft.timeclock.hr.domain.port.out.VacationPolicyRepositoryPort;
 import com.condor.nexussoft.timeclock.hr.domain.port.out.VacationRequestRepositoryPort;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -85,13 +85,7 @@ public class VacationRequestService implements VacationRequestUseCase {
 
     /** Cuenta días naturales o solo hábiles (lun-vie), ambos extremos inclusive. */
     static int countDays(LocalDate start, LocalDate end, boolean businessOnly) {
-        int count = 0;
-        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-            if (!businessOnly || (d.getDayOfWeek() != DayOfWeek.SATURDAY && d.getDayOfWeek() != DayOfWeek.SUNDAY)) {
-                count++;
-            }
-        }
-        return count;
+        return DayCounter.count(start, end, businessOnly);
     }
 
     private static String trimToNull(String s) {

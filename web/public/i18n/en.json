@@ -93,7 +93,9 @@
       "eventTypes": "Event types",
       "vacations": "Vacations",
       "notifications": "Notifications",
-      "settings": "Settings"
+      "settings": "Settings",
+      "permits": "Permits",
+      "incapacities": "Sick leave"
     },
     "closeMenu": "Close menu",
     "home": "Nexus Soft Time Clock: go to Dashboard",
@@ -991,6 +993,86 @@
     "connection": {
       "title": "Couldn't connect to the server.",
       "description": "Check your connection and try again."
+    }
+  },
+  "permits": {
+    "newPermit": "New permit",
+    "search": "Search employee or number",
+    "collaborator": "Employee",
+    "type": "Type",
+    "reason": "Reason",
+    "period": "Period",
+    "date": "Date",
+    "days": "Days",
+    "pay": "Pay",
+    "notes": "Notes",
+    "note": "Note",
+    "grantedBy": "Granted by",
+    "decidedBy": "Decided by",
+    "arrivalTime": "Authorized arrival time",
+    "departureTime": "Authorized departure time",
+    "payAction": "Pay",
+    "cancelAction": "Cancel permit",
+    "empty": "No permits recorded.",
+    "alreadyCancelled": "The permit was already cancelled by someone else.",
+    "payDecided": "Pay decision saved.",
+    "cancelled": "Permit cancelled.",
+    "actionError": "The action could not be completed.",
+    "types": {
+      "LATE_ARRIVAL": "Late arrival",
+      "EARLY_DEPARTURE": "Early departure",
+      "ABSENCE": "Absence"
+    },
+    "reasons": {
+      "PERSONAL": "Personal",
+      "INCAPACIDAD": "Sick leave",
+      "MEDICO": "Medical appointment",
+      "FAMILIAR": "Family matter",
+      "TRAMITE": "Errand",
+      "OTRO": "Other"
+    },
+    "status": {
+      "APPROVED": "Approved",
+      "CANCELLED": "Cancelled"
+    },
+    "payStatus": {
+      "PENDING_REVIEW": "Pending review",
+      "WITH_PAY": "Paid",
+      "WITHOUT_PAY": "Unpaid"
+    },
+    "phase": {
+      "label": "Validity",
+      "UPCOMING": "Upcoming",
+      "IN_PROGRESS": "In progress",
+      "FINISHED": "Finished"
+    },
+    "dialog": {
+      "title": "New permit",
+      "subtitle": "The permit is approved when recorded.",
+      "payHint": "HR decides whether it is paid; it will stay pending review.",
+      "submit": "Record",
+      "created": "Permit recorded.",
+      "overlap": "The employee already has a permit of this type in that period.",
+      "createError": "The permit could not be recorded."
+    },
+    "payDialog": {
+      "title": "Pay",
+      "submit": "Save decision"
+    },
+    "cancelDialog": {
+      "title": "Cancel permit",
+      "message": "Cancelling is final: the permit will no longer justify absences or late arrivals.",
+      "submit": "Cancel permit"
+    },
+    "incapacities": {
+      "title": "Sick leave report",
+      "empty": "No sick leave in this period.",
+      "fileName": "sick-leave",
+      "sheet": "Sick leave",
+      "kpi": {
+        "total": "Sick leaves",
+        "days": "Approved days"
+      }
     }
   }
 }
