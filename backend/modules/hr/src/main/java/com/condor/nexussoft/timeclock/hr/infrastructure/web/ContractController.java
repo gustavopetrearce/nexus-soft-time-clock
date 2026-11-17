@@ -9,6 +9,7 @@ import com.condor.nexussoft.timeclock.hr.domain.PagedResult;
 import com.condor.nexussoft.timeclock.hr.domain.ProjectRef;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.ContractUseCase;
 import com.condor.nexussoft.timeclock.hr.infrastructure.persistence.ContractOptionsQuery;
+import com.condor.nexussoft.timeclock.hr.infrastructure.persistence.DirectoryOptionsQuery;
 import com.condor.nexussoft.timeclock.hr.infrastructure.persistence.EmployeeDirectoryQuery;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.ContractDtos.*;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.PageResponse;
@@ -49,9 +50,9 @@ public class ContractController {
         this.options = options;
     }
 
-    public record ContractOptionsResponse(List<ContractOptionsQuery.Collaborator> collaborators,
+    public record ContractOptionsResponse(List<DirectoryOptionsQuery.Collaborator> collaborators,
                                           List<ContractOptionsQuery.Project> projects,
-                                          List<ContractOptionsQuery.WorkSite> workSites) {}
+                                          List<DirectoryOptionsQuery.WorkSite> workSites) {}
 
     @GetMapping("/contracts")
     public PageResponse<ContractResponse> list(

@@ -9,8 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { NotificationService } from '../../core/ui/notification.service';
-import { User } from '../admin/users/user.models';
-import { UserService } from '../admin/users/user.service';
+import { DirectoryOptionsService, EmployeeOption, employeeLabel } from '../../core/directory/directory-options.service';
 import { VacationService } from './vacation.service';
 
 /**
@@ -38,10 +37,13 @@ import { VacationService } from './vacation.service';
         <mat-label>{{ 'users.employee' | transloco }} *</mat-label>
         <mat-select formControlName="userId">
           @for (u of users(); track u.id) {
-            <mat-option [value]="u.id">{{ u.firstName }} {{ u.lastName }}{{ u.employeeCode ? ' · ' + u.employeeCode : '' }}</mat-option>
+            <mat-option [value]="u.id">{{ label(u) }}</mat-option>
           }
         </mat-select>
       </mat-form-field>
+      @if (usersError()) {
+        <p class="nx-text-caption opciones-error" role="alert">{{ 'common.collaboratorsLoadError' | transloco }}</p>
+      }
       <div class="grid2">
         <mat-form-field appearance="outline">
           <mat-label>{{ 'scheduling.from' | transloco }} *</mat-label>
@@ -68,6 +70,7 @@ import { VacationService } from './vacation.service';
   `,
   styles: [
     `
+      .opciones-error { margin: calc(-1 * var(--nx-space-2)) var(--nx-space-0) var(--nx-space-3); color: var(--nx-color-status-error-fg); }
       :host { display: block; }
       .m-head { display: flex; align-items: center; gap: 14px; padding: 20px 28px 16px; border-bottom: 1px solid var(--nx-color-border-default); }
       .m-head .badge-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--nx-color-action-primary-subtle); color: var(--nx-color-action-primary); display: grid; place-items: center; border: 1px solid var(--nx-color-border-brand); flex: none; }
@@ -85,12 +88,14 @@ import { VacationService } from './vacation.service';
 export class VacationRequestDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(VacationService);
-  private readonly userService = inject(UserService);
+  private readonly directory = inject(DirectoryOptionsService);
   private readonly notify = inject(NotificationService);
   private readonly dialogRef = inject(MatDialogRef<VacationRequestDialogComponent, boolean>);
   private readonly transloco = inject(TranslocoService);
 
-  protected readonly users = signal<User[]>([]);
+  protected readonly users = signal<EmployeeOption[]>([]);
+  protected readonly usersError = signal(false);
+  protected readonly label = employeeLabel;
   protected readonly saving = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
@@ -101,9 +106,9 @@ export class VacationRequestDialogComponent {
   });
 
   constructor() {
-    this.userService.list(0, 500).subscribe({
-      next: (r) => this.users.set(r.content),
-      error: () => void 0,
+    this.directory.employees().subscribe({
+      next: (list) => this.users.set(list),
+      error: () => this.usersError.set(true),
     });
   }
 

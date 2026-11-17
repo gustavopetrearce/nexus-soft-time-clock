@@ -49,6 +49,7 @@
       "range": "{{from}}–{{to}} of {{total}}"
     },
     "loadError": "Couldn't load the information.",
+    "collaboratorsLoadError": "Could not load the list of collaborators. Please try again.",
     "loadErrorHint": "Try again in a moment.",
     "actions": "Actions",
     "review": "Review",
