@@ -66,8 +66,12 @@ public class AttendanceEventsController {
     public List<AttendanceEventDto> events(
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        LocalDate fromD = (from == null || from.isBlank()) ? LocalDate.now().minusDays(29) : LocalDate.parse(from);
-        LocalDate toD = (to == null || to.isBlank()) ? LocalDate.now() : LocalDate.parse(to);
+        // Los límites se arman en UTC, así que "hoy" también se toma en UTC: con LocalDate.now() (huso
+        // de la JVM) una JVM en America/Mexico_City entre las 18:00 y las 24:00 dejaba fuera las marcas
+        // que ya caen en el día UTC siguiente.
+        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        LocalDate fromD = (from == null || from.isBlank()) ? todayUtc.minusDays(29) : LocalDate.parse(from);
+        LocalDate toD = (to == null || to.isBlank()) ? todayUtc : LocalDate.parse(to);
         OffsetDateTime fromTs = fromD.atStartOfDay().atOffset(ZoneOffset.UTC);
         OffsetDateTime toTs = toD.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
 
