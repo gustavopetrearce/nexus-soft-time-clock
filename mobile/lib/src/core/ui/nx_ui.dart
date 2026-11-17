@@ -4,6 +4,7 @@ library;
 
 export '../../app/tokens.g.dart';
 export 'nx_actions.dart';
+export 'nx_data.dart';
 export 'nx_feedback.dart';
 export 'nx_fields.dart';
 export 'nx_surfaces.dart';

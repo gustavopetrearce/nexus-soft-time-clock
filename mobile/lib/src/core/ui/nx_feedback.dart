@@ -131,10 +131,11 @@ class NxAparece extends StatelessWidget {
 
 /// Chip de estado (n.º 11).
 class NxChip extends StatelessWidget {
-  const NxChip({super.key, required this.label, required this.tone});
+  const NxChip({super.key, required this.label, required this.tone, this.icon});
 
   final String label;
   final NxTone tone;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -145,10 +146,19 @@ class NxChip extends StatelessWidget {
         color: tone.bg(c),
         borderRadius: const BorderRadius.all(Radius.circular(NxTokens.radiusFull)),
       ),
-      child: Text(
-        label,
-        maxLines: 1,
-        style: NxTokens.textSmallStrong.copyWith(color: tone.fg(c)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: NxTokens.iconSizeSm, color: tone.fg(c)),
+            const SizedBox(width: NxTokens.space1),
+          ],
+          Text(
+            label,
+            maxLines: 1,
+            style: NxTokens.textSmallStrong.copyWith(color: tone.fg(c)),
+          ),
+        ],
       ),
     );
   }
