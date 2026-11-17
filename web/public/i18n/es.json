@@ -95,7 +95,8 @@
       "notifications": "Notificaciones",
       "settings": "Configuración",
       "permits": "Permisos",
-      "incapacities": "Incapacidades"
+      "incapacities": "Incapacidades",
+      "contracts": "Contratos"
     },
     "closeMenu": "Cerrar menú",
     "home": "Nexus Soft Time Clock: ir al Panel",
@@ -128,7 +129,8 @@
     "PENDING": "Pendiente",
     "READ": "Leída",
     "SENT": "Enviada",
-    "CANCELLED": "Cancelada"
+    "CANCELLED": "Cancelada",
+    "ENDED": "Terminado"
   },
   "login": {
     "email": "Correo",
@@ -510,7 +512,12 @@
     },
     "search": "Buscar proyecto",
     "startsOn": "Inicio",
-    "endsOn": "Fin"
+    "endsOn": "Fin",
+    "contracts": "Colaboradores asignados",
+    "contractsHint": "Contratos por proyecto registrados en este proyecto.",
+    "assign": "Asignar colaborador",
+    "noContracts": "Aún no hay colaboradores asignados a este proyecto.",
+    "rangeInvalid": "La fecha de fin no puede ser anterior a la de inicio."
   },
   "apiClients": {
     "title": "Integraciones",
@@ -1073,6 +1080,71 @@
         "total": "Incapacidades",
         "days": "Días aprobados"
       }
+    }
+  },
+  "contracts": {
+    "newContract": "Registrar contrato",
+    "search": "Buscar colaborador o número",
+    "collaborator": "Colaborador",
+    "type": "Tipo de contrato",
+    "project": "Proyecto",
+    "workSite": "Centro de trabajo",
+    "period": "Vigencia",
+    "startsOn": "Inicio",
+    "endsOn": "Fin",
+    "notes": "Observaciones",
+    "activeOn": "Vigente en",
+    "indefinite": "Indefinido",
+    "noLimit": "sin límite",
+    "createdBy": "Registrado por",
+    "needsReview": "Por revisar",
+    "needsReviewHint": "El proyecto cambió: el contrato ya no cabe en su vigencia o el proyecto no está activo.",
+    "endAction": "Terminar",
+    "cancelAction": "Cancelar contrato",
+    "empty": "No hay contratos registrados.",
+    "ended": "Contrato terminado.",
+    "cancelled": "Contrato cancelado.",
+    "actionError": "No se pudo completar la acción.",
+    "types": {
+      "PROJECT": "Por proyecto",
+      "SHIFT": "Por turno / horario"
+    },
+    "status": {
+      "ACTIVE": "Activo",
+      "ENDED": "Terminado",
+      "CANCELLED": "Cancelado"
+    },
+    "phase": {
+      "label": "Situación",
+      "UPCOMING": "Próximo",
+      "IN_PROGRESS": "Vigente",
+      "FINISHED": "Concluido"
+    },
+    "dialog": {
+      "title": "Registrar contrato",
+      "editTitle": "Editar contrato",
+      "subtitle": "Por proyecto, el contrato es la asignación al proyecto y queda dentro de su vigencia.",
+      "projectValidity": "Vigencia del proyecto",
+      "endProjectHint": "Vacío: hasta el fin del proyecto.",
+      "endShiftHint": "Vacío: indefinido.",
+      "rangeInvalid": "La fecha de fin no puede ser anterior a la de inicio.",
+      "outOfProject": "El periodo debe quedar dentro de la vigencia del proyecto.",
+      "submit": "Registrar",
+      "created": "Contrato registrado.",
+      "updated": "Contrato actualizado.",
+      "saveError": "No se pudo guardar el contrato."
+    },
+    "endDialog": {
+      "title": "Terminar contrato",
+      "message": "La vigencia se recorta a la fecha indicada. Para ampliarla, edita el contrato.",
+      "date": "Fecha de término",
+      "submit": "Terminar"
+    },
+    "cancelDialog": {
+      "title": "Cancelar contrato",
+      "message": "Usa esta opción solo si el contrato se registró por error. Es definitivo.",
+      "reason": "Causa",
+      "submit": "Cancelar contrato"
     }
   }
 }

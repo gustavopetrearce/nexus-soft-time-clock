@@ -27,6 +27,7 @@ const TONE_BY_STATUS: Record<string, Tone> = {
   INACTIVE: 'neutral',
   CLOSED: 'neutral',
   CANCELLED: 'neutral',
+  ENDED: 'neutral',
   LOW: 'neutral',
 };
 

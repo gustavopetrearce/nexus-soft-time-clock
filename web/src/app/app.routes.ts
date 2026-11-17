@@ -182,6 +182,11 @@ export const routes: Routes = [
           import('./features/permits/incapacities.component').then((m) => m.IncapacitiesComponent),
       },
       {
+        path: 'contracts',
+        canActivate: [requirePermission('contract:manage')],
+        loadComponent: () => import('./features/contracts/contracts.component').then((m) => m.ContractsComponent),
+      },
+      {
         path: 'settings',
         canActivate: [requirePermission('vacation:manage')],
         loadComponent: () =>
