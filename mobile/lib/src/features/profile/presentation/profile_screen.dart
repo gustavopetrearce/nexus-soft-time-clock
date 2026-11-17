@@ -9,6 +9,7 @@ import '../../../core/i18n/locale_controller.dart';
 import '../../../core/ui/nx_ui.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/profile_repository.dart';
+import '../domain/my_contract.dart';
 import '../domain/my_profile.dart';
 
 /// Mi perfil (solo lectura): datos personales del colaborador. Para cambios, RR.HH.
@@ -27,6 +28,8 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final async = ref.watch(myProfileProvider);
+    // Complementario: si falla o no hay contrato, el perfil se muestra igual.
+    final contract = ref.watch(myContractProvider).valueOrNull;
     final l10n = context.l10n;
     final locale = Localizations.localeOf(context).toLanguageTag();
     final chosen = ref.watch(localeControllerProvider);
@@ -37,7 +40,10 @@ class ProfileScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorView(onRetry: () => ref.invalidate(myProfileProvider)),
         data: (p) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(myProfileProvider),
+          onRefresh: () async {
+            ref.invalidate(myProfileProvider);
+            ref.invalidate(myContractProvider);
+          },
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
@@ -54,6 +60,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               _Section(title: l10n.profileCompanyData, children: [
                 _Row(icon: Icons.event_available_outlined, label: l10n.profileHireDate, value: _fmt(p.hireDate, locale)),
+                ..._contractRows(l10n, contract, locale),
               ],),
               const SizedBox(height: 16),
               _Section(title: l10n.profileEmergency, children: [
@@ -100,6 +107,25 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Tipo de contrato, proyecto (si es por proyecto) y vigencia (iteración 14).
+  static List<Widget> _contractRows(AppLocalizations l10n, MyContract? c, String locale) {
+    if (c == null) {
+      return [_Row(icon: Icons.description_outlined, label: l10n.profileContractType, value: l10n.profileContractNone)];
+    }
+    final type = c.isProject ? l10n.profileContractProject : l10n.profileContractShift;
+    final start = _fmt(c.startsOn, locale) ?? '—';
+    final end = _fmt(c.endsOn, locale) ?? l10n.profileContractOpenEnded;
+    return [
+      _Row(
+        icon: Icons.description_outlined,
+        label: l10n.profileContractType,
+        value: c.current ? type : '$type (${l10n.profileContractUpcoming})',
+      ),
+      if (c.isProject) _Row(icon: Icons.work_outline, label: l10n.profileContractProjectName, value: c.projectLabel),
+      _Row(icon: Icons.date_range_outlined, label: l10n.profileContractValidity, value: '$start – $end'),
+    ];
   }
 
   /// Fecha `yyyy-MM-dd` del backend en el formato corto del idioma activo.

@@ -21,6 +21,8 @@ export interface AttendanceRecordReport {
   breakType?: string | null;
   /** Causa de la cancelación (texto libre); solo si `status` es CANCELLED. */
   cancelReason?: string | null;
+  /** Proyecto de la marca, "CÓDIGO · nombre" (RN-67); nulo si no se atribuyó a ninguno. */
+  project?: string | null;
 }
 
 export type RecordSortColumn = keyof Pick<

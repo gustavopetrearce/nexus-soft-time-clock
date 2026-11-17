@@ -123,6 +123,7 @@ class AuthController extends Notifier<AuthState> {
   void _clearUserScopedState() {
     ref.invalidate(meProvider);
     ref.invalidate(myProfileProvider);
+    ref.invalidate(myContractProvider);
     ref.invalidate(vacationSummaryProvider);
     ref.invalidate(myVacationsProvider);
     ref.invalidate(myPermitsProvider);

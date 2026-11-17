@@ -1,8 +1,9 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
+import { rangeParams } from '../report.service';
 import { AttendanceRecordReport } from './attendance-records.models';
 
 /**
@@ -15,18 +16,10 @@ export class AttendanceRecordsService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBaseUrl}/reports`;
 
-  /** Registros en el rango [from, to] (fechas yyyy-MM-dd) y estado opcional. */
-  records(from?: string, to?: string, status?: string): Observable<AttendanceRecordReport[]> {
-    let params = new HttpParams();
-    if (from) {
-      params = params.set('from', from);
-    }
-    if (to) {
-      params = params.set('to', to);
-    }
-    if (status) {
-      params = params.set('status', status);
-    }
-    return this.http.get<AttendanceRecordReport[]>(`${this.base}/attendance-records`, { params });
+  /** Registros en el rango [from, to] (fechas yyyy-MM-dd), con estado y proyecto opcionales. */
+  records(from?: string, to?: string, status?: string, projectId?: string): Observable<AttendanceRecordReport[]> {
+    return this.http.get<AttendanceRecordReport[]>(`${this.base}/attendance-records`, {
+      params: rangeParams(from, to, projectId, status),
+    });
   }
 }

@@ -177,6 +177,29 @@ class ContractIT extends PostgisIntegrationTest {
                 Integer.class, employeeId)).isEqualTo(1);
     }
 
+    /** El colaborador ve su contrato vigente desde la app (fase 3); sin contrato, 204. */
+    @Test
+    void elColaboradorVeSuContratoVigente() throws Exception {
+        String emp = token("emp");
+        mvc.perform(get("/api/v1/me/contract").header(HttpHeaders.AUTHORIZATION, "Bearer " + emp))
+                .andExpect(status().isNoContent());
+
+        LocalDate today = LocalDate.now();
+        UUID tenant = jdbc.queryForObject("SELECT tenant_id FROM users WHERE id = ?", UUID.class, employeeId);
+        jdbc.update("UPDATE projects SET starts_on = ?, ends_on = ? WHERE id = ?",
+                Date.valueOf(today.minusDays(100)), Date.valueOf(today.plusDays(100)), projectId);
+        jdbc.update("INSERT INTO employment_contracts (tenant_id, user_id, contract_type, project_id, starts_on, ends_on) "
+                        + "VALUES (?, ?, 'PROJECT', ?, ?, ?)",
+                tenant, employeeId, projectId, Date.valueOf(today.minusDays(10)), Date.valueOf(today.plusDays(10)));
+
+        mvc.perform(get("/api/v1/me/contract").header(HttpHeaders.AUTHORIZATION, "Bearer " + emp))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").value("PROJECT"))
+                .andExpect(jsonPath("$.projectCode").value("OBRA-" + suffix))
+                .andExpect(jsonPath("$.projectName").value("Obra Norte"))
+                .andExpect(jsonPath("$.current").value(true));
+    }
+
     private String body(String type, UUID project, String start, String end) throws Exception {
         Map<String, Object> m = new HashMap<>();
         m.put("userId", employeeId.toString());

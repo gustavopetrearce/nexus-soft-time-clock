@@ -31,6 +31,8 @@ import {
   RecordSortState,
 } from './attendance-records.models';
 import { AttendanceRecordsService } from './attendance-records.service';
+import { ReportProject } from '../report.models';
+import { ReportService } from '../report.service';
 import { recordStatusLabel, rejectionLabel } from '../../attendance-events/attendance-events.models';
 
 interface ColumnDef {
@@ -105,6 +107,15 @@ const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
             @for (s of statusOptions; track s) { <mat-option [value]="s">{{ statusLabel(s) }}</mat-option> }
           </mat-select>
         </mat-form-field>
+        @if (projects().length > 0) {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'reports.project' | transloco }}</mat-label>
+            <mat-select formControlName="projectId">
+              <mat-option value="">{{ 'common.all' | transloco }}</mat-option>
+              @for (p of projects(); track p.id) { <mat-option [value]="p.id">{{ p.code }} · {{ p.name }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+        }
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ 'records.eventType' | transloco }}</mat-label>
           <mat-select formControlName="eventType">
@@ -176,7 +187,10 @@ const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
                         <app-status-chip [status]="row.status" [label]="statusLabel(row.status)"
                           [matTooltip]="rejectionTooltip(row)" [matTooltipDisabled]="!rejectionTooltip(row)" />
                       </td>
-                      <td><span class="nx-trunc">{{ row.workCenter }}</span></td>
+                      <td>
+                        <span class="nx-trunc">{{ row.workCenter }}</span>
+                        @if (row.project) { <br /><small class="nx-text-caption">{{ row.project }}</small> }
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -199,6 +213,7 @@ export class AttendanceRecordsComponent {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(AttendanceRecordsService);
   private readonly eventTypes = inject(EventTypesService);
+  private readonly reports = inject(ReportService);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
@@ -209,6 +224,7 @@ export class AttendanceRecordsComponent {
   protected readonly form: FormGroup = this.buildForm();
 
   private readonly rawRows = signal<AttendanceRecordReport[]>([]);
+  protected readonly projects = signal<ReportProject[]>([]);
   protected readonly loading = signal(false);
   protected readonly error = signal(false);
 
@@ -230,7 +246,7 @@ export class AttendanceRecordsComponent {
       if (f['status'] !== 'ALL' && row.status !== f['status']) return false;
       if (f['eventType'] !== 'ALL' && row.eventType !== f['eventType']) return false;
       if (search) {
-        const haystack = `${row.employeeNumber} ${row.employeeName} ${row.workCenter}`.toLowerCase();
+        const haystack = `${row.employeeNumber} ${row.employeeName} ${row.workCenter} ${row.project ?? ''}`.toLowerCase();
         if (!haystack.includes(search)) return false;
       }
       return true;
@@ -261,16 +277,18 @@ export class AttendanceRecordsComponent {
     from$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
     to$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
     this.form.valueChanges.pipe(debounceTime(150), takeUntilDestroyed()).subscribe(() => this.pageIndex.set(0));
+    this.form.get('projectId')!.valueChanges.pipe(distinctUntilChanged(), takeUntilDestroyed()).subscribe(() => this.reload());
+    this.reports.projects().subscribe({ next: (p) => this.projects.set(p), error: () => void 0 });
 
     this.loadEventTypeLabels();
     this.reload();
   }
 
   protected reload(): void {
-    const { from, to } = this.form.getRawValue() as { from: string; to: string };
+    const { from, to, projectId } = this.form.getRawValue() as { from: string; to: string; projectId: string };
     this.loading.set(true);
     this.error.set(false);
-    this.service.records(from, to).subscribe({
+    this.service.records(from, to, undefined, projectId).subscribe({
       next: (rows) => {
         this.rawRows.set(rows);
         this.loading.set(false);
@@ -294,7 +312,7 @@ export class AttendanceRecordsComponent {
 
   /** Limpia búsqueda, estado y tipo de evento, conservando el rango de fechas. */
   protected clearFilters(): void {
-    this.form.patchValue({ search: '', status: 'ALL', eventType: 'ALL' });
+    this.form.patchValue({ search: '', status: 'ALL', eventType: 'ALL', projectId: '' });
   }
 
   protected rejectionTooltip(row: AttendanceRecordReport): string {
@@ -360,6 +378,7 @@ export class AttendanceRecordsComponent {
       search: this.fb.nonNullable.control(''),
       status: this.fb.nonNullable.control('ALL'),
       eventType: this.fb.nonNullable.control('ALL'),
+      projectId: this.fb.nonNullable.control(''),
     });
   }
 }
