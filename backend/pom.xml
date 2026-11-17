@@ -26,6 +26,12 @@
         <springdoc.version>2.6.0</springdoc.version>
         <archunit.version>1.3.0</archunit.version>
         <minio.version>8.5.12</minio.version>
+        <!--
+            Sobrescribe el 1.19.x que fija Spring Boot 3.3.4: ese cliente habla la API de Docker 1.32
+            y Docker Engine 29 (runner ubuntu-26.04, Docker Desktop 29) exige >= 1.40, así que los IT
+            no levantaban PostGIS. 1.21.4 negocia la versión de API con el daemon.
+        -->
+        <testcontainers.version>1.21.4</testcontainers.version>
 
         <!--
             Las pruebas corren en un huso DELIBERADAMENTE distinto de UTC. Producción y CI arrancan
