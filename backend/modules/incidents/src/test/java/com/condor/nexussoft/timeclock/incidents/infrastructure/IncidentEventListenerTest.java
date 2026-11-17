@@ -120,6 +120,40 @@ class IncidentEventListenerTest {
         verify(incidents, never()).openForNoSchedule(any(), any(), any());
     }
 
+    private AttendanceRegistered outOfContract(String eventKind) {
+        return AttendanceRegistered.of(tenantId, attendanceId, userId, siteId, eventKind, 0, false, false,
+                UUID.randomUUID(), true, Instant.parse("2026-07-21T10:00:00Z"));
+    }
+
+    /** RN-66: la ENTRADA fuera de la vigencia del contrato por proyecto abre FUERA_DE_VIGENCIA. */
+    @Test
+    void entradaFueraDeVigencia_abreIncidenciaFueraDeVigencia() {
+        IncidentEventListener listener = new IncidentEventListener(incidents);
+
+        listener.onAttendanceRegistered(outOfContract("ENTRADA"));
+
+        verify(incidents).openForOutOfContract(tenantId, userId, attendanceId);
+    }
+
+    /** Una incidencia por jornada: la SALIDA fuera de vigencia no abre otra. */
+    @Test
+    void salidaFueraDeVigencia_noAbreIncidencia() {
+        IncidentEventListener listener = new IncidentEventListener(incidents);
+
+        listener.onAttendanceRegistered(outOfContract("SALIDA"));
+
+        verify(incidents, never()).openForOutOfContract(any(), any(), any());
+    }
+
+    @Test
+    void entradaDentroDeVigencia_noAbreIncidenciaFueraDeVigencia() {
+        IncidentEventListener listener = new IncidentEventListener(incidents);
+
+        listener.onAttendanceRegistered(registered("ENTRADA", 0));
+
+        verify(incidents, never()).openForOutOfContract(any(), any(), any());
+    }
+
     @Test
     void entradaConTurno_noAbreIncidenciaSinTurno() {
         IncidentEventListener listener = new IncidentEventListener(incidents);

@@ -44,7 +44,7 @@ public class AttendancePersistenceAdapter implements AttendanceRepositoryPort {
                 r.deviceTime(), r.timeSkewSeconds(), r.qrNonce(), r.operationUuid(), r.source(),
                 r.biometricVerified(),
                 e == null ? null : e.bucket(), e == null ? null : e.key(), e == null ? null : e.hash(),
-                r.validationsJson(), r.breakTypeId()));
+                r.validationsJson(), r.breakTypeId(), r.projectId()));
     }
 
     @Override

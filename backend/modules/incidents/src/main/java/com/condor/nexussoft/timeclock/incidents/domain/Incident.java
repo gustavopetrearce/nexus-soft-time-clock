@@ -8,7 +8,7 @@ import java.util.UUID;
 public class Incident {
 
     public enum Type { RETARDO, FALTA, REGISTRO_RECHAZADO, PERMISO, JUSTIFICACION, FRAUDE,
-                       FUERA_DE_VENTANA, SIN_TURNO, OTRO }
+                       FUERA_DE_VENTANA, SIN_TURNO, FUERA_DE_VIGENCIA, OTRO }
 
     public enum Status { OPEN, APPROVED, REJECTED, RESOLVED }
 
@@ -75,6 +75,18 @@ public class Incident {
     public static Incident openForNoSchedule(UUID tenantId, UUID userId, UUID attendanceId) {
         return new Incident(UUID.randomUUID(), tenantId, userId, Type.SIN_TURNO, Status.OPEN,
                 "LOW", LocalDate.now(), attendanceId, "ENTRADA sin turno asignado vigente",
+                null, null, null, Instant.now());
+    }
+
+    /**
+     * Alta automática por ENTRADA aceptada de un colaborador con contrato por proyecto fuera de su
+     * vigencia, o con el proyecto no activo (RN-66). La marca se acepta: un dato administrativo
+     * atrasado no impide fichar, pero RR. HH. debe ampliar el contrato o corregir la asignación.
+     */
+    public static Incident openForOutOfContract(UUID tenantId, UUID userId, UUID attendanceId) {
+        return new Incident(UUID.randomUUID(), tenantId, userId, Type.FUERA_DE_VIGENCIA, Status.OPEN,
+                "MEDIUM", LocalDate.now(), attendanceId,
+                "ENTRADA fuera de la vigencia del contrato por proyecto",
                 null, null, null, Instant.now());
     }
 

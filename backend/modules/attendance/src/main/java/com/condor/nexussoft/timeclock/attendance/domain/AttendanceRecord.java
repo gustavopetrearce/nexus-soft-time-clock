@@ -34,6 +34,8 @@ public class AttendanceRecord {
     private final String validationsJson;
     /** Categoría del descanso (V30); solo en INICIO_DESCANSO/FIN_DESCANSO, nula si la empresa no las usa. */
     private final UUID breakTypeId;
+    /** Proyecto del contrato del colaborador (RN-67); nulo si no tiene contrato por proyecto. */
+    private final UUID projectId;
 
     public AttendanceRecord(UUID id, UUID tenantId, Instant serverTime, UUID userId, UUID workSiteId, UUID shiftId,
                             AttendanceEventType eventType, AttendanceStatus status, RejectionReason rejectionReason,
@@ -51,6 +53,17 @@ public class AttendanceRecord {
                             Integer timeSkewSeconds, String qrNonce, UUID operationUuid, String source,
                             boolean biometricVerified, Evidence evidence, String validationsJson,
                             UUID breakTypeId) {
+        this(id, tenantId, serverTime, userId, workSiteId, shiftId, eventType, status, rejectionReason, gps,
+                distanceToSiteM, deviceId, deviceTime, timeSkewSeconds, qrNonce, operationUuid, source,
+                biometricVerified, evidence, validationsJson, breakTypeId, null);
+    }
+
+    public AttendanceRecord(UUID id, UUID tenantId, Instant serverTime, UUID userId, UUID workSiteId, UUID shiftId,
+                            AttendanceEventType eventType, AttendanceStatus status, RejectionReason rejectionReason,
+                            GpsFix gps, Double distanceToSiteM, String deviceId, Instant deviceTime,
+                            Integer timeSkewSeconds, String qrNonce, UUID operationUuid, String source,
+                            boolean biometricVerified, Evidence evidence, String validationsJson,
+                            UUID breakTypeId, UUID projectId) {
         this.id = id;
         this.tenantId = tenantId;
         this.serverTime = serverTime;
@@ -72,6 +85,7 @@ public class AttendanceRecord {
         this.evidence = evidence;
         this.validationsJson = validationsJson;
         this.breakTypeId = breakTypeId;
+        this.projectId = projectId;
     }
 
     public boolean isAccepted() {
@@ -99,4 +113,5 @@ public class AttendanceRecord {
     public Evidence evidence() { return evidence; }
     public String validationsJson() { return validationsJson; }
     public UUID breakTypeId() { return breakTypeId; }
+    public UUID projectId() { return projectId; }
 }

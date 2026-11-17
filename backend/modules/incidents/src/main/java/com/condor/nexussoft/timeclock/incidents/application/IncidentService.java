@@ -65,6 +65,12 @@ public class IncidentService implements IncidentManagementUseCase {
 
     @Override
     @Transactional
+    public Incident openForOutOfContract(UUID tenantId, UUID userId, UUID attendanceId) {
+        return incidents.save(Incident.openForOutOfContract(tenantId, userId, attendanceId));
+    }
+
+    @Override
+    @Transactional
     public List<Incident> closeForCancelledAttendance(UUID tenantId, UUID attendanceId, String reason,
                                                       UUID cancelledBy) {
         Instant now = clock.instant();

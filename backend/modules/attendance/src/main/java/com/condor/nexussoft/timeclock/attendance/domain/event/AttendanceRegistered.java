@@ -12,17 +12,29 @@ import java.util.UUID;
  * rechaza la ENTRADA, y los demás eventos se aceptan con esta señal para que Incidents la registre.
  * {@code noSchedule} marca la marca aceptada sin turno vigente: no hay ventana ni retardo contra los
  * que medirla, y sin esta señal pasaría inadvertida para el supervisor.
+ * {@code outOfContract} marca la marca aceptada de un colaborador con contrato por proyecto fuera de
+ * la vigencia del contrato o del proyecto, o con el proyecto no activo (RN-66). {@code projectId} es
+ * el proyecto al que se atribuye (RN-67); nulo sin contrato por proyecto.
  */
 public record AttendanceRegistered(UUID eventId, Instant occurredAt, UUID tenantId,
                                    UUID attendanceId, UUID userId, UUID workSiteId, String eventKind,
-                                   int minutesLate, boolean outOfWindow, boolean noSchedule)
+                                   int minutesLate, boolean outOfWindow, boolean noSchedule,
+                                   UUID projectId, boolean outOfContract)
         implements DomainEvent {
 
     public static AttendanceRegistered of(UUID tenantId, UUID attendanceId, UUID userId, UUID workSiteId,
                                           String eventKind, int minutesLate, boolean outOfWindow,
                                           boolean noSchedule, Instant when) {
+        return of(tenantId, attendanceId, userId, workSiteId, eventKind, minutesLate, outOfWindow, noSchedule,
+                null, false, when);
+    }
+
+    public static AttendanceRegistered of(UUID tenantId, UUID attendanceId, UUID userId, UUID workSiteId,
+                                          String eventKind, int minutesLate, boolean outOfWindow,
+                                          boolean noSchedule, UUID projectId, boolean outOfContract,
+                                          Instant when) {
         return new AttendanceRegistered(UUID.randomUUID(), when, tenantId, attendanceId, userId, workSiteId,
-                eventKind, minutesLate, outOfWindow, noSchedule);
+                eventKind, minutesLate, outOfWindow, noSchedule, projectId, outOfContract);
     }
 
     @Override

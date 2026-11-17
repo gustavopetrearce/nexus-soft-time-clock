@@ -5,6 +5,7 @@ import com.condor.nexussoft.timeclock.attendance.domain.ScheduleWindowValidator;
 import com.condor.nexussoft.timeclock.attendance.domain.ScheduleWindowValidator.Occurrence;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.SchedulePolicyPort;
 import com.condor.nexussoft.timeclock.attendance.domain.port.out.ShiftZonePort;
+import com.condor.nexussoft.timeclock.scheduling.domain.Schedule;
 import com.condor.nexussoft.timeclock.scheduling.domain.Shift;
 import com.condor.nexussoft.timeclock.scheduling.domain.ShiftAssignment;
 import com.condor.nexussoft.timeclock.scheduling.domain.port.in.SchedulingUseCase;
@@ -47,16 +48,24 @@ public class SchedulePolicyAdapter implements SchedulePolicyPort {
         // Sin centro (QR de empresa) no hay contra qué filtrar: se evalúan todas las asignaciones
         // vigentes del colaborador, de modo que el camino sin centro conserva la ventana de turno
         // y la detección de retardo (RN-15, RN-16) en lugar de quedarse sin control horario.
+        // Una asignación sin centro vale para cualquier centro: es el turno del colaborador, sin
+        // importar dónde fiche. Antes se descartaba en cuanto la marca traía centro, y quien solo
+        // tenía asignaciones sin centro fichaba como SIN_TURNO.
         List<ShiftAssignment> forSite = scheduling.listAssignments(tenantId, userId).stream()
-                .filter(a -> workSiteId == null || workSiteId.equals(a.workSiteId()))
+                .filter(a -> workSiteId == null || a.workSiteId() == null || workSiteId.equals(a.workSiteId()))
                 .toList();
 
         Map<ZoneKey, ZoneId> zoneCache = new HashMap<>();
+        Map<UUID, Boolean> activeSchedules = new HashMap<>();
         Candidate best = null;
         for (ShiftAssignment a : forSite) {
             Shift shift = safeShift(tenantId, a.shiftId());
             if (shift == null) {
                 continue;   // turno borrado con la asignación viva → sin restricción horaria
+            }
+            // Un horario desactivado deja de regir: sus turnos no reclaman marcas.
+            if (!activeSchedules.computeIfAbsent(shift.scheduleId(), id -> isScheduleActive(tenantId, id))) {
+                continue;
             }
             ZoneId zone = zoneCache.computeIfAbsent(new ZoneKey(shift.scheduleId(), a.workSiteId()),
                     k -> zones.resolve(tenantId, k.scheduleId(), k.workSiteId()));
@@ -138,5 +147,15 @@ public class SchedulePolicyAdapter implements SchedulePolicyPort {
      */
     private Shift safeShift(UUID tenantId, UUID shiftId) {
         return scheduling.findShift(tenantId, shiftId).orElse(null);
+    }
+
+    /**
+     * Horario activo. Uno ausente se trata como activo —mismo criterio permisivo que el turno
+     * borrado— y se consulta con la variante {@code Optional} por la misma razón de rollback-only.
+     */
+    private boolean isScheduleActive(UUID tenantId, UUID scheduleId) {
+        return scheduling.findSchedule(tenantId, scheduleId)
+                .map(s -> s.status() == Schedule.Status.ACTIVE)
+                .orElse(true);
     }
 }

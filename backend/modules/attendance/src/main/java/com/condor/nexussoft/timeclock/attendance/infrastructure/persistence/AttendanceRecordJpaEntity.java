@@ -95,6 +95,10 @@ public class AttendanceRecordJpaEntity {
     @Column(name = "break_type_id")
     private UUID breakTypeId;
 
+    /** Proyecto del contrato vigente del colaborador (V33, RN-67); nulo sin contrato por proyecto. */
+    @Column(name = "project_id")
+    private UUID projectId;
+
     protected AttendanceRecordJpaEntity() {
     }
 
@@ -105,7 +109,8 @@ public class AttendanceRecordJpaEntity {
                                      Double gpsAccuracyM, Double distanceToSiteM, UUID deviceId, Instant deviceTime,
                                      Integer timeSkewSeconds, String qrNonce, UUID operationUuid, String source,
                                      boolean biometricVerified, String evidenceBucket, String evidenceKey,
-                                     String evidenceHash, String validationsJson, UUID breakTypeId) {
+                                     String evidenceHash, String validationsJson, UUID breakTypeId,
+                                     UUID projectId) {
         this.id = id;
         this.tenantId = tenantId;
         this.serverTime = serverTime;
@@ -130,6 +135,7 @@ public class AttendanceRecordJpaEntity {
         this.evidenceHash = evidenceHash;
         this.validationsJson = validationsJson;
         this.breakTypeId = breakTypeId;
+        this.projectId = projectId;
     }
 
     public UUID getId() { return id; }
@@ -137,6 +143,7 @@ public class AttendanceRecordJpaEntity {
     public UUID getShiftId() { return shiftId; }
     public String getEventType() { return eventType; }
     public UUID getBreakTypeId() { return breakTypeId; }
+    public UUID getProjectId() { return projectId; }
     public String getStatus() { return status; }
     public String getRejectionReason() { return rejectionReason; }
     public Instant getServerTime() { return serverTime; }
