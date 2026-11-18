@@ -12,6 +12,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AppDatePipe } from '../../core/i18n/app-date.pipe';
 import { AlertComponent } from '../../core/ui/alert.component';
 import { NotificationService } from '../../core/ui/notification.service';
+import { ScrollDirective } from '../../core/ui/scroll.directive';
 import { CONTRACT_TYPES, Contract, ContractOptions, ContractType, fitsInProject, hrErrorMessage } from './contract.models';
 import { ContractService } from './contract.service';
 
@@ -23,7 +24,8 @@ export interface ContractDialogData {
 }
 
 /**
- * Registrar o editar el contrato de un colaborador (RF-30).
+ * Registrar o editar el contrato de un colaborador (RF-30), en Drawer como las altas del catálogo
+ * (HIFI/08, reglas comunes; sin maqueta propia).
  * <ul>
  *   <li>Por proyecto: el periodo cabe en la vigencia del proyecto (RN-64); sin fin, hereda el del proyecto.</li>
  *   <li>Por turno: periodo de empleo; sin fin = indefinido.</li>
@@ -36,115 +38,91 @@ export interface ContractDialogData {
   imports: [
     ReactiveFormsModule, MatDialogModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
-    TranslocoPipe, AppDatePipe, AlertComponent,
+    TranslocoPipe, AppDatePipe, AlertComponent, ScrollDirective,
   ],
   template: `
-    <div class="m-head">
-      <div class="badge-ic"><mat-icon>badge</mat-icon></div>
-      <div class="t">
-        <h2>{{ (editing ? 'contracts.dialog.editTitle' : 'contracts.dialog.title') | transloco }}</h2>
-        <p>{{ 'contracts.dialog.subtitle' | transloco }}</p>
-      </div>
-      <button mat-icon-button (click)="ref.close(false)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+    <div class="nx-capa__enc">
+      <h2 class="nx-text-heading-3" mat-dialog-title>{{ (editing ? 'contracts.dialog.editTitle' : 'contracts.dialog.title') | transloco }}</h2>
+      <button mat-icon-button type="button" (click)="ref.close(false)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
     </div>
 
-    <form [formGroup]="form" class="m-body">
+    <form [formGroup]="form" class="nx-capa__cuerpo nx-scroll" nxScroll id="contrato" (ngSubmit)="submit()" novalidate aria-live="polite">
+      <p class="nx-text-small nx-sec">{{ 'contracts.dialog.subtitle' | transloco }}</p>
       @if (problem()) { <app-alert tone="error">{{ problem() }}</app-alert> }
 
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>{{ 'contracts.collaborator' | transloco }} *</mat-label>
-        <mat-select formControlName="userId">
-          @for (u of options().collaborators; track u.id) {
-            <mat-option [value]="u.id">{{ u.fullName }}{{ u.employeeCode ? ' · ' + u.employeeCode : '' }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      <div class="grid2">
+      <div class="nx-form__grid">
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
+          <mat-label>{{ 'contracts.collaborator' | transloco }}</mat-label>
+          <mat-select formControlName="userId" required>
+            @for (u of options().collaborators; track u.id) {
+              <mat-option [value]="u.id">{{ u.fullName }}{{ u.employeeCode ? ' · ' + u.employeeCode : '' }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>{{ 'contracts.type' | transloco }} *</mat-label>
-          <mat-select formControlName="type">
+          <mat-label>{{ 'contracts.type' | transloco }}</mat-label>
+          <mat-select formControlName="type" required>
             @for (t of types; track t) { <mat-option [value]="t">{{ 'contracts.types.' + t | transloco }}</mat-option> }
           </mat-select>
         </mat-form-field>
         @if (isProject()) {
           <mat-form-field appearance="outline">
-            <mat-label>{{ 'contracts.project' | transloco }} *</mat-label>
-            <mat-select formControlName="projectId">
+            <mat-label>{{ 'contracts.project' | transloco }}</mat-label>
+            <mat-select formControlName="projectId" required>
               @for (p of selectableProjects(); track p.id) {
                 <mat-option [value]="p.id">{{ p.code }} · {{ p.name }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
-        } @else {
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'contracts.workSite' | transloco }}</mat-label>
-            <mat-select formControlName="workSiteId">
-              <mat-option value="">—</mat-option>
-              @for (w of options().workSites; track w.id) { <mat-option [value]="w.id">{{ w.name }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
+          @if (project(); as p) {
+            <p class="nx-text-small nx-sec nx-campo--ancho">
+              {{ 'contracts.dialog.projectValidity' | transloco }}:
+              <span class="nx-text-numeric">{{ p.startsOn ? (p.startsOn | appDate: 'dd/MM/yyyy') : ('contracts.noLimit' | transloco) }} –
+              {{ p.endsOn ? (p.endsOn | appDate: 'dd/MM/yyyy') : ('contracts.noLimit' | transloco) }}</span>
+            </p>
+          }
         }
-      </div>
-      @if (isProject()) {
-        @if (project(); as p) {
-          <p class="nx-text-small nx-sec hint">
-            {{ 'contracts.dialog.projectValidity' | transloco }}:
-            {{ p.startsOn ? (p.startsOn | appDate: 'dd/MM/yyyy') : ('contracts.noLimit' | transloco) }} –
-            {{ p.endsOn ? (p.endsOn | appDate: 'dd/MM/yyyy') : ('contracts.noLimit' | transloco) }}
-          </p>
-        }
-        <mat-form-field appearance="outline" class="full">
+        <mat-form-field appearance="outline" [class.nx-campo--ancho]="isProject()">
           <mat-label>{{ 'contracts.workSite' | transloco }}</mat-label>
           <mat-select formControlName="workSiteId">
             <mat-option value="">—</mat-option>
             @for (w of options().workSites; track w.id) { <mat-option [value]="w.id">{{ w.name }}</mat-option> }
           </mat-select>
         </mat-form-field>
-      }
-      <div class="grid2">
         <mat-form-field appearance="outline">
-          <mat-label>{{ 'contracts.startsOn' | transloco }} *</mat-label>
-          <input matInput type="date" formControlName="startsOn" />
+          <mat-label>{{ 'contracts.startsOn' | transloco }}</mat-label>
+          <input matInput type="date" formControlName="startsOn" required />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>{{ 'contracts.endsOn' | transloco }}</mat-label>
           <input matInput type="date" formControlName="endsOn" />
           <mat-hint>{{ (isProject() ? 'contracts.dialog.endProjectHint' : 'contracts.dialog.endShiftHint') | transloco }}</mat-hint>
         </mat-form-field>
+        @if (rangeError(); as key) {
+          <p class="nx-text-caption err nx-campo--ancho" role="alert">{{ key | transloco }}</p>
+        }
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
+          <mat-label>{{ 'contracts.notes' | transloco }}</mat-label>
+          <textarea matInput rows="2" maxlength="500" formControlName="notes"></textarea>
+          <mat-hint>{{ 'users.form.optional' | transloco }}</mat-hint>
+        </mat-form-field>
       </div>
-      @if (rangeError(); as key) {
-        <p class="nx-text-small err">{{ key | transloco }}</p>
-      }
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>{{ 'contracts.notes' | transloco }}</mat-label>
-        <textarea matInput rows="2" maxlength="500" formControlName="notes" [placeholder]="'users.form.optional' | transloco"></textarea>
-      </mat-form-field>
     </form>
 
-    <div class="m-foot">
-      <span class="fill"></span>
-      <button mat-button (click)="ref.close(false)">{{ 'common.cancel' | transloco }}</button>
-      <button mat-flat-button color="primary" [disabled]="!valid() || saving()" [attr.aria-busy]="saving()" (click)="submit()">
-        <mat-icon>check</mat-icon> {{ (editing ? 'common.saveChanges' : 'contracts.dialog.submit') | transloco }}
+    <div class="nx-capa__pie">
+      <button mat-button type="button" (click)="ref.close(false)"><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
+      <button mat-flat-button type="submit" form="contrato" [disabled]="saving()" [attr.aria-busy]="saving()">
+        @if (saving()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>save</mat-icon> }
+        {{ (editing ? 'common.saveChanges' : 'contracts.dialog.submit') | transloco }}
       </button>
     </div>
   `,
   styles: [
     `
-      :host { display: block; }
-      .m-head { display: flex; align-items: center; gap: 14px; padding: 20px 28px 16px; border-bottom: 1px solid var(--nx-color-border-default); }
-      .m-head .badge-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--nx-color-action-primary-subtle); color: var(--nx-color-action-primary); display: grid; place-items: center; border: 1px solid var(--nx-color-border-brand); flex: none; }
-      .m-head .t { flex: 1; }
-      .m-head h2 { margin: 0; font-size: 1.15rem; font-weight: var(--nx-font-weight-bold); }
-      .m-head p { margin: 2px 0 0; color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
-      .m-body { padding: 8px 28px 12px; }
-      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--nx-space-4); }
+      h2, p { margin: var(--nx-space-0); }
       mat-form-field { width: 100%; }
-      .hint { margin: calc(var(--nx-space-2) * -1) 0 var(--nx-space-4); }
-      .err { margin: 0 0 var(--nx-space-4); color: var(--nx-color-status-error-fg); }
-      .m-foot { display: flex; align-items: center; gap: 10px; padding: 14px 28px 18px; border-top: 1px solid var(--nx-color-border-default); }
-      .m-foot .fill { flex: 1; }
-      @media (max-width: 599px) { .grid2 { grid-template-columns: 1fr; } .m-head, .m-body, .m-foot { padding-left: 16px; padding-right: 16px; } }
+      .err { color: var(--nx-color-status-error-fg); }
+      .nx-capa__pie .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
     `,
   ],
 })
@@ -194,13 +172,13 @@ export class ContractDialogComponent {
     return null;
   });
 
-  protected readonly valid = computed(() => {
-    const v = this.value();
-    if (!v.userId || !v.startsOn || this.rangeError()) return false;
-    return !this.isProject() || !!v.projectId;
-  });
-
   constructor() {
+    // El proyecto solo es obligatorio en los contratos por proyecto.
+    this.form.controls.type.valueChanges.subscribe((type) => {
+      this.form.controls.projectId.setValidators(type === 'PROJECT' ? [Validators.required] : []);
+      this.form.controls.projectId.updateValueAndValidity({ emitEvent: false });
+    });
+    if (this.form.controls.type.value === 'PROJECT') this.form.controls.projectId.setValidators([Validators.required]);
     if (this.editing) {
       this.form.controls.userId.disable();
       this.form.controls.type.disable();
@@ -213,7 +191,11 @@ export class ContractDialogComponent {
   }
 
   protected submit(): void {
-    if (!this.valid()) return;
+    // El botón nunca se deshabilita antes del primer intento: los errores aparecen al enviar (C1, C2).
+    if (this.form.invalid || this.rangeError()) {
+      this.form.markAllAsTouched();
+      return;
+    }
     const raw = this.form.getRawValue();
     const project = raw.type === 'PROJECT';
     this.saving.set(true);

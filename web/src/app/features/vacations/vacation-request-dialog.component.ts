@@ -1,4 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -8,12 +9,15 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
+import { AlertComponent } from '../../core/ui/alert.component';
 import { NotificationService } from '../../core/ui/notification.service';
+import { ScrollDirective } from '../../core/ui/scroll.directive';
 import { DirectoryOptionsService, EmployeeOption, employeeLabel } from '../../core/directory/directory-options.service';
 import { VacationService } from './vacation.service';
 
 /**
- * Alta de una solicitud de vacaciones desde el panel (a nombre de un colaborador).
+ * Alta de una solicitud de vacaciones desde el panel (a nombre de un colaborador), en Drawer sobre
+ * la bandeja P19 como las altas del catálogo (HIFI/08, reglas comunes; sin maqueta propia).
  * El backend calcula los días según la política y abre la solicitud como PENDING.
  * Requiere {@code vacation:request} (o {@code vacation:approve}).
  */
@@ -24,64 +28,62 @@ import { VacationService } from './vacation.service';
     ReactiveFormsModule, MatDialogModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     TranslocoPipe,
+    AlertComponent,
+    ScrollDirective,
   ],
   template: `
-    <div class="m-head">
-      <div class="badge-ic"><mat-icon>beach_access</mat-icon></div>
-      <div class="t"><h2>{{ 'vacations.dialog.title' | transloco }}</h2><p>{{ 'vacations.dialog.subtitle' | transloco }}</p></div>
-      <button mat-icon-button (click)="close(false)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+    <div class="nx-capa__enc">
+      <h2 class="nx-text-heading-3" mat-dialog-title>{{ 'vacations.dialog.title' | transloco }}</h2>
+      <button mat-icon-button type="button" (click)="close(false)" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
     </div>
 
-    <form [formGroup]="form" class="m-body">
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>{{ 'users.employee' | transloco }} *</mat-label>
-        <mat-select formControlName="userId">
-          @for (u of users(); track u.id) {
-            <mat-option [value]="u.id">{{ label(u) }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      @if (usersError()) {
-        <p class="nx-text-caption opciones-error" role="alert">{{ 'common.collaboratorsLoadError' | transloco }}</p>
-      }
-      <div class="grid2">
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'scheduling.from' | transloco }} *</mat-label>
-          <input matInput type="date" formControlName="startDate" />
+    <form [formGroup]="form" class="nx-capa__cuerpo nx-scroll" nxScroll id="solicitud-vacaciones" (ngSubmit)="submit()" novalidate aria-live="polite">
+      <p class="nx-text-small nx-sec">{{ 'vacations.dialog.subtitle' | transloco }}</p>
+      @if (problem()) { <app-alert tone="error">{{ problem() }}</app-alert> }
+      @if (usersError()) { <app-alert tone="error">{{ 'common.collaboratorsLoadError' | transloco }}</app-alert> }
+
+      <div class="nx-form__grid">
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
+          <mat-label>{{ 'users.employee' | transloco }}</mat-label>
+          <mat-select formControlName="userId" required>
+            @for (u of users(); track u.id) {
+              <mat-option [value]="u.id">{{ label(u) }}</mat-option>
+            }
+          </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>{{ 'period.to' | transloco }} *</mat-label>
-          <input matInput type="date" formControlName="endDate" />
+          <mat-label>{{ 'scheduling.from' | transloco }}</mat-label>
+          <input matInput type="date" formControlName="startDate" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'period.to' | transloco }}</mat-label>
+          <input matInput type="date" formControlName="endDate" required />
+        </mat-form-field>
+        @if (rangeInvalid()) {
+          <p class="nx-text-caption err nx-campo--ancho" role="alert">{{ 'vacations.dialog.endBeforeStart' | transloco }}</p>
+        }
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
+          <mat-label>{{ 'vacations.reason' | transloco }}</mat-label>
+          <input matInput formControlName="reason" />
+          <mat-hint>{{ 'users.form.optional' | transloco }}</mat-hint>
         </mat-form-field>
       </div>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>{{ 'vacations.reason' | transloco }}</mat-label>
-        <input matInput formControlName="reason" [placeholder]="'users.form.optional' | transloco" />
-      </mat-form-field>
     </form>
 
-    <div class="m-foot">
-      <span class="fill"></span>
-      <button mat-button (click)="close(false)">{{ 'common.cancel' | transloco }}</button>
-      <button mat-flat-button color="primary" [disabled]="form.invalid || saving()" (click)="submit()">
-        <mat-icon>check</mat-icon> {{ 'vacations.dialog.submit' | transloco }}
+    <div class="nx-capa__pie">
+      <button mat-button type="button" (click)="close(false)"><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
+      <button mat-flat-button type="submit" form="solicitud-vacaciones" [disabled]="saving()" [attr.aria-busy]="saving()">
+        @if (saving()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>save</mat-icon> }
+        {{ 'vacations.dialog.submit' | transloco }}
       </button>
     </div>
   `,
   styles: [
     `
-      .opciones-error { margin: calc(-1 * var(--nx-space-2)) var(--nx-space-0) var(--nx-space-3); color: var(--nx-color-status-error-fg); }
-      :host { display: block; }
-      .m-head { display: flex; align-items: center; gap: 14px; padding: 20px 28px 16px; border-bottom: 1px solid var(--nx-color-border-default); }
-      .m-head .badge-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--nx-color-action-primary-subtle); color: var(--nx-color-action-primary); display: grid; place-items: center; border: 1px solid var(--nx-color-border-brand); flex: none; }
-      .m-head .t { flex: 1; }
-      .m-head h2 { margin: 0; font-size: 1.15rem; font-weight: var(--nx-font-weight-bold); }
-      .m-head p { margin: 2px 0 0; color: var(--nx-color-text-secondary); font-size: var(--nx-text-small-size); }
-      .m-body { padding: 8px 28px 12px; }
-      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--nx-space-4); }
+      h2, p { margin: var(--nx-space-0); }
       mat-form-field { width: 100%; }
-      .m-foot { display: flex; align-items: center; gap: 10px; padding: 14px 28px 18px; border-top: 1px solid var(--nx-color-border-default); }
-      .m-foot .fill { flex: 1; }
+      .err { color: var(--nx-color-status-error-fg); }
+      .nx-capa__pie .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
     `,
   ],
 })
@@ -97,12 +99,19 @@ export class VacationRequestDialogComponent {
   protected readonly usersError = signal(false);
   protected readonly label = employeeLabel;
   protected readonly saving = signal(false);
+  protected readonly problem = signal<string | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
     userId: ['', [Validators.required]],
     startDate: ['', [Validators.required]],
     endDate: ['', [Validators.required]],
     reason: [''],
+  });
+
+  private readonly value = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
+  protected readonly rangeInvalid = computed(() => {
+    const v = this.value();
+    return !!v.startDate && !!v.endDate && v.endDate < v.startDate;
   });
 
   constructor() {
@@ -117,13 +126,14 @@ export class VacationRequestDialogComponent {
   }
 
   protected submit(): void {
-    if (this.form.invalid) return;
-    const raw = this.form.getRawValue();
-    if (raw.endDate < raw.startDate) {
-      this.notify.error(this.transloco.translate('vacations.dialog.endBeforeStart'));
+    // El botón nunca se deshabilita antes del primer intento: los errores aparecen al enviar (C1, C2).
+    if (this.form.invalid || this.rangeInvalid()) {
+      this.form.markAllAsTouched();
       return;
     }
+    const raw = this.form.getRawValue();
     this.saving.set(true);
+    this.problem.set(null);
     this.service
       .create({ userId: raw.userId, startDate: raw.startDate, endDate: raw.endDate, reason: raw.reason || undefined })
       .subscribe({
@@ -134,7 +144,7 @@ export class VacationRequestDialogComponent {
         },
         error: () => {
           this.saving.set(false);
-          this.notify.error(this.transloco.translate('vacations.dialog.createError'));
+          this.problem.set(this.transloco.translate('vacations.dialog.createError'));
         },
       });
   }

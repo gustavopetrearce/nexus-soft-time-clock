@@ -66,8 +66,7 @@ const PHASE_TONE: Record<PermitPhase, string> = { UPCOMING: 'OPEN', IN_PROGRESS:
       td { white-space: nowrap; }
       .sub { display: block; }
       .nx-kpis { margin-bottom: var(--nx-space-4); }
-      @media (min-width: 900px) { .nx-kpis { grid-template-columns: repeat(5, 1fr); } }
-      .nx-kpi b { font-size: var(--nx-text-heading-3-size); }
+      .nx-kpi__concepto mat-icon { width: var(--nx-icon-size-md); height: var(--nx-icon-size-md); font-size: var(--nx-icon-size-md); }
       .exportar .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
     `,
   ],
@@ -141,11 +140,31 @@ const PHASE_TONE: Record<PermitPhase, string> = { UPCOMING: 'OPEN', IN_PROGRESS:
         </div>
 
         <div class="nx-kpis">
-          <div class="nx-kpi"><span class="nx-sec nx-text-small">{{ 'permits.incapacities.kpi.total' | transloco }}</span><b class="nx-text-numeric">{{ totals().count | appNumber }}</b></div>
-          <div class="nx-kpi"><span class="nx-sec nx-text-small">{{ 'permits.incapacities.kpi.days' | transloco }}</span><b class="nx-text-numeric">{{ totals().days | appNumber }}</b></div>
-          <div class="nx-kpi"><span class="nx-sec nx-text-small">{{ 'permits.payStatus.WITH_PAY' | transloco }}</span><b class="nx-text-numeric">{{ totals().withPay | appNumber }}</b></div>
-          <div class="nx-kpi"><span class="nx-sec nx-text-small">{{ 'permits.payStatus.WITHOUT_PAY' | transloco }}</span><b class="nx-text-numeric">{{ totals().withoutPay | appNumber }}</b></div>
-          <div class="nx-kpi"><span class="nx-sec nx-text-small">{{ 'permits.payStatus.PENDING_REVIEW' | transloco }}</span><b class="nx-text-numeric">{{ totals().pending | appNumber }}</b></div>
+          <div class="nx-kpi nx-kpi--brand">
+            <span class="nx-kpi__label">{{ 'permits.incapacities.kpi.total' | transloco }}</span>
+            <span class="nx-kpi__concepto nx-kpi__concepto--brand"><mat-icon fontSet="material-icons-outlined" aria-hidden="true">personal_injury</mat-icon></span>
+            <span class="nx-kpi__fila"><span class="nx-kpi__valor nx-text-numeric">{{ totals().count | appNumber }}</span></span>
+          </div>
+          <div class="nx-kpi nx-kpi--info">
+            <span class="nx-kpi__label">{{ 'permits.incapacities.kpi.days' | transloco }}</span>
+            <span class="nx-kpi__concepto nx-kpi__concepto--info"><mat-icon fontSet="material-icons-outlined" aria-hidden="true">event</mat-icon></span>
+            <span class="nx-kpi__fila"><span class="nx-kpi__valor nx-text-numeric">{{ totals().days | appNumber }}</span></span>
+          </div>
+          <div class="nx-kpi nx-kpi--success">
+            <span class="nx-kpi__label">{{ 'permits.payStatus.WITH_PAY' | transloco }}</span>
+            <span class="nx-kpi__concepto nx-kpi__concepto--success"><mat-icon fontSet="material-icons-outlined" aria-hidden="true">paid</mat-icon></span>
+            <span class="nx-kpi__fila"><span class="nx-kpi__valor nx-text-numeric">{{ totals().withPay | appNumber }}</span></span>
+          </div>
+          <div class="nx-kpi nx-kpi--error">
+            <span class="nx-kpi__label">{{ 'permits.payStatus.WITHOUT_PAY' | transloco }}</span>
+            <span class="nx-kpi__concepto nx-kpi__concepto--error"><mat-icon fontSet="material-icons-outlined" aria-hidden="true">money_off</mat-icon></span>
+            <span class="nx-kpi__fila"><span class="nx-kpi__valor nx-text-numeric">{{ totals().withoutPay | appNumber }}</span></span>
+          </div>
+          <div class="nx-kpi nx-kpi--warning">
+            <span class="nx-kpi__label">{{ 'permits.payStatus.PENDING_REVIEW' | transloco }}</span>
+            <span class="nx-kpi__concepto nx-kpi__concepto--warning"><mat-icon fontSet="material-icons-outlined" aria-hidden="true">hourglass_empty</mat-icon></span>
+            <span class="nx-kpi__fila"><span class="nx-kpi__valor nx-text-numeric">{{ totals().pending | appNumber }}</span></span>
+          </div>
         </div>
 
         @if (!loading() && rows().length === 0) {

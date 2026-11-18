@@ -9,7 +9,7 @@
   --nx-color-red-50:#fdecea;--nx-color-red-100:#ffc5be;--nx-color-red-200:#fe9c92;--nx-color-red-300:#f97066;--nx-color-red-400:#e2584d;--nx-color-red-500:#cb3f34;--nx-color-red-600:#b42318;--nx-color-red-700:#961b12;--nx-color-red-800:#7a140d;--nx-color-red-900:#5e0d08;--nx-color-red-950:#440704;
   --nx-color-blue-50:#e8f0fe;--nx-color-blue-100:#c2d8ff;--nx-color-blue-200:#9cc0ff;--nx-color-blue-300:#76a7ff;--nx-color-blue-400:#578ced;--nx-color-blue-500:#3972db;--nx-color-blue-600:#1856c9;--nx-color-blue-700:#1347a8;--nx-color-blue-800:#0e3889;--nx-color-blue-900:#092a6b;--nx-color-blue-950:#051d4e;
   --nx-color-white:#ffffff;
-  --nx-color-neutral-900-a05:rgba(16,24,40,.05);--nx-color-neutral-900-a06:rgba(16,24,40,.06);--nx-color-neutral-900-a08:rgba(16,24,40,.08);--nx-color-neutral-900-a10:rgba(16,24,40,.10);--nx-color-neutral-900-a12:rgba(16,24,40,.12);--nx-color-neutral-900-a16:rgba(16,24,40,.16);
+  --nx-color-neutral-900-a05:rgba(16,24,40,.05);--nx-color-neutral-900-a06:rgba(16,24,40,.06);--nx-color-neutral-900-a08:rgba(16,24,40,.08);--nx-color-neutral-900-a10:rgba(16,24,40,.10);--nx-color-neutral-900-a12:rgba(16,24,40,.12);--nx-color-neutral-900-a16:rgba(16,24,40,.16);--nx-color-neutral-900-a24:rgba(16,24,40,.24);
   --nx-color-white-a10:rgba(255,255,255,.10);--nx-color-white-a16:rgba(255,255,255,.16);
   --nx-color-neutral-950-a40:rgba(15,20,32,.40);--nx-color-neutral-950-a50:rgba(15,20,32,.50);
 
@@ -48,6 +48,7 @@
   --nx-color-nav-bg:var(--nx-color-indigo-950);--nx-color-nav-text:var(--nx-color-neutral-200);--nx-color-nav-text-muted:var(--nx-color-neutral-400);--nx-color-nav-icon:var(--nx-color-indigo-400);
   --nx-color-nav-active-bg:var(--nx-color-indigo-900);--nx-color-nav-active-fg:var(--nx-color-indigo-300);--nx-color-nav-border:var(--nx-color-white-a10);--nx-color-nav-focus-ring:var(--nx-color-indigo-300);--nx-color-nav-scrollbar:var(--nx-color-white-a16);
   --nx-color-surface-brand:var(--nx-color-indigo-950);--nx-color-on-surface-brand:var(--nx-color-white);
+  --nx-color-action-on-brand:var(--nx-color-white);--nx-color-action-on-brand-hover:var(--nx-color-indigo-100);--nx-color-on-action-on-brand:var(--nx-color-indigo-950);
   --nx-color-overlay-scrim:var(--nx-color-neutral-950-a50);
 
   /* DS/03 · estilos compuestos, escala del portal */
@@ -68,34 +69,36 @@
 }
 /* DS/02 · semánticos · claro (base) */
 :root{
-  --nx-color-bg-app:var(--nx-color-neutral-50);--nx-color-surface-default:var(--nx-color-white);--nx-color-surface-subtle:var(--nx-color-neutral-50);--nx-color-surface-hover:var(--nx-color-neutral-100);
-  --nx-color-text-primary:var(--nx-color-neutral-900);--nx-color-text-secondary:var(--nx-color-neutral-500);--nx-color-text-disabled:var(--nx-color-neutral-400);--nx-color-text-placeholder:var(--nx-color-neutral-500);--nx-color-text-inverse:var(--nx-color-white);
+  --nx-color-bg-app:var(--nx-color-neutral-200);--nx-color-surface-default:var(--nx-color-white);--nx-color-surface-subtle:var(--nx-color-neutral-50);--nx-color-surface-hover:var(--nx-color-neutral-100);
+  --nx-color-text-primary:var(--nx-color-neutral-900);--nx-color-text-secondary:var(--nx-color-neutral-600);--nx-color-text-disabled:var(--nx-color-neutral-400);--nx-color-text-placeholder:var(--nx-color-neutral-500);--nx-color-text-inverse:var(--nx-color-white);
   --nx-color-action-primary:var(--nx-color-indigo-500);--nx-color-action-primary-hover:var(--nx-color-indigo-600);--nx-color-on-action-primary:var(--nx-color-white);--nx-color-action-primary-subtle:var(--nx-color-indigo-50);
-  --nx-color-border-default:var(--nx-color-neutral-900-a10);--nx-color-border-strong:var(--nx-color-neutral-900-a16);--nx-color-border-brand:var(--nx-color-indigo-200);--nx-color-border-input:var(--nx-color-neutral-500);
+  --nx-color-border-default:var(--nx-color-neutral-900-a16);--nx-color-border-divider:var(--nx-color-neutral-300);--nx-color-border-strong:var(--nx-color-neutral-900-a24);--nx-color-border-brand:var(--nx-color-indigo-200);--nx-color-border-input:var(--nx-color-neutral-500);
   --nx-color-focus-ring:var(--nx-color-indigo-500);
   --nx-color-status-success-fg:var(--nx-color-green-600);--nx-color-status-success-bg:var(--nx-color-green-50);
   --nx-color-status-warning-fg:var(--nx-color-orange-600);--nx-color-status-warning-bg:var(--nx-color-orange-50);
   --nx-color-status-error-fg:var(--nx-color-red-600);--nx-color-status-error-bg:var(--nx-color-red-50);
   --nx-color-status-info-fg:var(--nx-color-blue-600);--nx-color-status-info-bg:var(--nx-color-blue-50);
   --nx-color-status-neutral-fg:var(--nx-color-neutral-600);--nx-color-status-neutral-bg:var(--nx-color-neutral-100);
-  --nx-shadow-1:0 1px 2px var(--nx-color-neutral-900-a06),0 1px 3px var(--nx-color-neutral-900-a10);
+  --nx-color-scrollbar-track:var(--nx-color-neutral-50);--nx-color-scrollbar-thumb:var(--nx-color-neutral-300);--nx-color-scrollbar-thumb-active:var(--nx-color-neutral-500);--nx-color-status-success-border:var(--nx-color-green-200);--nx-color-status-warning-border:var(--nx-color-orange-200);--nx-color-status-error-border:var(--nx-color-red-200);--nx-color-status-info-border:var(--nx-color-blue-200);--nx-color-status-neutral-border:var(--nx-color-neutral-300);
+  --nx-shadow-1:0 1px 2px var(--nx-color-neutral-900-a08),0 2px 6px var(--nx-color-neutral-900-a12);
   --nx-shadow-2:0 6px 16px var(--nx-color-neutral-900-a08),0 2px 6px var(--nx-color-neutral-900-a05);
   --nx-shadow-3:0 16px 32px var(--nx-color-neutral-900-a12),0 4px 8px var(--nx-color-neutral-900-a06);
   --nx-elevation-2-surface:var(--nx-color-surface-default);--nx-elevation-3-surface:var(--nx-color-surface-default);
 }
 /* DS/02 · semánticos · oscuro (body.dark, como ThemeService; solo reasigna el nivel semántico) */
 body.dark{
-  --nx-color-surface-brand:var(--nx-color-indigo-700);
+  --nx-color-surface-brand:var(--nx-color-indigo-700);--nx-color-on-action-on-brand:var(--nx-color-indigo-700);
   --nx-color-bg-app:var(--nx-color-neutral-950);--nx-color-surface-default:var(--nx-color-neutral-800);--nx-color-surface-subtle:var(--nx-color-neutral-900);--nx-color-surface-hover:var(--nx-color-neutral-700);
   --nx-color-text-primary:var(--nx-color-neutral-200);--nx-color-text-secondary:var(--nx-color-neutral-400);--nx-color-text-disabled:var(--nx-color-neutral-500);--nx-color-text-placeholder:var(--nx-color-neutral-400);--nx-color-text-inverse:var(--nx-color-neutral-900);
   --nx-color-action-primary:var(--nx-color-indigo-300);--nx-color-action-primary-hover:var(--nx-color-indigo-200);--nx-color-on-action-primary:var(--nx-color-indigo-950);--nx-color-action-primary-subtle:var(--nx-color-indigo-900);
-  --nx-color-border-default:var(--nx-color-white-a10);--nx-color-border-strong:var(--nx-color-white-a16);--nx-color-border-brand:var(--nx-color-indigo-400);--nx-color-border-input:var(--nx-color-neutral-400);
+  --nx-color-border-default:var(--nx-color-white-a10);--nx-color-border-divider:var(--nx-color-white-a10);--nx-color-border-strong:var(--nx-color-white-a16);--nx-color-border-brand:var(--nx-color-indigo-400);--nx-color-border-input:var(--nx-color-neutral-400);
   --nx-color-focus-ring:var(--nx-color-indigo-300);
   --nx-color-status-success-fg:var(--nx-color-green-300);--nx-color-status-success-bg:var(--nx-color-green-900);
   --nx-color-status-warning-fg:var(--nx-color-orange-300);--nx-color-status-warning-bg:var(--nx-color-orange-900);
   --nx-color-status-error-fg:var(--nx-color-red-300);--nx-color-status-error-bg:var(--nx-color-red-900);
   --nx-color-status-info-fg:var(--nx-color-blue-300);--nx-color-status-info-bg:var(--nx-color-blue-900);
   --nx-color-status-neutral-fg:var(--nx-color-neutral-300);--nx-color-status-neutral-bg:var(--nx-color-neutral-700);
+  --nx-color-scrollbar-track:var(--nx-color-neutral-900);--nx-color-scrollbar-thumb:var(--nx-color-neutral-600);--nx-color-scrollbar-thumb-active:var(--nx-color-neutral-400);--nx-color-status-success-border:var(--nx-color-green-700);--nx-color-status-warning-border:var(--nx-color-orange-700);--nx-color-status-error-border:var(--nx-color-red-700);--nx-color-status-info-border:var(--nx-color-blue-700);--nx-color-status-neutral-border:var(--nx-color-neutral-500);
   --nx-shadow-1:none;--nx-shadow-2:0 6px 16px var(--nx-color-neutral-950-a40);--nx-shadow-3:0 16px 32px var(--nx-color-neutral-950-a50);
   --nx-elevation-2-surface:var(--nx-color-surface-hover);--nx-elevation-3-surface:var(--nx-color-surface-hover);
 }

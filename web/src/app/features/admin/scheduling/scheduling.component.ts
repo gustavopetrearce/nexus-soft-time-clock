@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -11,20 +11,21 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { PAGE_SIZE_OPTIONS, debouncedSearch, pageSizePreference } from '../../../core/ui/catalog';
-import { openDrawer } from '../../../core/ui/drawer';
+import { openDrawer, routedDrawer } from '../../../core/ui/drawer';
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
 import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
 import { PageHeaderComponent } from '../../../core/ui/page-header.component';
 import { ScrollDirective } from '../../../core/ui/scroll.directive';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { AssignShiftData, AssignShiftDrawerComponent } from './assign-shift-drawer.component';
+import { ScheduleDrawerData, ScheduleFormComponent } from './schedule-form.component';
 import { Schedule } from './scheduling.models';
 import { SchedulingService } from './scheduling.service';
 
 /**
  * P28 · Horarios y turnos (RF-08): buscador en el servidor, «Asignar turno» (drawer P30) y «Nuevo
- * horario»; tabla con código, nombre, zona horaria y estado. Los turnos de cada horario se editan
- * en su formulario (P29).
+ * horario»; tabla con código, nombre, zona horaria y estado. El alta y la edición (P29, con sus
+ * turnos) van en drawer sobre el catálogo; `/scheduling/new` y `/scheduling/:id/edit` lo abren.
  */
 @Component({
   selector: 'app-scheduling',
@@ -60,9 +61,9 @@ import { SchedulingService } from './scheduling.service';
             <mat-label>{{ 'scheduling.search' | transloco }}</mat-label>
             <input matInput type="search" [formControl]="searchControl" autocomplete="off" />
           </mat-form-field>
-          <div class="nx-filtros__acciones">
-            <button mat-stroked-button type="button" (click)="openAssign()">{{ 'scheduling.assignShift' | transloco }}</button>
-            <button mat-flat-button type="button" (click)="router.navigate(['/scheduling/new'])"><mat-icon>add</mat-icon>{{ 'scheduling.new' | transloco }}</button>
+          <div class="nx-filtros__acciones nx-filtros__acciones--par">
+            <button mat-stroked-button type="button" (click)="openAssign()"><mat-icon>event_available</mat-icon>{{ 'scheduling.assignShift' | transloco }}</button>
+            <button mat-flat-button type="button" (click)="router.navigate(['new'], { relativeTo: route })"><mat-icon>add</mat-icon>{{ 'scheduling.new' | transloco }}</button>
           </div>
         </div>
 
@@ -123,6 +124,7 @@ export class SchedulingComponent {
   private readonly dialog = inject(MatDialog);
   private readonly transloco = inject(TranslocoService);
   protected readonly router = inject(Router);
+  protected readonly route = inject(ActivatedRoute);
 
   protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   protected readonly schedules = signal<Schedule[]>([]);
@@ -143,6 +145,16 @@ export class SchedulingComponent {
         this.reload();
       });
     this.reload();
+    routedDrawer<ScheduleFormComponent, boolean>({
+      open: (state) =>
+        openDrawer<ScheduleFormComponent, ScheduleDrawerData, boolean>(this.dialog, ScheduleFormComponent, {
+          data: { scheduleId: state.id },
+          ariaLabel: this.transloco.translate(state.mode === 'new' ? 'scheduling.new' : 'scheduling.edit'),
+        }),
+      closed: (saved) => {
+        if (saved) this.reload();
+      },
+    });
   }
 
   protected reload(): void {
@@ -168,7 +180,7 @@ export class SchedulingComponent {
   }
 
   protected edit(schedule: Schedule): void {
-    void this.router.navigate(['/scheduling', schedule.id, 'edit']);
+    void this.router.navigate([schedule.id, 'edit'], { relativeTo: this.route });
   }
 
   /** Los turnos se eligen de todos los horarios activos, no solo de la página visible. */

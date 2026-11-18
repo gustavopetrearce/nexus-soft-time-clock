@@ -27,6 +27,7 @@ import { ScrollDirective } from '../../core/ui/scroll.directive';
 import { StatusChipComponent } from '../../core/ui/status-chip.component';
 import { PermitDecision, PermitDecisionDialogComponent, PermitDecisionMode } from './permit-decision-dialog.component';
 import { PermitDialogComponent } from './permit-dialog.component';
+import { openDrawer } from '../../core/ui/drawer';
 import {
   PAY_STATUSES,
   PERMIT_REASONS,
@@ -293,8 +294,7 @@ export class PermitsComponent {
   }
 
   protected openCreate(): void {
-    this.dialog
-      .open(PermitDialogComponent, { width: '640px', maxWidth: '96vw' })
+    openDrawer(this.dialog, PermitDialogComponent, { ariaLabel: this.transloco.translate('permits.dialog.title') })
       .afterClosed()
       .subscribe((created) => {
         if (created) this.reload();

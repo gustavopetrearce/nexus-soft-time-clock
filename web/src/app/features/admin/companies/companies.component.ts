@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -13,6 +13,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AuthStore } from '../../../core/auth/auth.store';
 import { AppNumberPipe } from '../../../core/i18n/app-number.pipe';
+import { openDrawer, routedDrawer } from '../../../core/ui/drawer';
 import { PAGE_SIZE_OPTIONS, debouncedSearch, pageSizePreference } from '../../../core/ui/catalog';
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
 import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
@@ -22,6 +23,7 @@ import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { CapacityDialogComponent } from './capacity-dialog.component';
 import { Company, TenantCapacity } from './company.models';
 import { CompanyService } from './company.service';
+import { CompanyDrawerData, CompanyFormComponent } from './company-form.component';
 
 /**
  * P22 · Empresas (RF-13): buscador en el servidor (400 ms) y «Nueva empresa» en la misma fila; tabla
@@ -65,7 +67,7 @@ import { CompanyService } from './company.service';
             <input matInput type="search" [formControl]="searchControl" autocomplete="off" />
           </mat-form-field>
           <div class="nx-filtros__acciones">
-            <button mat-flat-button type="button" (click)="router.navigate(['/companies/new'])"><mat-icon>add</mat-icon>{{ 'companies.new' | transloco }}</button>
+            <button mat-flat-button type="button" (click)="router.navigate(['new'], { relativeTo: route })"><mat-icon>add</mat-icon>{{ 'companies.new' | transloco }}</button>
           </div>
         </div>
 
@@ -135,6 +137,7 @@ export class CompaniesComponent {
   private readonly auth = inject(AuthStore);
   private readonly transloco = inject(TranslocoService);
   protected readonly router = inject(Router);
+  protected readonly route = inject(ActivatedRoute);
 
   protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   protected readonly companies = signal<Company[]>([]);
@@ -157,6 +160,16 @@ export class CompaniesComponent {
         this.reload();
       });
     this.reload();
+    routedDrawer<CompanyFormComponent, boolean>({
+      open: (state) =>
+        openDrawer<CompanyFormComponent, CompanyDrawerData, boolean>(this.dialog, CompanyFormComponent, {
+          data: { companyId: state.id },
+          ariaLabel: this.transloco.translate(state.mode === 'new' ? 'companies.new' : 'companies.edit'),
+        }),
+      closed: (saved) => {
+        if (saved) this.reload();
+      },
+    });
   }
 
   protected reload(): void {
@@ -223,6 +236,6 @@ export class CompaniesComponent {
   }
 
   protected edit(company: Company): void {
-    void this.router.navigate(['/companies', company.id, 'edit']);
+    void this.router.navigate([company.id, 'edit'], { relativeTo: this.route });
   }
 }

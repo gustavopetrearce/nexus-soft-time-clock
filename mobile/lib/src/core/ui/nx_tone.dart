@@ -24,6 +24,16 @@ extension NxToneColors on NxTone {
         NxTone.neutral => c.statusNeutralBg,
         NxTone.brand => c.actionPrimarySubtle,
       };
+
+  /// Contorno del Chip (`color.status.*-border`, DS/09 n.º 11; decorativo). La marca usa `border-brand`.
+  Color border(NxColors c) => switch (this) {
+        NxTone.success => c.statusSuccessBorder,
+        NxTone.warning => c.statusWarningBorder,
+        NxTone.error => c.statusErrorBorder,
+        NxTone.info => c.statusInfoBorder,
+        NxTone.neutral => c.statusNeutralBorder,
+        NxTone.brand => c.borderBrand,
+      };
 }
 
 /// Tono de `attendance_records.status` (HIFI/08): ACCEPTED → success, PENDING_REVIEW → warning,

@@ -14,6 +14,7 @@ import { localizedProblem } from '../../../core/ui/problem-detail';
 import { ScrollDirective } from '../../../core/ui/scroll.directive';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { ApiClientFormDialogComponent } from './api-client-form-dialog.component';
+import { openDrawer } from '../../../core/ui/drawer';
 import { ApiClientSecretDialogComponent, ApiClientSecretDialogData } from './api-client-secret-dialog.component';
 import { ApiClient, ApiClientCredentials } from './api-client.models';
 import { ApiClientService } from './api-client.service';
@@ -121,8 +122,9 @@ export class ApiClientsComponent {
   }
 
   protected create(): void {
-    this.dialog
-      .open<ApiClientFormDialogComponent, void, ApiClientCredentials>(ApiClientFormDialogComponent, { width: '480px' })
+    openDrawer<ApiClientFormDialogComponent, void, ApiClientCredentials>(this.dialog, ApiClientFormDialogComponent, {
+      ariaLabel: this.transloco.translate('apiClients.new'),
+    })
       .afterClosed()
       .subscribe((credentials) => {
         if (credentials) {

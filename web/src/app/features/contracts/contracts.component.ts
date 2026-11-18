@@ -24,6 +24,7 @@ import { ScrollDirective } from '../../core/ui/scroll.directive';
 import { StatusChipComponent } from '../../core/ui/status-chip.component';
 import { ContractAction, ContractActionDialogComponent, ContractActionMode } from './contract-action-dialog.component';
 import { ContractDialogComponent, ContractDialogData } from './contract-dialog.component';
+import { openDrawer } from '../../core/ui/drawer';
 import {
   CONTRACT_STATUSES,
   CONTRACT_TYPES,
@@ -289,8 +290,10 @@ export class ContractsComponent {
   }
 
   private openDialog(data: ContractDialogData): void {
-    this.dialog
-      .open(ContractDialogComponent, { data, width: '640px', maxWidth: '96vw' })
+    openDrawer(this.dialog, ContractDialogComponent, {
+      data,
+      ariaLabel: this.transloco.translate(data.contract ? 'contracts.dialog.editTitle' : 'contracts.dialog.title'),
+    })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) this.reload();

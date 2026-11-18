@@ -1,15 +1,17 @@
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AppDatePipe } from '../../../core/i18n/app-date.pipe';
+import { openDrawer, routedDrawer } from '../../../core/ui/drawer';
 import { PAGE_SIZE_OPTIONS, debouncedSearch, pageSizePreference } from '../../../core/ui/catalog';
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
 import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
@@ -18,6 +20,7 @@ import { ScrollDirective } from '../../../core/ui/scroll.directive';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { Project } from './project.models';
 import { ProjectService } from './project.service';
+import { ProjectDrawerData, ProjectFormComponent } from './project-form.component';
 
 /** P34 · Proyectos (F18): buscador en el servidor y «Nuevo proyecto»; tabla con estado y vigencia. */
 @Component({
@@ -56,7 +59,7 @@ import { ProjectService } from './project.service';
             <input matInput type="search" [formControl]="searchControl" autocomplete="off" />
           </mat-form-field>
           <div class="nx-filtros__acciones">
-            <button mat-flat-button type="button" (click)="router.navigate(['/projects/new'])"><mat-icon>add</mat-icon>{{ 'projects.new' | transloco }}</button>
+            <button mat-flat-button type="button" (click)="router.navigate(['new'], { relativeTo: route })"><mat-icon>add</mat-icon>{{ 'projects.new' | transloco }}</button>
           </div>
         </div>
 
@@ -117,6 +120,9 @@ import { ProjectService } from './project.service';
 export class ProjectsComponent {
   private readonly service = inject(ProjectService);
   protected readonly router = inject(Router);
+  protected readonly route = inject(ActivatedRoute);
+  private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   protected readonly projects = signal<Project[]>([]);
@@ -137,6 +143,16 @@ export class ProjectsComponent {
         this.reload();
       });
     this.reload();
+    routedDrawer<ProjectFormComponent, boolean>({
+      open: (state) =>
+        openDrawer<ProjectFormComponent, ProjectDrawerData, boolean>(this.dialog, ProjectFormComponent, {
+          data: { projectId: state.id },
+          ariaLabel: this.transloco.translate(state.mode === 'new' ? 'projects.new' : 'projects.edit'),
+        }),
+      closed: (saved) => {
+        if (saved) this.reload();
+      },
+    });
   }
 
   protected reload(): void {
@@ -162,6 +178,6 @@ export class ProjectsComponent {
   }
 
   protected edit(project: Project): void {
-    void this.router.navigate(['/projects', project.id, 'edit']);
+    void this.router.navigate([project.id, 'edit'], { relativeTo: this.route });
   }
 }

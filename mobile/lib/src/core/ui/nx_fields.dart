@@ -20,7 +20,8 @@ class NxCampoLabel extends StatelessWidget {
       TextSpan(
         text: label,
         children: [
-          if (required) const TextSpan(text: ' *', semanticsLabel: ''),
+          // El asterisco va en status-error-fg (2026-11-13); el lector no lo anuncia.
+          if (required) TextSpan(text: ' *', semanticsLabel: '', style: TextStyle(color: NxColors.of(context).statusErrorFg)),
         ],
       ),
       style: style,

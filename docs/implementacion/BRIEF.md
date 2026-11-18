@@ -1,10 +1,10 @@
 # Brief de implementación — Design system de Nexus Soft Time Clock
 
-> Generado el 2026-10-26 desde el laboratorio StoryBook (`sss/nexus-soft-time-clock/`). No se edita a mano: si algo cambia, cambia en el artefacto de origen y se regenera.
+> Generado el 2026-10-26 y regenerado el 2026-11-13 desde el laboratorio StoryBook (`sss/nexus-soft-time-clock/`). No se edita a mano: si algo cambia, cambia en el artefacto de origen y se regenera.
 
 ## Tu tarea
 
-Implementar el **design system** y el **rediseño de alta fidelidad** de Nexus Soft Time Clock sobre el código que ya existe. No es un producto nuevo: las 40 pantallas ya están construidas (iteraciones 1 a 13). Tu trabajo es vestirlas con el sistema y corregir lo que el diseño decidió cambiar, **sin cambiar la estructura ni la navegación** salvo donde este brief lo dice.
+Implementar el **design system** y el **rediseño de alta fidelidad** de Nexus Soft Time Clock sobre el código que ya existe. No es un producto nuevo: las 43 pantallas ya están construidas (iteraciones 1 a 13). Tu trabajo es vestirlas con el sistema y corregir lo que el diseño decidió cambiar, **sin cambiar la estructura ni la navegación** salvo donde este brief lo dice.
 
 - **Repositorio:** monorepo con `web/` (Angular 18 + Angular Material), `mobile/` (Flutter, Material 3) y `backend/` (Spring Boot, monolito modular hexagonal).
 - **Superficies:** el **portal** (Angular, para supervisores y administradores, desde el escritorio) y la **app** (Flutter, para colaboradores, desde el teléfono).
@@ -12,7 +12,7 @@ Implementar el **design system** y el **rediseño de alta fidelidad** de Nexus S
 ## Fuentes de verdad, en este orden
 
 1. **`tokens.json` + `tokens.dark.json`** (esta carpeta): todos los valores. **Ningún color, medida, radio, sombra o duración se escribe a mano**; si te falta un valor, no lo inventes: detente y pregunta.
-2. **`design-system.md`** (`sss/nexus-soft-time-clock/`): las 35 fichas de componentes (`DS/09`), los 7 patrones (`DS/10`), accesibilidad (`DS/11`) y la cadena de herramientas (`DS/12`).
+2. **`design-system.md`** (`sss/nexus-soft-time-clock/`): las 37 fichas de componentes (`DS/09`; 4 piezas documentadas quedan sin uso: Botón *sobre marca*, Lista *separada*, Breadcrumb y el Grupo de opciones tri-estado), los 7 patrones (`DS/10`), accesibilidad (`DS/11`) y la cadena de herramientas (`DS/12`).
 3. **`highfi.md`**: cómo se ve y se comporta cada pantalla. La sección `08 · Especificaciones para desarrollo` es el **redline por pantalla**: elemento, componente, tokens, comportamiento, campo de datos y regla.
 4. **La maqueta hi-fi**: `output/nexus-soft-time-clock/maquetas/hifi/index.html`. Es la referencia visual navegable; cada página tiene selector de estado, de ancho y de tema, y su redline en "Ver anotaciones".
 5. **`storybook.md`**: reglas de negocio (`E1/07`), modelo de datos (`E1/10`) y requerimientos no funcionales (`E1/08`).
@@ -31,11 +31,12 @@ Si dos fuentes se contradicen, manda la de número menor, y avisa.
 3. **Desviaciones a corregir** (anotadas en `DS/02`–`DS/07`): superficies, estados y navegación fuera de escala en `styles.scss`; sombras de negro puro; radios, tamaños y pesos sueltos en `mobile/lib`; transiciones con `ease` y animación de `width` en el sidenav; la variante rellena de Material Icons (pasa a **Outlined**; relleno solo en estados activos); el voseo en los textos (pasa a *tú*).
 4. **Librería base.** Construye una vez los componentes de `DS/09` sobre Angular Material y Material 3, con sus 7 estados, y reutilízalos. No crees componentes que no estén en el catálogo.
 5. **Shell del portal.** La navegación lateral arranca **cerrada** en todos los tamaños y se abre **encima del contenido con velo** desde el botón de menú; se cierra con la X, el velo, Esc o al elegir un ítem. Hoy es `<mat-sidenav mode="side" opened>` (`web/src/app/layout/main-layout.component.ts:120`): pasa a `mode="over"` sin `opened`.
-6. **Barras de desplazamiento** delgadas y ocultas hasta que se desplaza; se ocultan `motion.delay.hide` después de detenerse (`DS/09`, reglas comunes).
+6. **Barras de desplazamiento** delgadas y ocultas hasta que se desplaza; se ocultan `motion.delay.hide` después de detenerse (`DS/09`, reglas comunes). **Excepción:** la barra horizontal de las tablas se ve siempre, de alto `space.2`, con `color.scrollbar.thumb` y `color.scrollbar.thumb-active` al pasar el cursor o arrastrar (`DS/09`, reglas comunes; `HIFI/08`).
+7. **Contraste del modo claro** (2026-11-13): fondo `color.bg.app` en neutral-200, texto secundario en neutral-600, bordes al 16 %, separadores de fila en `color.border.divider` y `shadow.1` reforzada (`DS/02`, `DS/06`). Todos los Chips llevan contorno `color.status.*-border` (`DS/09` n.º 11).
 
 ### Tanda 2 · App, núcleo del registro: P01–P05
 ### Tanda 3 · App, resto: P07–P10, P31, P32
-### Tanda 4 · Portal, operación y análisis: P11–P19, P33, P38, S02, S03
+### Tanda 4 · Portal, operación y análisis: P11–P19, P33, P38, P39–P41, S02, S03 (P39–P41, por la columna "Orden" de `HIFI/09`)
 ### Tanda 5 · Portal, organización y planificación: P20–P30, P34–P37, S01
 
 Para cada pantalla: abre su página en la maqueta y su tabla en `HIFI/08`, implementa **todos sus estados** de `HIFI/05` (carga, vacío, sin resultados, error, éxito y los propios) con los textos exactos, y verifica los cortes de `HIFI/07`.
@@ -46,18 +47,20 @@ Para cada pantalla: abre su página en la maqueta y su tabla en `HIFI/08`, imple
 - **Carga:** barra de progreso arriba del contenido, sin mover el layout. No hay skeletons.
 - **Confirmación:** solo para rotar QR, dar de baja a un usuario y reducir el cupo (diálogo S01, botón en tono error).
 - **Errores del servidor:** 409 → aviso con el mensaje de `HIFI/05` sin perder lo escrito; 422 → error en el campo; sin red en el portal → S03, en la app → cola local; 401 → renovar sesión una vez y, si falla, al login.
-- **Catálogos del portal:** paginación de **20** (opciones 10, 20, 50), siempre con "Filas por página". Búsqueda **en el servidor mientras se escribe, con espera de 400 ms**, volviendo a la página 1. Título fuera; dentro de una tarjeta: barra (chip y acciones), filtros, tabla y paginación.
+- **Catálogos del portal:** paginación de **20** (opciones 10, 20, 50), siempre con "Filas por página". Búsqueda **en el servidor mientras se escribe, con espera de 400 ms**, volviendo a la página 1. Título fuera; dentro de una tarjeta: barra (chip y acciones), filtros, tabla y paginación. **Altas y ediciones en Drawer**, sobre el catálogo: P21 (usuario), P23 (empresa), P29 (horario) y P35 (proyecto). Solo P26 conserva la página propia. Las filas hijas (turnos de P29) van en Lista en acordeón (`DS/10` patrón 2). Cada botón "Nuevo…" abre la variante vacía y "Editar" la variante con datos (`HIFI/08`).
 - **Formatos:** es-MX, hora 24 h `hh:mm`, fecha `dd/mm/aaaa`, miles con coma, cifras con `text.numeric` (cifras tabulares). La hora mostrada es siempre la del servidor.
 - **Foco:** al abrir un formulario, drawer o diálogo va al primer campo (en S01, a Cancelar) y vuelve a quien lo abrió al cerrar. Sin aviso al salir con cambios sin guardar.
 
 ## Accesibilidad (`DS/11`, obligatoria)
 
-WCAG 2.1 AA: contraste 4.5:1 en texto y 3:1 en componentes (todas las parejas de color del sistema ya lo cumplen; no combines colores fuera de ellas). Foco visible con `color.focus-ring` (en la navegación, `color.nav.focus-ring`). Áreas táctiles de **48 en la app y 40 en el portal**. Texto mínimo 14/16 de lectura y 11/12 auxiliar, ampliable al 200 %. El resultado del registro se anuncia al lector de pantalla. `prefers-reduced-motion` y `disableAnimations`: desplazamientos y escalas instantáneos, fundidos en `fast`, progreso conservado.
+WCAG 2.1 AA: contraste 4.5:1 en texto y 3:1 en componentes (las parejas de color del sistema lo cumplen, salvo el cursor de la barra de tablas en reposo, ver riesgos; no combines colores fuera de ellas). Foco visible con `color.focus-ring` (en la navegación, `color.nav.focus-ring`). Áreas táctiles de **48 en la app y 40 en el portal**. Texto mínimo 14/16 de lectura y 11/12 auxiliar, ampliable al 200 %. El resultado del registro se anuncia al lector de pantalla. `prefers-reduced-motion` y `disableAnimations`: desplazamientos y escalas instantáneos, fundidos en `fast`, progreso conservado.
 
 ## Cambios de backend que el diseño necesita
 
 - **RN-29 (registro en revisión).** `RegisterAttendanceService` deja el registro en `PENDING_REVIEW` (hoy siempre `ACCEPTED`, línea 274) cuando no hay motivo de rechazo pero sí una bandera antifraude aceptada por política. `IncidentEventListener` abre una incidencia `FRAUDE` de prioridad `HIGH` ligada al registro. Al resolverla, el registro pasa a `ACCEPTED` o `REJECTED` y el colaborador recibe una notificación push y en la app.
-- **Sincronización de dispositivos (P12).** `devices.last_sync_at` y `devices.pending_count` están en el modelo de datos pero no en las migraciones: hace falta una migración nueva y que la app los reporte al sincronizar.
+- **Sincronización de dispositivos.** Desde el 2026-11-13 ninguna pantalla la muestra: el usuario quitó la tabla de P12, y RF26 quedó sin pantalla (devolución abierta a `E1/06`). **No implementes** la migración de `devices.last_sync_at` y `pending_count` hasta que se resuelva.
+- **KPI del Panel (P12).** Además de RF24, muestran la tendencia contra ayer a la misma hora, el % aceptado del día, el motivo de rechazo más frecuente, las abiertas por tipo y el % de incidencias atendidas, el cupo en uso (`company_capacity`) y los centros con geocerca activa y QR vigente (`HIFI/08`). Todo sale de campos de `E1/10`, pero RF24 no lo pide todavía (devolución abierta a `E1/06`). El contador de incidencias del menú y de P13 es el mismo dato del KPI de abiertas.
+- **Descripción de la incidencia (P14).** La app real la muestra ("Registro rechazado: INVALID_SEQUENCE"), pero `incidents` no tiene ese campo en `E1/10` (devolución abierta): confirma en el código de dónde sale antes de tocarlo.
 - **Búsqueda y paginación** unificadas en los catálogos (ver reglas transversales).
 
 ## Riesgos abiertos (no los resuelvas por tu cuenta)
@@ -65,6 +68,11 @@ WCAG 2.1 AA: contraste 4.5:1 en texto y 3:1 en componentes (todas las parejas de
 - El **logotipo** es provisional (el reloj índigo). Úsalo como recurso intercambiable: si cambia, solo cambia el archivo.
 - Las **rutas `/admin`**: la documentación usa el prefijo y el código no. No cambies rutas.
 - La **retención** de fotos y datos biométricos no está definida (D-07). No implementes políticas de borrado.
+- **Copy pendiente de aprobación** (`HIFI/04` ⚠️): los textos nuevos del Panel (título y descripción de Entradas y salidas recientes, "Ver detalle completo", "Aún no hay registros hoy." y los textos de los KPI). Úsalos como están; pueden cambiar.
+- **Devoluciones abiertas a la definición** (`handoff-E1-E2.md`): i18n y textos en inglés (`E1/08`), cálculos de los KPI y RF26 (`E1/06`), contraseña temporal al crear usuario, con mínimo de 8 y generación (`E1/07`), y descripción de la incidencia (`E1/10`). Implementa lo que el diseño muestra, pero no inventes las reglas que faltan.
+- **Usuarios activos "de N"** (P12): mezcla los usuarios activos con el cupo, que solo cuenta cuentas con `attendance:register` (S-13). Está anotado en la devolución a `E1/06`.
+- **Barra de tablas en reposo**: `color.scrollbar.thumb` da 1.61, por debajo de 3:1, por decisión del usuario (`DS/02`). Las columnas siguen alcanzables con teclado.
+- **Rutas de las altas en drawer**: el código usa páginas (`/companies/new`, `/projects/new`, `/scheduling/new`, con sus `:id/edit`). El diseño las abre en drawer sobre el catálogo (`LOWFI/02`). Decide con el equipo si las rutas se conservan como estado del drawer.
 
 ## Cuándo está terminada una pantalla
 

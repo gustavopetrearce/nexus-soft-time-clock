@@ -173,13 +173,18 @@ class NxCabeceraMarca extends StatelessWidget {
 /// Isotipo provisional de la marca (el reloj índigo, IDENT/03). Recurso intercambiable: si el
 /// logotipo cambia, cambia solo este widget.
 class NxIsotipo extends StatelessWidget {
-  const NxIsotipo({super.key, this.size = NxTokens.iconSizeXl});
+  const NxIsotipo({super.key, this.size = NxTokens.iconSizeXl, this.semanticLabel});
 
   final double size;
+
+  /// Nombre accesible cuando el isotipo va solo (encabezado del login, IDENT/03); sin él es decorativo.
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      image: semanticLabel != null,
+      label: semanticLabel,
       excludeSemantics: true,
       child: CustomPaint(size: Size.square(size), painter: const _IsotipoPainter()),
     );

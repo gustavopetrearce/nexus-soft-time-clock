@@ -25,6 +25,7 @@ import { StatusChipComponent } from '../../core/ui/status-chip.component';
 import { VacationRequest, VacationResolution, VacationStatus } from './vacation.models';
 import { VacationService } from './vacation.service';
 import { VacationRequestDialogComponent } from './vacation-request-dialog.component';
+import { openDrawer } from '../../core/ui/drawer';
 
 const STATUSES: readonly (VacationStatus | '')[] = ['PENDING', 'APPROVED', 'REJECTED', ''];
 
@@ -192,7 +193,7 @@ export class VacationsComponent {
   }
 
   protected openCreate(): void {
-    const ref = this.dialog.open(VacationRequestDialogComponent);
+    const ref = openDrawer(this.dialog, VacationRequestDialogComponent, { ariaLabel: this.transloco.translate('vacations.dialog.title') });
     ref.afterClosed().subscribe((created) => {
       if (created) this.reload();
     });

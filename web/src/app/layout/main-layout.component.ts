@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,11 +15,13 @@ import { AuthService } from '../core/auth/auth.service';
 import { AuthStore } from '../core/auth/auth.store';
 import { ConnectionStore } from '../core/connection/connection.store';
 import { ChangePasswordDialogComponent } from '../core/auth/change-password-dialog.component';
+import { AppNumberPipe } from '../core/i18n/app-number.pipe';
 import { LanguageSwitcherComponent } from '../core/i18n/language-switcher.component';
 import { ThemeService } from '../core/theme/theme.service';
 import { LogoComponent } from '../core/ui/logo.component';
 import { ScrollDirective } from '../core/ui/scroll.directive';
 import { roleLabel } from '../features/admin/roles/role.models';
+import { OpenIncidentsStore } from '../features/incidents/open-incidents.store';
 import { ConnectionErrorComponent } from '../features/support/connection-error.component';
 
 interface NavItem {
@@ -107,6 +109,7 @@ const NAV: readonly NavGroup[] = [
     MatButtonModule,
     MatMenuModule,
     TranslocoPipe,
+    AppNumberPipe,
     LanguageSwitcherComponent,
     LogoComponent,
     ScrollDirective,
@@ -184,9 +187,13 @@ const NAV: readonly NavGroup[] = [
                 [routerLinkActiveOptions]="{ exact: item.route === '/reports' || item.route === '/permits' }"
                 ariaCurrentWhenActive="page"
                 #rla="routerLinkActive"
+                [attr.aria-label]="badge(item) !== null ? ('layout.nav.' + item.key | transloco) + ', ' + ('incidents.pending' | transloco: { count: (badge(item) | appNumber) }) : null"
               >
                 <mat-icon [fontSet]="rla.isActive ? 'material-icons' : 'material-icons-outlined'">{{ item.icon }}</mat-icon>
                 <span class="nx-nav__label">{{ 'layout.nav.' + item.key | transloco }}</span>
+                @if (badge(item); as n) {
+                  <span class="nx-chip nx-chip--warning nx-nav__badge" aria-hidden="true">{{ n | appNumber }}</span>
+                }
               </a>
             }
           }
@@ -264,6 +271,7 @@ export class MainLayoutComponent {
   private readonly transloco = inject(TranslocoService);
   protected readonly theme = inject(ThemeService);
   protected readonly connection = inject(ConnectionStore);
+  private readonly openIncidents = inject(OpenIncidentsStore);
 
   private readonly drawer = viewChild.required<MatSidenav>('drawer');
   private readonly menuButton = viewChild.required('menuButton', { read: ElementRef<HTMLElement> });
@@ -282,6 +290,14 @@ export class MainLayoutComponent {
   });
 
   constructor() {
+    // Contador de incidencias abiertas del menú (HIFI/08 R1): solo con permiso para verlas.
+    effect(
+      () => {
+        if (this.store.user() && this.store.hasPermission('incident:approve')) this.openIncidents.refresh();
+        else this.openIncidents.clear();
+      },
+      { allowSignalWrites: true },
+    );
     if (!this.store.user()) {
       this.authService.loadCurrentUser().subscribe({ error: () => void 0 });
     }
@@ -300,6 +316,13 @@ export class MainLayoutComponent {
             .then(() => this.menuButton().nativeElement.focus());
         }
       });
+  }
+
+  /** Cifra del ítem del menú: solo «Incidencias», con las abiertas; 0 no se pinta. */
+  protected badge(item: NavItem): number | null {
+    if (item.key !== 'incidents') return null;
+    const n = this.openIncidents.count();
+    return n ? n : null;
   }
 
   protected onScroll(event: Event): void {

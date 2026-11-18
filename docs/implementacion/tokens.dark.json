@@ -19,6 +19,11 @@
       "hover": {
         "$value": "{color.neutral.700}",
         "$type": "color"
+      },
+      "brand": {
+        "$value": "{color.indigo.700}",
+        "$type": "color",
+        "$description": "En oscuro, indigo-700 (DS/02, 2026-10-30): Noche se fundía con el fondo."
       }
     },
     "text": {
@@ -61,6 +66,10 @@
       "action-primary": {
         "$value": "{color.indigo.950}",
         "$type": "color"
+      },
+      "action-on-brand": {
+        "$value": "{color.indigo.700}",
+        "$type": "color"
       }
     },
     "border": {
@@ -78,6 +87,10 @@
       },
       "input": {
         "$value": "{color.neutral.400}",
+        "$type": "color"
+      },
+      "divider": {
+        "$value": "{color.white-a10}",
         "$type": "color"
       }
     },
@@ -126,6 +139,40 @@
       },
       "neutral-bg": {
         "$value": "{color.neutral.700}",
+        "$type": "color"
+      },
+      "success-border": {
+        "$value": "{color.green.700}",
+        "$type": "color"
+      },
+      "warning-border": {
+        "$value": "{color.orange.700}",
+        "$type": "color"
+      },
+      "error-border": {
+        "$value": "{color.red.700}",
+        "$type": "color"
+      },
+      "info-border": {
+        "$value": "{color.blue.700}",
+        "$type": "color"
+      },
+      "neutral-border": {
+        "$value": "{color.neutral.500}",
+        "$type": "color"
+      }
+    },
+    "scrollbar": {
+      "track": {
+        "$value": "{color.neutral.900}",
+        "$type": "color"
+      },
+      "thumb": {
+        "$value": "{color.neutral.600}",
+        "$type": "color"
+      },
+      "thumb-active": {
+        "$value": "{color.neutral.400}",
         "$type": "color"
       }
     }

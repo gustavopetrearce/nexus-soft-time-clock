@@ -83,13 +83,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Align(alignment: Alignment.centerLeft, child: NxLockup(name: l10n.appTitle)),
-                        const SizedBox(height: NxTokens.space4 + NxTokens.spaceGapRelated),
+                        // Encabezado (HIFI/08 R6): isotipo con el nombre del producto, título y subtítulo.
+                        Center(child: NxIsotipo(size: NxTokens.space12, semanticLabel: l10n.appTitle)),
+                        const SizedBox(height: NxTokens.space3 + NxTokens.space1),
                         Semantics(
                           header: true,
                           child: Text(l10n.loginTitle,
+                              textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.titleLarge?.copyWith(color: c.textPrimary),),
                         ),
+                        const SizedBox(height: NxTokens.space1),
+                        Text(
+                          l10n.loginTagline,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: c.textSecondary),
+                        ),
+                        const SizedBox(height: NxTokens.space4),
                         if (error != null) ...[
                           const SizedBox(height: NxTokens.spaceGapRelated),
                           NxAviso(tone: NxTone.error, message: error),
@@ -140,6 +149,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           busy: state.loading,
                           block: true,
                           onPressed: _submit,
+                        ),
+                        // Pie (HIFI/08 R7): separador y texto fijo.
+                        const SizedBox(height: NxTokens.space4),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border(top: BorderSide(color: c.borderDefault, width: NxTokens.borderWidthDefault)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: NxTokens.space4),
+                            child: Text(
+                              l10n.loginCopyright(DateTime.now().year.toString()),
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: c.textSecondary),
+                            ),
+                          ),
                         ),
                       ],
                     ),

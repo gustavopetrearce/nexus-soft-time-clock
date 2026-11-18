@@ -30,6 +30,7 @@
   --nx-color-neutral-900-a16: rgba(16,24,40,.16);
   --nx-color-neutral-950-a40: rgba(15,20,32,.40);
   --nx-color-neutral-950-a50: rgba(15,20,32,.50);
+  --nx-color-neutral-900-a24: rgba(16,24,40,.24);
   --nx-color-green-50: #e5f6ef;
   --nx-color-green-100: #bae6d2;
   --nx-color-green-200: #8dd6b6;
@@ -92,20 +93,24 @@
   --nx-color-surface-hover: var(--nx-color-neutral-100);
   --nx-color-on-surface-brand: var(--nx-color-white);
   --nx-color-on-action-primary: var(--nx-color-white);
+  --nx-color-on-action-on-brand: var(--nx-color-indigo-950);
   --nx-color-overlay-scrim: var(--nx-color-neutral-950-a50);
-  --nx-color-bg-app: var(--nx-color-neutral-50);
+  --nx-color-bg-app: var(--nx-color-neutral-200);
   --nx-color-text-primary: var(--nx-color-neutral-900);
-  --nx-color-text-secondary: var(--nx-color-neutral-500);
+  --nx-color-text-secondary: var(--nx-color-neutral-600);
   --nx-color-text-disabled: var(--nx-color-neutral-400);
   --nx-color-text-placeholder: var(--nx-color-neutral-500);
   --nx-color-text-inverse: var(--nx-color-white);
   --nx-color-action-primary: var(--nx-color-indigo-500);
   --nx-color-action-primary-hover: var(--nx-color-indigo-600);
   --nx-color-action-primary-subtle: var(--nx-color-indigo-50);
-  --nx-color-border-default: var(--nx-color-neutral-900-a10);
-  --nx-color-border-strong: var(--nx-color-neutral-900-a16);
+  --nx-color-action-on-brand: var(--nx-color-white);
+  --nx-color-action-on-brand-hover: var(--nx-color-indigo-100);
+  --nx-color-border-default: var(--nx-color-neutral-900-a16);
+  --nx-color-border-strong: var(--nx-color-neutral-900-a24);
   --nx-color-border-brand: var(--nx-color-indigo-200);
   --nx-color-border-input: var(--nx-color-neutral-500);
+  --nx-color-border-divider: var(--nx-color-neutral-300);
   --nx-color-focus-ring: var(--nx-color-indigo-500);
   --nx-color-status-success-fg: var(--nx-color-green-600);
   --nx-color-status-success-bg: var(--nx-color-green-50);
@@ -117,6 +122,14 @@
   --nx-color-status-info-bg: var(--nx-color-blue-50);
   --nx-color-status-neutral-fg: var(--nx-color-neutral-600);
   --nx-color-status-neutral-bg: var(--nx-color-neutral-100);
+  --nx-color-status-success-border: var(--nx-color-green-200);
+  --nx-color-status-warning-border: var(--nx-color-orange-200);
+  --nx-color-status-error-border: var(--nx-color-red-200);
+  --nx-color-status-info-border: var(--nx-color-blue-200);
+  --nx-color-status-neutral-border: var(--nx-color-neutral-300);
+  --nx-color-scrollbar-track: var(--nx-color-neutral-50);
+  --nx-color-scrollbar-thumb: var(--nx-color-neutral-300);
+  --nx-color-scrollbar-thumb-active: var(--nx-color-neutral-500);
   --nx-font-family-sans: "Inter Variable",Inter,system-ui,"Segoe UI",Roboto,sans-serif;
   --nx-font-family-mono: ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
   --nx-font-size-11: .6875rem;
@@ -203,7 +216,7 @@
   --nx-motion-delay-hide: 1000ms;
   --nx-motion-scale-dialog: 0.96;
   --nx-motion-scale-menu: 0.95;
-  --nx-shadow-1: 0px 1px 2px 0px var(--nx-color-neutral-900-a06),0px 1px 3px 0px var(--nx-color-neutral-900-a10);
+  --nx-shadow-1: 0px 1px 2px 0px var(--nx-color-neutral-900-a08),0px 2px 6px 0px var(--nx-color-neutral-900-a12);
   --nx-shadow-2: 0px 6px 16px 0px var(--nx-color-neutral-900-a08),0px 2px 6px 0px var(--nx-color-neutral-900-a05);
   --nx-shadow-3: 0px 16px 32px 0px var(--nx-color-neutral-900-a12),0px 4px 8px 0px var(--nx-color-neutral-900-a06);
   --nx-text-heading-1-family: var(--nx-font-family-sans);
@@ -283,10 +296,12 @@
 }
 
 body.dark {
+  --nx-color-surface-brand: var(--nx-color-indigo-700);
   --nx-color-surface-default: var(--nx-color-neutral-800);
   --nx-color-surface-subtle: var(--nx-color-neutral-900);
   --nx-color-surface-hover: var(--nx-color-neutral-700);
   --nx-color-on-action-primary: var(--nx-color-indigo-950);
+  --nx-color-on-action-on-brand: var(--nx-color-indigo-700);
   --nx-color-bg-app: var(--nx-color-neutral-950);
   --nx-color-text-primary: var(--nx-color-neutral-200);
   --nx-color-text-secondary: var(--nx-color-neutral-400);
@@ -300,6 +315,7 @@ body.dark {
   --nx-color-border-strong: var(--nx-color-white-a16);
   --nx-color-border-brand: var(--nx-color-indigo-400);
   --nx-color-border-input: var(--nx-color-neutral-400);
+  --nx-color-border-divider: var(--nx-color-white-a10);
   --nx-color-focus-ring: var(--nx-color-indigo-300);
   --nx-color-status-success-fg: var(--nx-color-green-300);
   --nx-color-status-success-bg: var(--nx-color-green-900);
@@ -311,6 +327,14 @@ body.dark {
   --nx-color-status-info-bg: var(--nx-color-blue-900);
   --nx-color-status-neutral-fg: var(--nx-color-neutral-300);
   --nx-color-status-neutral-bg: var(--nx-color-neutral-700);
+  --nx-color-status-success-border: var(--nx-color-green-700);
+  --nx-color-status-warning-border: var(--nx-color-orange-700);
+  --nx-color-status-error-border: var(--nx-color-red-700);
+  --nx-color-status-info-border: var(--nx-color-blue-700);
+  --nx-color-status-neutral-border: var(--nx-color-neutral-500);
+  --nx-color-scrollbar-track: var(--nx-color-neutral-900);
+  --nx-color-scrollbar-thumb: var(--nx-color-neutral-600);
+  --nx-color-scrollbar-thumb-active: var(--nx-color-neutral-400);
   --nx-shadow-1: none;
   --nx-shadow-2: 0px 6px 16px 0px var(--nx-color-neutral-950-a40);
   --nx-shadow-3: 0px 16px 32px 0px var(--nx-color-neutral-950-a50);

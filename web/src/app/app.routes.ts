@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth.guard';
 import { requirePermission } from './core/guards/permission.guard';
+import { drawerChildRoutes } from './core/ui/drawer-routes';
 
 /**
  * Enrutado con lazy loading + standalone components (Angular Style Guide).
@@ -71,18 +72,8 @@ export const routes: Routes = [
         canActivate: [requirePermission('company:manage')],
         loadComponent: () =>
           import('./features/admin/companies/companies.component').then((m) => m.CompaniesComponent),
-      },
-      {
-        path: 'companies/new',
-        canActivate: [requirePermission('company:manage')],
-        loadComponent: () =>
-          import('./features/admin/companies/company-form.component').then((m) => m.CompanyFormComponent),
-      },
-      {
-        path: 'companies/:id/edit',
-        canActivate: [requirePermission('company:manage')],
-        loadComponent: () =>
-          import('./features/admin/companies/company-form.component').then((m) => m.CompanyFormComponent),
+        // Alta y edición en drawer sobre el catálogo; /new y /:id/edit se conservan como su estado.
+        children: drawerChildRoutes(),
       },
       {
         path: 'users',
@@ -128,36 +119,16 @@ export const routes: Routes = [
         path: 'projects',
         canActivate: [requirePermission('project:manage')],
         loadComponent: () => import('./features/admin/projects/projects.component').then((m) => m.ProjectsComponent),
-      },
-      {
-        path: 'projects/new',
-        canActivate: [requirePermission('project:manage')],
-        loadComponent: () =>
-          import('./features/admin/projects/project-form.component').then((m) => m.ProjectFormComponent),
-      },
-      {
-        path: 'projects/:id/edit',
-        canActivate: [requirePermission('project:manage')],
-        loadComponent: () =>
-          import('./features/admin/projects/project-form.component').then((m) => m.ProjectFormComponent),
+        // Alta y edición en drawer sobre el catálogo; /new y /:id/edit se conservan como su estado.
+        children: drawerChildRoutes(),
       },
       {
         path: 'scheduling',
         canActivate: [requirePermission('schedule:manage')],
         loadComponent: () =>
           import('./features/admin/scheduling/scheduling.component').then((m) => m.SchedulingComponent),
-      },
-      {
-        path: 'scheduling/new',
-        canActivate: [requirePermission('schedule:manage')],
-        loadComponent: () =>
-          import('./features/admin/scheduling/schedule-form.component').then((m) => m.ScheduleFormComponent),
-      },
-      {
-        path: 'scheduling/:id/edit',
-        canActivate: [requirePermission('schedule:manage')],
-        loadComponent: () =>
-          import('./features/admin/scheduling/schedule-form.component').then((m) => m.ScheduleFormComponent),
+        // Alta y edición en drawer sobre el catálogo; /new y /:id/edit se conservan como su estado.
+        children: drawerChildRoutes(),
       },
       {
         path: 'event-types',

@@ -170,7 +170,8 @@
     "openIncidents": "Open incidents",
     "openIncidentsLink": "Open incidents: view incidents",
     "activeUsers": "Active users",
-    "activeSites": "Active sites"
+    "activeSites": "Active sites",
+    "toResolve": "To resolve"
   },
   "errors": {
     "generic": "An unexpected error occurred.",
@@ -316,8 +317,12 @@
       "employeeCodeOptional": "Employee code (optional)",
       "birth": "Birth date",
       "hire": "Hire date",
-      "select": "Select",
-      "optional": "Optional"
+      "optional": "Optional",
+      "sectionAccount": "Account",
+      "sectionProfile": "Profile",
+      "emergencyName": "Contact name",
+      "emergencyPhone": "Contact phone",
+      "selectMany": "Select one or more"
     },
     "edit": {
       "resetPassword": "Reset password",
@@ -653,7 +658,12 @@
     "tolerances": "Tolerances",
     "windows": "Windows",
     "breakMinutes": "Break (min)",
-    "earlyTolerance": "Early-leave tolerance (min)"
+    "earlyTolerance": "Early-leave tolerance (min)",
+    "shiftStart": "Start",
+    "shiftEnd": "End",
+    "lateTolerance": "Clock-in tolerance (min)",
+    "newShift": "New shift",
+    "collapseShift": "Collapse the shift"
   },
   "settings": {
     "subtitle": "General company parameters. They apply to the whole tenant.",
@@ -922,9 +932,9 @@
       "RESOLVED": "Resolve"
     },
     "note": "Note",
-    "notePlaceholder": "Add a note",
     "notOpen": "This incident is no longer open. Open the next one.",
-    "nextOpened": "Next incident: {{type}} for {{name}}."
+    "nextOpened": "Next incident: {{type}} for {{name}}.",
+    "pending": "{{ count }} pending resolution"
   },
   "audit": {
     "action": "Action",
