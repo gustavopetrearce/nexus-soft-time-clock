@@ -64,6 +64,7 @@ export interface UserEditData {
       @if (problem()) { <app-alert tone="error">{{ problem() }}</app-alert> }
 
       <div class="nx-form__grid">
+        <h3 class="nx-text-heading-4 nx-form__seccion">{{ 'users.form.sectionAccount' | transloco }}</h3>
         <!-- Nombre, correo y código los gestiona identity: aquí solo se consultan. -->
         <mat-form-field appearance="outline">
           <mat-label>{{ 'common.firstName' | transloco }}</mat-label>
@@ -73,7 +74,7 @@ export interface UserEditData {
           <mat-label>{{ 'users.form.lastNames' | transloco }}</mat-label>
           <input matInput [value]="data.user.lastName" disabled />
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
           <mat-label>{{ 'users.form.email' | transloco }}</mat-label>
           <input matInput [value]="data.user.email" disabled />
         </mat-form-field>
@@ -87,15 +88,17 @@ export interface UserEditData {
             @for (s of statuses; track s) { <mat-option [value]="s">{{ 'status.' + s | transloco }}</mat-option> }
           </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
           <mat-label>{{ 'users.roles' | transloco }}</mat-label>
-          <mat-select [value]="roles()" (selectionChange)="roles.set($event.value)" multiple>
+          <mat-select [value]="roles()" (selectionChange)="roles.set($event.value)" multiple [placeholder]="'users.form.selectMany' | transloco">
             @for (role of data.assignableRoles; track role.code) {
               <mat-option [value]="role.code">{{ roleLabel(role.code) }}</mat-option>
             }
           </mat-select>
           @if (data.assignableRoles.length === 0) { <mat-hint>{{ 'users.edit.noAssignableRoles' | transloco }}</mat-hint> }
         </mat-form-field>
+
+        <h3 class="nx-text-heading-4 nx-form__seccion">{{ 'users.form.sectionProfile' | transloco }}</h3>
         <mat-form-field appearance="outline">
           <mat-label>{{ 'users.form.birth' | transloco }}</mat-label>
           <input matInput type="date" formControlName="birthDate" />
@@ -106,7 +109,7 @@ export interface UserEditData {
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>{{ 'profile.gender' | transloco }}</mat-label>
-          <mat-select formControlName="gender" [placeholder]="'users.form.select' | transloco">
+          <mat-select formControlName="gender">
             <mat-option [value]="''">{{ 'profile.unspecified' | transloco }}</mat-option>
             @for (g of genders; track g) { <mat-option [value]="g">{{ 'gender.' + g | transloco }}</mat-option> }
           </mat-select>
@@ -115,26 +118,25 @@ export interface UserEditData {
           <mat-label>{{ 'profile.phone' | transloco }}</mat-label>
           <input matInput type="tel" formControlName="phone" autocomplete="off" />
         </mat-form-field>
-      </div>
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
+          <mat-label>{{ 'profile.address' | transloco }}</mat-label>
+          <textarea matInput rows="2" formControlName="address"></textarea>
+        </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'profile.address' | transloco }}</mat-label>
-        <textarea matInput rows="2" formControlName="address"></textarea>
-      </mat-form-field>
-      <div class="nx-form__grid">
+        <h3 class="nx-text-heading-4 nx-form__seccion">{{ 'profile.emergency' | transloco }}</h3>
         <mat-form-field appearance="outline">
-          <mat-label>{{ 'profile.emergency' | transloco }}</mat-label>
+          <mat-label>{{ 'users.form.emergencyName' | transloco }}</mat-label>
           <input matInput formControlName="emergencyContactName" autocomplete="off" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>{{ 'profile.contactPhone' | transloco }}</mat-label>
+          <mat-label>{{ 'users.form.emergencyPhone' | transloco }}</mat-label>
           <input matInput type="tel" formControlName="emergencyContactPhone" autocomplete="off" />
         </mat-form-field>
       </div>
 
       <!-- Dispositivos vinculados (RF-28, RN-27): solo con device:manage. -->
       @if (canManageDevices) {
-        <h3 class="nx-text-heading-4">{{ 'users.edit.devices' | transloco }}</h3>
+        <h3 class="nx-text-heading-4 nx-form__seccion">{{ 'users.edit.devices' | transloco }}</h3>
         @if (!devicesLoading() && devices().length === 0) {
           <p class="nx-text-small nx-sec">{{ 'users.edit.noDevices' | transloco }}</p>
         } @else {

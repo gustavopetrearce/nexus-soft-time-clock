@@ -129,7 +129,7 @@ class NxAparece extends StatelessWidget {
   }
 }
 
-/// Chip de estado (n.º 11).
+/// Chip de estado (n.º 11): fondo y texto del tono, con su contorno `status.*-border`.
 class NxChip extends StatelessWidget {
   const NxChip({super.key, required this.label, required this.tone, this.icon});
 
@@ -145,6 +145,7 @@ class NxChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: tone.bg(c),
         borderRadius: const BorderRadius.all(Radius.circular(NxTokens.radiusFull)),
+        border: Border.all(color: tone.border(c), width: NxTokens.borderWidthDefault),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

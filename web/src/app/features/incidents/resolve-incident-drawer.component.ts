@@ -92,9 +92,14 @@ const NOTE_MAX = 1000;
           <dd><span class="nx-text-numeric">{{ i.incidentDate | appDate: 'dd/MM/yyyy' }}</span></dd>
         </div>
         @if (i.description) {
-          <div class="nx-dato">
+          <div class="nx-dato nx-dato--ancho">
             <dt class="nx-text-heading-6">{{ 'incidents.description' | transloco }}</dt>
-            <dd>{{ i.description }}</dd>
+            <!-- «Registro rechazado: OUT_OF_GEOFENCE»: el código del motivo va en text-code (HIFI/08). -->
+            @if (descriptionParts(i.description); as d) {
+              <dd>{{ d.text }}<span class="nx-text-code">{{ d.code }}</span></dd>
+            } @else {
+              <dd>{{ i.description }}</dd>
+            }
           </div>
         }
       </dl>
@@ -112,7 +117,7 @@ const NOTE_MAX = 1000;
 
         <mat-form-field appearance="outline">
           <mat-label>{{ 'incidents.note' | transloco }}</mat-label>
-          <textarea matInput formControlName="note" rows="4" [maxlength]="noteMax" [placeholder]="'incidents.notePlaceholder' | transloco"></textarea>
+          <textarea matInput formControlName="note" rows="4" [maxlength]="noteMax"></textarea>
           <mat-hint align="end" class="nx-text-numeric">{{ noteLength() }}/{{ noteMax }}</mat-hint>
         </mat-form-field>
       </form>
@@ -225,6 +230,12 @@ export class ResolveIncidentDrawerComponent {
     this.announcement.set(
       this.transloco.translate('incidents.nextOpened', { name: next.userName || next.userId, type: this.typeLabel(next.type) }),
     );
+  }
+
+  /** Separa el código de motivo final (MAYÚSCULAS_CON_GUION) del texto que lo antecede. */
+  protected descriptionParts(description: string): { text: string; code: string } | null {
+    const match = /^(.*:\s*)([A-Z][A-Z0-9_]+)$/.exec(description);
+    return match ? { text: match[1], code: match[2] } : null;
   }
 
   protected typeLabel(type: string): string {

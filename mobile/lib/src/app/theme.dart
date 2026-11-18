@@ -91,7 +91,7 @@ ThemeData _themeFor(NxColors c, Brightness brightness) {
     fontFamilyFallback: NxTokens.fontFamilySansFallback,
     scaffoldBackgroundColor: c.bgApp,
     canvasColor: c.bgApp,
-    dividerColor: c.borderDefault,
+    dividerColor: c.borderDivider,
     visualDensity: VisualDensity.standard,
     materialTapTargetSize: MaterialTapTargetSize.padded,
     extensions: [c],
@@ -296,7 +296,8 @@ ThemeData _themeFor(NxColors c, Brightness brightness) {
     ),
 
     dividerTheme: DividerThemeData(
-      color: c.borderDefault,
+      // Separador entre filas de lista: border-divider (DS/02, 2026-11-13).
+      color: c.borderDivider,
       space: NxTokens.borderWidthDefault,
       thickness: NxTokens.borderWidthDefault,
     ),

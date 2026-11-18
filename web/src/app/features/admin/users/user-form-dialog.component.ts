@@ -52,6 +52,7 @@ export interface UserFormData {
       @if (problem()) { <app-alert tone="error">{{ problem() }}</app-alert> }
 
       <div class="nx-form__grid">
+        <h3 class="nx-text-heading-4 nx-form__seccion">{{ 'users.form.sectionAccount' | transloco }}</h3>
         <mat-form-field appearance="outline">
           <mat-label>{{ 'common.firstName' | transloco }}</mat-label>
           <input matInput formControlName="firstName" required autocomplete="off" />
@@ -60,18 +61,18 @@ export interface UserFormData {
           <mat-label>{{ 'users.form.lastNames' | transloco }}</mat-label>
           <input matInput formControlName="lastName" required autocomplete="off" />
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
           <mat-label>{{ 'users.form.email' | transloco }}</mat-label>
           <input matInput type="email" formControlName="email" required autocomplete="off" />
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
           <mat-label>{{ 'users.form.employeeCodeOptional' | transloco }}</mat-label>
           <input matInput formControlName="employeeCode" autocomplete="off" />
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
           <mat-label>{{ 'users.form.password' | transloco }}</mat-label>
           <input matInput [type]="showPw() ? 'text' : 'password'" formControlName="password" required autocomplete="new-password" />
-          <button mat-icon-button matSuffix type="button" (click)="showPw.set(!showPw())" [attr.aria-label]="(showPw() ? 'common.hide' : 'common.show') | transloco">
+          <button mat-icon-button matSuffix type="button" (click)="showPw.set(!showPw())" [attr.aria-pressed]="showPw()" [attr.aria-label]="(showPw() ? 'common.hide' : 'common.show') | transloco">
             <mat-icon>{{ showPw() ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
           <button mat-icon-button matSuffix type="button" (click)="generatePassword()" [attr.aria-label]="'password.generate' | transloco">
@@ -79,14 +80,16 @@ export interface UserFormData {
           </button>
           <mat-hint>{{ 'password.minLength' | transloco }}</mat-hint>
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
           <mat-label>{{ 'users.roles' | transloco }}</mat-label>
-          <mat-select formControlName="roleCodes" multiple>
+          <mat-select formControlName="roleCodes" multiple [placeholder]="'users.form.selectMany' | transloco">
             @for (role of data.assignableRoles; track role.code) {
               <mat-option [value]="role.code">{{ roleLabel(role.code) }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
+
+        <h3 class="nx-text-heading-4 nx-form__seccion">{{ 'users.form.sectionProfile' | transloco }}</h3>
         <mat-form-field appearance="outline">
           <mat-label>{{ 'users.form.birth' | transloco }}</mat-label>
           <input matInput type="date" formControlName="birthDate" />
@@ -97,7 +100,7 @@ export interface UserFormData {
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>{{ 'profile.gender' | transloco }}</mat-label>
-          <mat-select formControlName="gender" [placeholder]="'users.form.select' | transloco">
+          <mat-select formControlName="gender">
             <mat-option [value]="''">{{ 'profile.unspecified' | transloco }}</mat-option>
             @for (g of genders; track g) { <mat-option [value]="g">{{ 'gender.' + g | transloco }}</mat-option> }
           </mat-select>
@@ -106,19 +109,18 @@ export interface UserFormData {
           <mat-label>{{ 'profile.phone' | transloco }}</mat-label>
           <input matInput type="tel" formControlName="phone" autocomplete="off" />
         </mat-form-field>
-      </div>
+        <mat-form-field appearance="outline" class="nx-campo--ancho">
+          <mat-label>{{ 'profile.address' | transloco }}</mat-label>
+          <textarea matInput rows="2" formControlName="address"></textarea>
+        </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'profile.address' | transloco }}</mat-label>
-        <textarea matInput rows="2" formControlName="address"></textarea>
-      </mat-form-field>
-      <div class="nx-form__grid">
+        <h3 class="nx-text-heading-4 nx-form__seccion">{{ 'profile.emergency' | transloco }}</h3>
         <mat-form-field appearance="outline">
-          <mat-label>{{ 'profile.emergency' | transloco }}</mat-label>
+          <mat-label>{{ 'users.form.emergencyName' | transloco }}</mat-label>
           <input matInput formControlName="emergencyContactName" autocomplete="off" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>{{ 'profile.contactPhone' | transloco }}</mat-label>
+          <mat-label>{{ 'users.form.emergencyPhone' | transloco }}</mat-label>
           <input matInput type="tel" formControlName="emergencyContactPhone" autocomplete="off" />
         </mat-form-field>
       </div>

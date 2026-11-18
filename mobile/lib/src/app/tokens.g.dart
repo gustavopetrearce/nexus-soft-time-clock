@@ -36,6 +36,8 @@ abstract final class NxTokens {
   static const Color colorNeutral900A16 = Color(0x29101828);
   static const Color colorNeutral950A40 = Color(0x660F1420);
   static const Color colorNeutral950A50 = Color(0x800F1420);
+  /// Tinta al 24 % (DS/02, agregado el 2026-11-13 para border-strong).
+  static const Color colorNeutral900A24 = Color(0x3D101828);
   static const Color colorGreen50 = Color(0xFFE5F6EF);
   static const Color colorGreen100 = Color(0xFFBAE6D2);
   static const Color colorGreen200 = Color(0xFF8DD6B6);
@@ -101,21 +103,29 @@ abstract final class NxTokens {
   static const Color colorSurfaceHover = Color(0xFFEEF1F5);
   static const Color colorOnSurfaceBrand = Color(0xFFFFFFFF);
   static const Color colorOnActionPrimary = Color(0xFFFFFFFF);
+  static const Color colorOnActionOnBrand = Color(0xFF0B1020);
   /// Velo de los modales (DS/06).
   static const Color colorOverlayScrim = Color(0x800F1420);
-  static const Color colorBgApp = Color(0xFFF4F6FB);
+  /// Fondo de la aplicación. neutral-200 desde el 2026-11-13 (DS/02): las tarjetas se separan con 1.22.
+  static const Color colorBgApp = Color(0xFFE6E9F0);
   static const Color colorTextPrimary = Color(0xFF101828);
-  static const Color colorTextSecondary = Color(0xFF667085);
+  /// 7.69 sobre la superficie · 6.32 sobre el fondo (DS/02, 2026-11-13).
+  static const Color colorTextSecondary = Color(0xFF475467);
   static const Color colorTextDisabled = Color(0xFF98A2B3);
   static const Color colorTextPlaceholder = Color(0xFF667085);
   static const Color colorTextInverse = Color(0xFFFFFFFF);
   static const Color colorActionPrimary = Color(0xFF3949AB);
   static const Color colorActionPrimaryHover = Color(0xFF303F9F);
   static const Color colorActionPrimarySubtle = Color(0xFFEEF0FF);
-  static const Color colorBorderDefault = Color(0x1A101828);
-  static const Color colorBorderStrong = Color(0x29101828);
+  /// Botón sobre surface-brand (DS/02). Sin uso desde el 2026-11-13.
+  static const Color colorActionOnBrand = Color(0xFFFFFFFF);
+  static const Color colorActionOnBrandHover = Color(0xFFDDE2FF);
+  static const Color colorBorderDefault = Color(0x29101828);
+  static const Color colorBorderStrong = Color(0x3D101828);
   static const Color colorBorderBrand = Color(0xFFCDD3FF);
   static const Color colorBorderInput = Color(0xFF667085);
+  /// Separador entre filas de tabla y lista · 1.74 sobre blanco (DS/02).
+  static const Color colorBorderDivider = Color(0xFFBEC5D1);
   static const Color colorFocusRing = Color(0xFF3949AB);
   static const Color colorStatusSuccessFg = Color(0xFF0F7A52);
   static const Color colorStatusSuccessBg = Color(0xFFE5F6EF);
@@ -127,6 +137,22 @@ abstract final class NxTokens {
   static const Color colorStatusInfoBg = Color(0xFFE8F0FE);
   static const Color colorStatusNeutralFg = Color(0xFF475467);
   static const Color colorStatusNeutralBg = Color(0xFFEEF1F5);
+  /// Contorno del Chip (DS/09 n.º 11); decorativo.
+  static const Color colorStatusSuccessBorder = Color(0xFF8DD6B6);
+  /// Contorno del Chip (DS/09 n.º 11); decorativo.
+  static const Color colorStatusWarningBorder = Color(0xFFF7BE8F);
+  /// Contorno del Chip (DS/09 n.º 11); decorativo.
+  static const Color colorStatusErrorBorder = Color(0xFFFE9C92);
+  /// Contorno del Chip (DS/09 n.º 11); decorativo.
+  static const Color colorStatusInfoBorder = Color(0xFF9CC0FF);
+  /// Contorno del Chip (DS/09 n.º 11); decorativo.
+  static const Color colorStatusNeutralBorder = Color(0xFFBEC5D1);
+  /// Barra horizontal de tablas, siempre visible (DS/09, reglas comunes).
+  static const Color colorScrollbarTrack = Color(0xFFF4F6FB);
+  /// En reposo: 1.61, por debajo de 3:1 por decisión del usuario (riesgo anotado en DS/02).
+  static const Color colorScrollbarThumb = Color(0xFFBEC5D1);
+  /// Al pasar el cursor o arrastrar: 4.60.
+  static const Color colorScrollbarThumbActive = Color(0xFF667085);
   static const String fontFamilySans = 'Inter Variable';
   static const List<String> fontFamilySansFallback = ['Inter', 'system-ui', 'Segoe UI', 'Roboto', 'sans-serif'];
   static const String fontFamilyMono = 'ui-monospace';
@@ -270,6 +296,7 @@ class NxColors extends ThemeExtension<NxColors> {
     required this.surfaceHover,
     required this.onSurfaceBrand,
     required this.onActionPrimary,
+    required this.onActionOnBrand,
     required this.overlayScrim,
     required this.bgApp,
     required this.textPrimary,
@@ -280,10 +307,13 @@ class NxColors extends ThemeExtension<NxColors> {
     required this.actionPrimary,
     required this.actionPrimaryHover,
     required this.actionPrimarySubtle,
+    required this.actionOnBrand,
+    required this.actionOnBrandHover,
     required this.borderDefault,
     required this.borderStrong,
     required this.borderBrand,
     required this.borderInput,
+    required this.borderDivider,
     required this.focusRing,
     required this.statusSuccessFg,
     required this.statusSuccessBg,
@@ -295,6 +325,14 @@ class NxColors extends ThemeExtension<NxColors> {
     required this.statusInfoBg,
     required this.statusNeutralFg,
     required this.statusNeutralBg,
+    required this.statusSuccessBorder,
+    required this.statusWarningBorder,
+    required this.statusErrorBorder,
+    required this.statusInfoBorder,
+    required this.statusNeutralBorder,
+    required this.scrollbarTrack,
+    required this.scrollbarThumb,
+    required this.scrollbarThumbActive,
     required this.shadow1,
     required this.shadow2,
     required this.shadow3,
@@ -315,6 +353,7 @@ class NxColors extends ThemeExtension<NxColors> {
   final Color surfaceHover;
   final Color onSurfaceBrand;
   final Color onActionPrimary;
+  final Color onActionOnBrand;
   final Color overlayScrim;
   final Color bgApp;
   final Color textPrimary;
@@ -325,10 +364,13 @@ class NxColors extends ThemeExtension<NxColors> {
   final Color actionPrimary;
   final Color actionPrimaryHover;
   final Color actionPrimarySubtle;
+  final Color actionOnBrand;
+  final Color actionOnBrandHover;
   final Color borderDefault;
   final Color borderStrong;
   final Color borderBrand;
   final Color borderInput;
+  final Color borderDivider;
   final Color focusRing;
   final Color statusSuccessFg;
   final Color statusSuccessBg;
@@ -340,6 +382,14 @@ class NxColors extends ThemeExtension<NxColors> {
   final Color statusInfoBg;
   final Color statusNeutralFg;
   final Color statusNeutralBg;
+  final Color statusSuccessBorder;
+  final Color statusWarningBorder;
+  final Color statusErrorBorder;
+  final Color statusInfoBorder;
+  final Color statusNeutralBorder;
+  final Color scrollbarTrack;
+  final Color scrollbarThumb;
+  final Color scrollbarThumbActive;
   final List<BoxShadow> shadow1;
   final List<BoxShadow> shadow2;
   final List<BoxShadow> shadow3;
@@ -360,20 +410,24 @@ class NxColors extends ThemeExtension<NxColors> {
     surfaceHover: Color(0xFFEEF1F5),
     onSurfaceBrand: Color(0xFFFFFFFF),
     onActionPrimary: Color(0xFFFFFFFF),
+    onActionOnBrand: Color(0xFF0B1020),
     overlayScrim: Color(0x800F1420),
-    bgApp: Color(0xFFF4F6FB),
+    bgApp: Color(0xFFE6E9F0),
     textPrimary: Color(0xFF101828),
-    textSecondary: Color(0xFF667085),
+    textSecondary: Color(0xFF475467),
     textDisabled: Color(0xFF98A2B3),
     textPlaceholder: Color(0xFF667085),
     textInverse: Color(0xFFFFFFFF),
     actionPrimary: Color(0xFF3949AB),
     actionPrimaryHover: Color(0xFF303F9F),
     actionPrimarySubtle: Color(0xFFEEF0FF),
-    borderDefault: Color(0x1A101828),
-    borderStrong: Color(0x29101828),
+    actionOnBrand: Color(0xFFFFFFFF),
+    actionOnBrandHover: Color(0xFFDDE2FF),
+    borderDefault: Color(0x29101828),
+    borderStrong: Color(0x3D101828),
     borderBrand: Color(0xFFCDD3FF),
     borderInput: Color(0xFF667085),
+    borderDivider: Color(0xFFBEC5D1),
     focusRing: Color(0xFF3949AB),
     statusSuccessFg: Color(0xFF0F7A52),
     statusSuccessBg: Color(0xFFE5F6EF),
@@ -385,9 +439,17 @@ class NxColors extends ThemeExtension<NxColors> {
     statusInfoBg: Color(0xFFE8F0FE),
     statusNeutralFg: Color(0xFF475467),
     statusNeutralBg: Color(0xFFEEF1F5),
+    statusSuccessBorder: Color(0xFF8DD6B6),
+    statusWarningBorder: Color(0xFFF7BE8F),
+    statusErrorBorder: Color(0xFFFE9C92),
+    statusInfoBorder: Color(0xFF9CC0FF),
+    statusNeutralBorder: Color(0xFFBEC5D1),
+    scrollbarTrack: Color(0xFFF4F6FB),
+    scrollbarThumb: Color(0xFFBEC5D1),
+    scrollbarThumbActive: Color(0xFF667085),
     shadow1: <BoxShadow>[
-      BoxShadow(color: Color(0x0F101828), offset: Offset(0.0, 1.0), blurRadius: 2.0, spreadRadius: 0.0),
-      BoxShadow(color: Color(0x1A101828), offset: Offset(0.0, 1.0), blurRadius: 3.0, spreadRadius: 0.0),
+      BoxShadow(color: Color(0x14101828), offset: Offset(0.0, 1.0), blurRadius: 2.0, spreadRadius: 0.0),
+      BoxShadow(color: Color(0x1F101828), offset: Offset(0.0, 2.0), blurRadius: 6.0, spreadRadius: 0.0),
     ],
     shadow2: <BoxShadow>[
       BoxShadow(color: Color(0x14101828), offset: Offset(0.0, 6.0), blurRadius: 16.0, spreadRadius: 0.0),
@@ -409,12 +471,13 @@ class NxColors extends ThemeExtension<NxColors> {
     navBorder: Color(0x1AFFFFFF),
     navFocusRing: Color(0xFF7C88FF),
     navScrollbar: Color(0x29FFFFFF),
-    surfaceBrand: Color(0xFF0B1020),
+    surfaceBrand: Color(0xFF26337D),
     surfaceDefault: Color(0xFF171C28),
     surfaceSubtle: Color(0xFF101828),
     surfaceHover: Color(0xFF2E3746),
     onSurfaceBrand: Color(0xFFFFFFFF),
     onActionPrimary: Color(0xFF0B1020),
+    onActionOnBrand: Color(0xFF26337D),
     overlayScrim: Color(0x800F1420),
     bgApp: Color(0xFF0F1420),
     textPrimary: Color(0xFFE6E9F0),
@@ -425,10 +488,13 @@ class NxColors extends ThemeExtension<NxColors> {
     actionPrimary: Color(0xFF7C88FF),
     actionPrimaryHover: Color(0xFFCDD3FF),
     actionPrimarySubtle: Color(0xFF131B3D),
+    actionOnBrand: Color(0xFFFFFFFF),
+    actionOnBrandHover: Color(0xFFDDE2FF),
     borderDefault: Color(0x1AFFFFFF),
     borderStrong: Color(0x29FFFFFF),
     borderBrand: Color(0xFF5C6BC0),
     borderInput: Color(0xFF98A2B3),
+    borderDivider: Color(0x1AFFFFFF),
     focusRing: Color(0xFF7C88FF),
     statusSuccessFg: Color(0xFF59C69B),
     statusSuccessBg: Color(0xFF033C26),
@@ -440,6 +506,14 @@ class NxColors extends ThemeExtension<NxColors> {
     statusInfoBg: Color(0xFF092A6B),
     statusNeutralFg: Color(0xFFBEC5D1),
     statusNeutralBg: Color(0xFF2E3746),
+    statusSuccessBorder: Color(0xFF0A6443),
+    statusWarningBorder: Color(0xFF953804),
+    statusErrorBorder: Color(0xFF961B12),
+    statusInfoBorder: Color(0xFF1347A8),
+    statusNeutralBorder: Color(0xFF667085),
+    scrollbarTrack: Color(0xFF101828),
+    scrollbarThumb: Color(0xFF475467),
+    scrollbarThumbActive: Color(0xFF98A2B3),
     shadow1: <BoxShadow>[],
     shadow2: <BoxShadow>[
       BoxShadow(color: Color(0x660F1420), offset: Offset(0.0, 6.0), blurRadius: 16.0, spreadRadius: 0.0),
@@ -469,6 +543,7 @@ class NxColors extends ThemeExtension<NxColors> {
     Color? surfaceHover,
     Color? onSurfaceBrand,
     Color? onActionPrimary,
+    Color? onActionOnBrand,
     Color? overlayScrim,
     Color? bgApp,
     Color? textPrimary,
@@ -479,10 +554,13 @@ class NxColors extends ThemeExtension<NxColors> {
     Color? actionPrimary,
     Color? actionPrimaryHover,
     Color? actionPrimarySubtle,
+    Color? actionOnBrand,
+    Color? actionOnBrandHover,
     Color? borderDefault,
     Color? borderStrong,
     Color? borderBrand,
     Color? borderInput,
+    Color? borderDivider,
     Color? focusRing,
     Color? statusSuccessFg,
     Color? statusSuccessBg,
@@ -494,6 +572,14 @@ class NxColors extends ThemeExtension<NxColors> {
     Color? statusInfoBg,
     Color? statusNeutralFg,
     Color? statusNeutralBg,
+    Color? statusSuccessBorder,
+    Color? statusWarningBorder,
+    Color? statusErrorBorder,
+    Color? statusInfoBorder,
+    Color? statusNeutralBorder,
+    Color? scrollbarTrack,
+    Color? scrollbarThumb,
+    Color? scrollbarThumbActive,
     List<BoxShadow>? shadow1,
     List<BoxShadow>? shadow2,
     List<BoxShadow>? shadow3,
@@ -514,6 +600,7 @@ class NxColors extends ThemeExtension<NxColors> {
         surfaceHover: surfaceHover ?? this.surfaceHover,
         onSurfaceBrand: onSurfaceBrand ?? this.onSurfaceBrand,
         onActionPrimary: onActionPrimary ?? this.onActionPrimary,
+        onActionOnBrand: onActionOnBrand ?? this.onActionOnBrand,
         overlayScrim: overlayScrim ?? this.overlayScrim,
         bgApp: bgApp ?? this.bgApp,
         textPrimary: textPrimary ?? this.textPrimary,
@@ -524,10 +611,13 @@ class NxColors extends ThemeExtension<NxColors> {
         actionPrimary: actionPrimary ?? this.actionPrimary,
         actionPrimaryHover: actionPrimaryHover ?? this.actionPrimaryHover,
         actionPrimarySubtle: actionPrimarySubtle ?? this.actionPrimarySubtle,
+        actionOnBrand: actionOnBrand ?? this.actionOnBrand,
+        actionOnBrandHover: actionOnBrandHover ?? this.actionOnBrandHover,
         borderDefault: borderDefault ?? this.borderDefault,
         borderStrong: borderStrong ?? this.borderStrong,
         borderBrand: borderBrand ?? this.borderBrand,
         borderInput: borderInput ?? this.borderInput,
+        borderDivider: borderDivider ?? this.borderDivider,
         focusRing: focusRing ?? this.focusRing,
         statusSuccessFg: statusSuccessFg ?? this.statusSuccessFg,
         statusSuccessBg: statusSuccessBg ?? this.statusSuccessBg,
@@ -539,6 +629,14 @@ class NxColors extends ThemeExtension<NxColors> {
         statusInfoBg: statusInfoBg ?? this.statusInfoBg,
         statusNeutralFg: statusNeutralFg ?? this.statusNeutralFg,
         statusNeutralBg: statusNeutralBg ?? this.statusNeutralBg,
+        statusSuccessBorder: statusSuccessBorder ?? this.statusSuccessBorder,
+        statusWarningBorder: statusWarningBorder ?? this.statusWarningBorder,
+        statusErrorBorder: statusErrorBorder ?? this.statusErrorBorder,
+        statusInfoBorder: statusInfoBorder ?? this.statusInfoBorder,
+        statusNeutralBorder: statusNeutralBorder ?? this.statusNeutralBorder,
+        scrollbarTrack: scrollbarTrack ?? this.scrollbarTrack,
+        scrollbarThumb: scrollbarThumb ?? this.scrollbarThumb,
+        scrollbarThumbActive: scrollbarThumbActive ?? this.scrollbarThumbActive,
         shadow1: shadow1 ?? this.shadow1,
         shadow2: shadow2 ?? this.shadow2,
         shadow3: shadow3 ?? this.shadow3,
@@ -563,6 +661,7 @@ class NxColors extends ThemeExtension<NxColors> {
       surfaceHover: Color.lerp(surfaceHover, other.surfaceHover, t)!,
       onSurfaceBrand: Color.lerp(onSurfaceBrand, other.onSurfaceBrand, t)!,
       onActionPrimary: Color.lerp(onActionPrimary, other.onActionPrimary, t)!,
+      onActionOnBrand: Color.lerp(onActionOnBrand, other.onActionOnBrand, t)!,
       overlayScrim: Color.lerp(overlayScrim, other.overlayScrim, t)!,
       bgApp: Color.lerp(bgApp, other.bgApp, t)!,
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
@@ -573,10 +672,13 @@ class NxColors extends ThemeExtension<NxColors> {
       actionPrimary: Color.lerp(actionPrimary, other.actionPrimary, t)!,
       actionPrimaryHover: Color.lerp(actionPrimaryHover, other.actionPrimaryHover, t)!,
       actionPrimarySubtle: Color.lerp(actionPrimarySubtle, other.actionPrimarySubtle, t)!,
+      actionOnBrand: Color.lerp(actionOnBrand, other.actionOnBrand, t)!,
+      actionOnBrandHover: Color.lerp(actionOnBrandHover, other.actionOnBrandHover, t)!,
       borderDefault: Color.lerp(borderDefault, other.borderDefault, t)!,
       borderStrong: Color.lerp(borderStrong, other.borderStrong, t)!,
       borderBrand: Color.lerp(borderBrand, other.borderBrand, t)!,
       borderInput: Color.lerp(borderInput, other.borderInput, t)!,
+      borderDivider: Color.lerp(borderDivider, other.borderDivider, t)!,
       focusRing: Color.lerp(focusRing, other.focusRing, t)!,
       statusSuccessFg: Color.lerp(statusSuccessFg, other.statusSuccessFg, t)!,
       statusSuccessBg: Color.lerp(statusSuccessBg, other.statusSuccessBg, t)!,
@@ -588,6 +690,14 @@ class NxColors extends ThemeExtension<NxColors> {
       statusInfoBg: Color.lerp(statusInfoBg, other.statusInfoBg, t)!,
       statusNeutralFg: Color.lerp(statusNeutralFg, other.statusNeutralFg, t)!,
       statusNeutralBg: Color.lerp(statusNeutralBg, other.statusNeutralBg, t)!,
+      statusSuccessBorder: Color.lerp(statusSuccessBorder, other.statusSuccessBorder, t)!,
+      statusWarningBorder: Color.lerp(statusWarningBorder, other.statusWarningBorder, t)!,
+      statusErrorBorder: Color.lerp(statusErrorBorder, other.statusErrorBorder, t)!,
+      statusInfoBorder: Color.lerp(statusInfoBorder, other.statusInfoBorder, t)!,
+      statusNeutralBorder: Color.lerp(statusNeutralBorder, other.statusNeutralBorder, t)!,
+      scrollbarTrack: Color.lerp(scrollbarTrack, other.scrollbarTrack, t)!,
+      scrollbarThumb: Color.lerp(scrollbarThumb, other.scrollbarThumb, t)!,
+      scrollbarThumbActive: Color.lerp(scrollbarThumbActive, other.scrollbarThumbActive, t)!,
       shadow1: BoxShadow.lerpList(shadow1, other.shadow1, t)!,
       shadow2: BoxShadow.lerpList(shadow2, other.shadow2, t)!,
       shadow3: BoxShadow.lerpList(shadow3, other.shadow3, t)!,

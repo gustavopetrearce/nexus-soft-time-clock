@@ -13,6 +13,7 @@ import { MatTableModule } from '@angular/material/table';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AppDatePipe } from '../../core/i18n/app-date.pipe';
+import { AppNumberPipe } from '../../core/i18n/app-number.pipe';
 import { PAGE_SIZE_OPTIONS, pageSizePreference } from '../../core/ui/catalog';
 import { openDrawer } from '../../core/ui/drawer';
 import { EmptyStateComponent } from '../../core/ui/empty-state.component';
@@ -24,6 +25,7 @@ import { StatusChipComponent } from '../../core/ui/status-chip.component';
 import { incidentTypeLabel, priorityLabel } from './incident.labels';
 import { Incident } from './incident.models';
 import { IncidentService } from './incident.service';
+import { OpenIncidentsStore } from './open-incidents.store';
 import { ResolveIncidentDrawerComponent, ResolveIncidentData } from './resolve-incident-drawer.component';
 
 const PRIORITIES = ['HIGH', 'MEDIUM', 'LOW'] as const;
@@ -49,6 +51,7 @@ const STATUSES = ['OPEN', 'APPROVED', 'REJECTED', 'RESOLVED'] as const;
     MatSelectModule,
     TranslocoPipe,
     AppDatePipe,
+    AppNumberPipe,
     EmptyStateComponent,
     FiltersButtonComponent,
     LoadingBarComponent,
@@ -89,12 +92,15 @@ const STATUSES = ['OPEN', 'APPROVED', 'REJECTED', 'RESOLVED'] as const;
       </app-empty-state>
     } @else {
       <section class="nx-panel nx-panel--listado">
-        <div class="nx-filtros">
+        <div class="nx-filtros nx-filtros--incidencias">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-buscador">
             <mat-icon matPrefix>search</mat-icon>
             <mat-label>{{ 'incidents.search' | transloco }}</mat-label>
             <input matInput type="search" [formControl]="searchControl" autocomplete="off" />
           </mat-form-field>
+          @if (openCount(); as n) {
+            <span class="nx-chip nx-chip--warning nx-filtros__pendientes">{{ 'incidents.pending' | transloco: { count: (n | appNumber) } }}</span>
+          }
           <div class="nx-flt-sec nx-flt-sec--grupo"><ng-container *ngTemplateOutlet="secundarios" /></div>
           <app-filters-button [filters]="secundarios" />
         </div>
@@ -163,6 +169,10 @@ export class IncidentsComponent {
   private readonly service = inject(IncidentService);
   private readonly dialog = inject(MatDialog);
   private readonly transloco = inject(TranslocoService);
+  private readonly openIncidents = inject(OpenIncidentsStore);
+
+  /** Abiertas en total (no solo la página): el mismo dato del menú y del KPI de P12. */
+  protected readonly openCount = this.openIncidents.count;
 
   protected readonly columns = ['user', 'type', 'date', 'priority', 'status', 'actions'];
   protected readonly priorities = PRIORITIES;
@@ -209,6 +219,8 @@ export class IncidentsComponent {
       next: (result) => {
         this.incidents.set(result.content);
         this.total.set(result.totalElements);
+        if (this.statusFilter.value === 'OPEN') this.openIncidents.set(result.totalElements);
+        else this.openIncidents.refresh();
         this.loading.set(false);
       },
       error: () => {

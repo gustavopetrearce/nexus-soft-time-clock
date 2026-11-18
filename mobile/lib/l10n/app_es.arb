@@ -35,6 +35,13 @@
   "@homeLastRecord": { "placeholders": {"event": {"type": "String"}, "time": {"type": "String"}, "site": {"type": "String"}} },
 
   "loginTitle": "Iniciar sesión",
+  "loginTagline": "Cada jornada cuenta.",
+  "loginCopyright": "© {year} Nexus Soft",
+  "@loginCopyright": {
+    "placeholders": {
+      "year": { "type": "String" }
+    }
+  },
   "loginEmail": "Correo",
   "loginEmailInvalid": "Escribe un correo válido.",
   "loginPassword": "Contraseña",

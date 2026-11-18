@@ -48,6 +48,8 @@ const FEED_SIZE = 30;
   styles: [
     `
       h2 { margin: var(--nx-space-0); }
+      .mapa-pagina { display: flex; flex-direction: column; gap: var(--nx-space-gap-section); }
+      .mapa-pagina[hidden] { display: none; }
       mat-form-field { width: 100%; }
       .nx-indicador mat-icon { width: var(--nx-icon-size-md); height: var(--nx-icon-size-md); font-size: var(--nx-icon-size-md); }
       .nx-chip mat-icon { width: var(--nx-icon-size-sm); height: var(--nx-icon-size-sm); font-size: var(--nx-icon-size-sm); }
@@ -75,34 +77,35 @@ const FEED_SIZE = 30;
       </app-empty-state>
     }
 
-    <section class="nx-panel" [hidden]="error()">
-      <div class="nx-panel__barra">
-        <div class="nx-fila-indicadores" aria-live="polite">
-          @if (connected()) {
-            <span class="nx-indicador nx-indicador--success">
-              <mat-icon aria-hidden="true">sync</mat-icon>
-              {{ 'map.live' | transloco }} · {{ 'map.updated' | transloco }}
-              <span class="nx-text-numeric">{{ lastUpdate() | appDate: 'HH:mm' }}</span>
-            </span>
-          } @else {
-            <span class="nx-indicador nx-indicador--warning">
-              <mat-icon aria-hidden="true">cloud_off</mat-icon>{{ 'map.reconnecting' | transloco }}
-            </span>
-          }
-        </div>
-      </div>
-
+    <div class="mapa-pagina" [hidden]="error()">
+    <section class="nx-panel nx-panel--barra">
       <mat-form-field appearance="outline" subscriptSizing="dynamic" class="nx-buscador">
         <mat-icon matPrefix>search</mat-icon>
         <mat-label>{{ 'map.search' | transloco }}</mat-label>
         <input matInput type="search" [formControl]="searchControl" autocomplete="off" />
       </mat-form-field>
+      <div class="nx-fila-indicadores" aria-live="polite">
+        @if (connected()) {
+          <span class="nx-indicador nx-indicador--success">
+            <mat-icon aria-hidden="true">sync</mat-icon>
+            {{ 'map.live' | transloco }} · {{ 'map.updated' | transloco }}
+            <span class="nx-text-numeric">{{ lastUpdate() | appDate: 'HH:mm' }}</span>
+          </span>
+        } @else {
+          <span class="nx-indicador nx-indicador--warning">
+            <mat-icon aria-hidden="true">cloud_off</mat-icon>{{ 'map.reconnecting' | transloco }}
+          </span>
+        }
+      </div>
+    </section>
 
       <div class="nx-g-8-4">
-        <div #mapEl class="nx-mapa" role="img" [attr.aria-label]="'map.mapLabel' | transloco"></div>
+        <section class="nx-panel nx-panel--mapa">
+          <div #mapEl class="nx-mapa" role="img" [attr.aria-label]="'map.mapLabel' | transloco"></div>
+        </section>
 
-        <div class="nx-eventos-recientes">
-          <h2 class="nx-text-heading-4">{{ 'map.recent' | transloco }}</h2>
+        <section class="nx-panel nx-eventos-recientes">
+          <h2 class="nx-text-heading-3">{{ 'map.recent' | transloco }}</h2>
           <div class="nx-fila-indicadores">
             <span class="nx-chip nx-chip--success"><mat-icon aria-hidden="true">check_circle</mat-icon>{{ 'map.accepted' | transloco: { n: acceptedCount() } }}</span>
             <span class="nx-chip nx-chip--error"><mat-icon aria-hidden="true">error_outline</mat-icon>{{ 'map.rejected' | transloco: { n: rejectedCount() } }}</span>
@@ -136,9 +139,9 @@ const FEED_SIZE = 30;
               }
             </ul>
           }
-        </div>
+        </section>
       </div>
-    </section>
+    </div>
   `,
 })
 export class RealtimeMapComponent implements AfterViewInit, OnDestroy {

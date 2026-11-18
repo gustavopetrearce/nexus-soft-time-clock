@@ -49,7 +49,7 @@ const STATUSES = ['ACTIVE', 'INACTIVE', 'LOCKED', 'INVITED'];
   styles: [
     `
       .nx-kpis { margin-bottom: var(--nx-space-gap-section); }
-      .nx-kpi__concepto { width: var(--nx-icon-size-lg); height: var(--nx-icon-size-lg); font-size: var(--nx-icon-size-lg); }
+      .nx-kpi__concepto mat-icon { width: var(--nx-icon-size-lg); height: var(--nx-icon-size-lg); font-size: var(--nx-icon-size-lg); }
       .columnas { display: flex; flex-direction: column; padding: var(--nx-space-2) var(--nx-space-3); }
       .exportar .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
       .nx-fila-filtros th { padding-block: var(--nx-space-1); }
@@ -73,25 +73,25 @@ const STATUSES = ['ACTIVE', 'INACTIVE', 'LOCKED', 'INVITED'];
       </app-empty-state>
     } @else {
       <div class="nx-kpis nx-kpis--4">
-        <div class="nx-kpi">
+        <div class="nx-kpi nx-kpi--info">
           <span class="nx-kpi__label">{{ 'people.kpi.people' | transloco }}</span>
-          <span class="nx-kpi__valor nx-text-numeric">{{ people().length | appNumber }}</span>
-          <mat-icon class="nx-kpi__concepto" aria-hidden="true">group</mat-icon>
+          <span class="nx-kpi__concepto nx-kpi__concepto--info"><mat-icon fontSet="material-icons-outlined" aria-hidden="true">group</mat-icon></span>
+          <span class="nx-kpi__fila"><span class="nx-kpi__valor nx-text-numeric">{{ people().length | appNumber }}</span></span>
         </div>
-        <div class="nx-kpi">
+        <div class="nx-kpi nx-kpi--success">
           <span class="nx-kpi__label">{{ 'people.kpi.birthdays' | transloco }}</span>
-          <span class="nx-kpi__valor nx-text-numeric">{{ birthdays() | appNumber }}</span>
-          <mat-icon class="nx-kpi__concepto" aria-hidden="true">cake</mat-icon>
+          <span class="nx-kpi__concepto nx-kpi__concepto--success"><mat-icon fontSet="material-icons-outlined" aria-hidden="true">cake</mat-icon></span>
+          <span class="nx-kpi__fila"><span class="nx-kpi__valor nx-text-numeric">{{ birthdays() | appNumber }}</span></span>
         </div>
-        <div class="nx-kpi">
+        <div class="nx-kpi nx-kpi--warning">
           <span class="nx-kpi__label">{{ 'people.col.vacation' | transloco }}</span>
-          <span class="nx-kpi__valor nx-text-numeric">{{ vacationsPending() | appNumber }}</span>
-          <mat-icon class="nx-kpi__concepto" aria-hidden="true">beach_access</mat-icon>
+          <span class="nx-kpi__concepto nx-kpi__concepto--warning"><mat-icon fontSet="material-icons-outlined" aria-hidden="true">beach_access</mat-icon></span>
+          <span class="nx-kpi__fila"><span class="nx-kpi__valor nx-text-numeric">{{ vacationsPending() | appNumber }}</span></span>
         </div>
-        <div class="nx-kpi">
+        <div class="nx-kpi nx-kpi--brand">
           <span class="nx-kpi__label">{{ 'people.kpi.anniversaries' | transloco }}</span>
-          <span class="nx-kpi__valor nx-text-numeric">{{ anniversaries() | appNumber }}</span>
-          <mat-icon class="nx-kpi__concepto" aria-hidden="true">celebration</mat-icon>
+          <span class="nx-kpi__concepto nx-kpi__concepto--brand"><mat-icon fontSet="material-icons-outlined" aria-hidden="true">celebration</mat-icon></span>
+          <span class="nx-kpi__fila"><span class="nx-kpi__valor nx-text-numeric">{{ anniversaries() | appNumber }}</span></span>
         </div>
       </div>
 

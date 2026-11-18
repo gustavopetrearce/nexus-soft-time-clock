@@ -170,7 +170,8 @@
     "openIncidents": "Incidencias abiertas",
     "openIncidentsLink": "Incidencias abiertas: ver incidencias",
     "activeUsers": "Usuarios activos",
-    "activeSites": "Centros activos"
+    "activeSites": "Centros activos",
+    "toResolve": "Por resolver"
   },
   "errors": {
     "generic": "Ocurrió un error inesperado.",
@@ -316,8 +317,12 @@
       "employeeCodeOptional": "Código de empleado (opcional)",
       "birth": "Nacimiento",
       "hire": "Ingreso",
-      "select": "Selecciona",
-      "optional": "Opcional"
+      "optional": "Opcional",
+      "sectionAccount": "Cuenta",
+      "sectionProfile": "Perfil",
+      "emergencyName": "Nombre del contacto",
+      "emergencyPhone": "Teléfono del contacto",
+      "selectMany": "Selecciona uno o más"
     },
     "edit": {
       "resetPassword": "Restablecer contraseña",
@@ -653,7 +658,12 @@
     "tolerances": "Tolerancias",
     "windows": "Ventanas",
     "breakMinutes": "Descanso (min)",
-    "earlyTolerance": "Tolerancia de salida (min)"
+    "earlyTolerance": "Tolerancia de salida (min)",
+    "shiftStart": "Inicio",
+    "shiftEnd": "Fin",
+    "lateTolerance": "Tolerancia de entrada (min)",
+    "newShift": "Nuevo turno",
+    "collapseShift": "Plegar el turno"
   },
   "settings": {
     "subtitle": "Parámetros generales de la empresa. Aplican a todo el tenant.",
@@ -922,9 +932,9 @@
       "RESOLVED": "Resolver"
     },
     "note": "Nota",
-    "notePlaceholder": "Agrega una nota",
     "notOpen": "Esta incidencia ya no está abierta. Abre la siguiente.",
-    "nextOpened": "Siguiente incidencia: {{type}} de {{name}}."
+    "nextOpened": "Siguiente incidencia: {{type}} de {{name}}.",
+    "pending": "{{ count }} pendientes de resolución"
   },
   "audit": {
     "action": "Acción",

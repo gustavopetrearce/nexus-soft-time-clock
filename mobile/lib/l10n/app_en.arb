@@ -34,6 +34,8 @@
   "homeSyncPending": "Sync pending records",
 
   "loginTitle": "Sign in",
+  "loginTagline": "Every workday counts.",
+  "loginCopyright": "© {year} Nexus Soft",
   "loginEmail": "Email",
   "loginEmailInvalid": "Enter a valid email.",
   "loginPassword": "Password",

@@ -89,7 +89,7 @@ body {
   --mat-table-row-item-container-height: var(--nx-space-12);
   --mat-table-row-item-label-text-size: var(--nx-text-body-size);
   --mat-table-row-item-label-text-tracking: var(--nx-font-tracking-normal);
-  --mat-table-row-item-outline-color: var(--nx-color-border-default);
+  --mat-table-row-item-outline-color: var(--nx-color-border-divider);
   --mat-paginator-container-text-color: var(--nx-color-text-secondary);
   --mat-paginator-container-background-color: transparent;
   --mat-paginator-container-text-size: var(--nx-text-small-size);
@@ -153,8 +153,10 @@ body {
 .mat-mdc-header-cell,
 .mat-mdc-cell {
   padding: var(--nx-space-inset-cell-y) var(--nx-space-inset-cell-x);
-  border-bottom-color: var(--nx-color-border-default);
+  border-bottom-color: var(--nx-color-border-divider);
 }
+/* El encabezado conserva border-default; las filas usan border-divider (DS/02, 2026-11-13). */
+.mat-mdc-header-cell { border-bottom-color: var(--nx-color-border-default); }
 .mat-mdc-row { transition: background-color var(--nx-motion-duration-fast) var(--nx-motion-easing-standard); }
 .mat-mdc-row:hover { background: var(--nx-color-surface-hover); }
 .mat-mdc-row:last-child .mat-mdc-cell { border-bottom: 0; }

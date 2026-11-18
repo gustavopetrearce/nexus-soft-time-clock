@@ -51,14 +51,6 @@ type LoginError = 'invalid' | 'locked' | 'offline';
       h1, p { margin: var(--nx-space-0); }
       mat-form-field { width: 100%; }
       .enviar .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
-      .cabecera { display: flex; flex-direction: column; align-items: center; gap: var(--nx-space-gap-related); text-align: center; }
-      .nx-campo__label > span { color: var(--nx-color-status-error-fg); }
-      .pie {
-        padding-top: var(--nx-space-4);
-        border-top: var(--nx-border-width-default) solid var(--nx-color-border-default);
-        color: var(--nx-color-text-secondary);
-        text-align: center;
-      }
     `,
   ],
   template: `
@@ -86,9 +78,10 @@ type LoginError = 'invalid' | 'locked' | 'offline';
       <div class="nx-acceso__lado">
         <app-language-switcher class="idioma" />
         <form class="nx-acceso__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-          <div class="cabecera">
-            <app-logo class="md" />
+          <div class="nx-acceso__cabecera">
+            <app-logo class="lg nx-logo" label="Nexus Soft Time Clock" />
             <h1 class="nx-text-heading-2">{{ 'login.submit' | transloco }}</h1>
+            <p class="nx-sec">{{ 'login.tagline' | transloco }}</p>
           </div>
 
           @switch (error()) {
@@ -138,7 +131,7 @@ type LoginError = 'invalid' | 'locked' | 'offline';
             {{ 'login.submit' | transloco }}
           </button>
 
-          <p class="pie nx-text-caption">{{ 'login.copyright' | transloco: { year } }}</p>
+          <footer class="nx-acceso__pie nx-text-small nx-sec">{{ 'login.copyright' | transloco: { year } }}</footer>
         </form>
       </div>
     </div>

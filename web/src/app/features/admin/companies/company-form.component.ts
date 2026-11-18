@@ -1,9 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -15,6 +14,7 @@ import { AuthStore } from '../../../core/auth/auth.store';
 import { ConfirmDialogComponent } from '../../../core/ui/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../core/ui/empty-state.component';
 import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
+import { ScrollDirective } from '../../../core/ui/scroll.directive';
 import { NotificationService } from '../../../core/ui/notification.service';
 import { localeOptions } from '../../../core/models/locales';
 import { browserTimeZone, timezoneOptions } from '../../../core/models/timezones';
@@ -22,10 +22,16 @@ import { CapacityDialogComponent } from './capacity-dialog.component';
 import { Company, CompanyStatus } from './company.models';
 import { CompanyService } from './company.service';
 
+export interface CompanyDrawerData {
+  /** Empresa a editar; sin ella, se crea una nueva. */
+  companyId: string | null;
+}
+
 /**
- * P23 · Nueva o editar empresa (página, patrón Formulario): código y nombre obligatorios, zona horaria,
- * idioma y, al editar, estado (suspender se confirma, S01) y acceso al cupo (P24). Al crear se
- * aprovisiona además el administrador inicial; al editar puede agregarse otro bajo demanda.
+ * P23 · Nueva o editar empresa (Drawer sobre P22, HIFI/03 F): código y nombre obligatorios, razón
+ * social, dominio, zona horaria, idioma y, al editar, estado (suspender se confirma, S01), en una
+ * columna; «Cupo de colaboradores» (P24) solo al editar. Al crear se aprovisiona además el
+ * administrador inicial; al editar puede agregarse otro bajo demanda. Guardar cierra y avisa.
  */
 @Component({
   selector: 'app-company-form',
@@ -38,33 +44,34 @@ import { CompanyService } from './company.service';
     MatIconModule,
     MatInputModule,
     MatSelectModule,
-    RouterLink,
     TranslocoPipe,
     EmptyStateComponent,
     LoadingBarComponent,
+    ScrollDirective,
   ],
   styles: [
     `
-      h1, h2, p { margin: var(--nx-space-0); }
+      h2, h3, p { margin: var(--nx-space-0); }
       mat-form-field { width: 100%; }
-      .nx-regresar { align-self: flex-start; }
-      .pagina { display: flex; flex-direction: column; gap: var(--nx-space-gap-group); }
+      form { display: flex; flex-direction: column; gap: var(--nx-space-gap-related); }
+      .solo { align-self: flex-start; }
       .nx-fila-botones { display: flex; justify-content: flex-end; gap: var(--nx-space-gap-inline); }
-      .nx-form__acciones .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
+      .nx-capa__pie .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
     `,
   ],
   template: `
-    <div class="pagina">
-      <a mat-button class="nx-regresar" routerLink="/companies"><mat-icon>arrow_back</mat-icon>{{ 'common.back' | transloco }}</a>
+    <div class="nx-capa__enc">
+      <h2 class="nx-text-heading-3" mat-dialog-title>{{ (isEdit() ? 'companies.edit' : 'companies.new') | transloco }}</h2>
+      <button mat-icon-button type="button" mat-dialog-close [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+    </div>
+    <div class="nx-capa__cuerpo nx-scroll" nxScroll aria-live="polite">
       <app-loading-bar [active]="loading()" />
 
       @if (error()) {
         <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco" />
       } @else {
-        <form class="nx-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
-          <h1 class="nx-text-heading-1">{{ (isEdit() ? 'companies.edit' : 'companies.new') | transloco }}</h1>
-
-          <div class="nx-form__grid">
+        <form id="empresa" [formGroup]="form" (ngSubmit)="save()" novalidate>
+          <div class="nx-form__grid nx-form__grid--1">
             <mat-form-field appearance="outline">
               <mat-label>{{ 'common.code' | transloco }}</mat-label>
               <input matInput formControlName="code" required autocomplete="off" />
@@ -104,13 +111,13 @@ import { CompanyService } from './company.service';
           </div>
 
           @if (isEdit() && canManageCapacity()) {
-            <button mat-stroked-button type="button" class="nx-regresar" (click)="openCapacity()">{{ 'capacity.title' | transloco }}</button>
+            <button mat-stroked-button type="button" class="solo" (click)="openCapacity()"><mat-icon>group</mat-icon>{{ 'capacity.title' | transloco }}</button>
           }
 
           <!-- Al crear se aprovisiona también el administrador inicial (COMPANY_ADMIN). -->
           @if (!isEdit() || showAdminForm()) {
-            <h2 class="nx-text-heading-4">{{ 'companies.form.initialAdmin' | transloco }}</h2>
-            <div class="nx-form__grid" [formGroup]="adminForm">
+            <h3 class="nx-text-heading-4 nx-form__seccion">{{ 'companies.form.initialAdmin' | transloco }}</h3>
+            <div class="nx-form__grid nx-form__grid--1" [formGroup]="adminForm">
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'common.email' | transloco }}</mat-label>
                 <input matInput type="email" formControlName="email" required autocomplete="off" />
@@ -140,25 +147,25 @@ import { CompanyService } from './company.service';
               </div>
             }
           } @else {
-            <button mat-button type="button" class="nx-regresar" (click)="showAdminForm.set(true)"><mat-icon>person_add</mat-icon>{{ 'companies.form.addAdmin' | transloco }}</button>
+            <button mat-button type="button" class="solo" (click)="showAdminForm.set(true)"><mat-icon>person_add</mat-icon>{{ 'companies.form.addAdmin' | transloco }}</button>
           }
 
-          <div class="nx-form__acciones">
-            <button mat-button type="button" (click)="cancel()"><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
-            <button mat-flat-button type="submit" [disabled]="saving()" [attr.aria-busy]="saving()">
-              @if (saving()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>save</mat-icon> }
-              {{ 'common.save' | transloco }}
-            </button>
-          </div>
         </form>
       }
+    </div>
+    <div class="nx-capa__pie">
+      <button mat-button type="button" mat-dialog-close><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
+      <button mat-flat-button type="submit" form="empresa" [disabled]="saving()" [attr.aria-busy]="saving()">
+        @if (saving()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>save</mat-icon> }
+        {{ 'common.save' | transloco }}
+      </button>
     </div>
   `,
 })
 export class CompanyFormComponent {
   private readonly fb = inject(FormBuilder);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
+  private readonly data = inject<CompanyDrawerData>(MAT_DIALOG_DATA);
+  private readonly ref = inject<MatDialogRef<CompanyFormComponent, boolean>>(MatDialogRef);
   private readonly service = inject(CompanyService);
   private readonly notify = inject(NotificationService);
   private readonly dialog = inject(MatDialog);
@@ -168,7 +175,7 @@ export class CompanyFormComponent {
   protected readonly statuses: CompanyStatus[] = ['ACTIVE', 'SUSPENDED'];
   protected readonly statusControl = this.fb.nonNullable.control<CompanyStatus>('ACTIVE');
 
-  protected readonly companyId = this.route.snapshot.paramMap.get('id');
+  protected readonly companyId = this.data.companyId;
   protected readonly isEdit = computed(() => !!this.companyId);
 
   protected readonly company = signal<Company | null>(null);
@@ -247,9 +254,6 @@ export class CompanyFormComponent {
     if (company) this.dialog.open(CapacityDialogComponent, { data: { company } });
   }
 
-  protected cancel(): void {
-    void this.router.navigate(['/companies']);
-  }
 
   protected save(): void {
     const raw = this.form.getRawValue();
@@ -278,7 +282,7 @@ export class CompanyFormComponent {
           .subscribe({
             next: () => {
               this.notify.success(this.transloco.translate('companies.form.updated'));
-              void this.router.navigate(['/companies']);
+              this.ref.close(true);
             },
             error: () => {
               this.saving.set(false);
@@ -328,12 +332,12 @@ export class CompanyFormComponent {
     this.service.provisionAdmin(companyId, this.adminPayload()).subscribe({
       next: () => {
         this.notify.success(this.transloco.translate('companies.form.created'));
-        void this.router.navigate(['/companies']);
+        this.ref.close(true);
       },
       error: () => {
         this.saving.set(false);
         this.notify.error(this.transloco.translate('companies.form.createdNoAdmin'));
-        void this.router.navigate(['/companies', companyId, 'edit']);
+        this.ref.close(true);
       },
     });
   }

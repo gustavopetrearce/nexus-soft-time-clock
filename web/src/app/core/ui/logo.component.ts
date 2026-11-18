@@ -33,6 +33,7 @@ function ensureSprite(): void {
       :host { display: inline-flex; flex: none; }
       svg { width: var(--nx-icon-size-lg); height: var(--nx-icon-size-lg); }
       :host(.md) svg { width: var(--nx-icon-size-xl); height: var(--nx-icon-size-xl); }
+      :host(.lg) svg { width: var(--nx-space-12); height: var(--nx-space-12); }
       :host(.xl) svg { width: var(--nx-space-16); height: var(--nx-space-16); }
     `,
   ],

@@ -1,7 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +10,8 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { AuthStore } from '../../../core/auth/auth.store';
 import { AppDatePipe } from '../../../core/i18n/app-date.pipe';
+import { openDrawer } from '../../../core/ui/drawer';
+import { ScrollDirective } from '../../../core/ui/scroll.directive';
 import { StatusChipComponent } from '../../../core/ui/status-chip.component';
 import { ContractDialogComponent } from '../../contracts/contract-dialog.component';
 import { Contract } from '../../contracts/contract.models';
@@ -24,17 +25,24 @@ import { localizedProblem } from '../../../core/ui/problem-detail';
 import { PROJECT_STATUSES, Project } from './project.models';
 import { ProjectService } from './project.service';
 
+export interface ProjectDrawerData {
+  /** Proyecto a editar; sin él, se crea uno nuevo. */
+  projectId: string | null;
+}
+
 /**
- * P35 · Nuevo o editar proyecto (página, patrón Formulario): código único y obligatorio, nombre,
- * estado (al editar) y vigencia. Un código repetido se avisa en el formulario.
+ * P35 · Nuevo o editar proyecto (Drawer sobre P34, HIFI/03 F): Código · Estado, Nombre a ancho
+ * completo, Inicio · Fin. Al crear, campos vacíos y Estado «Activo» (el alta siempre nace activa).
+ * Un código repetido se avisa en el formulario. Al editar, con `contract:manage`, debajo van los
+ * colaboradores asignados por contrato de proyecto (iteración 14, sin maqueta: Lista).
  */
 @Component({
   selector: 'app-project-form',
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    RouterLink,
     MatButtonModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -44,33 +52,34 @@ import { ProjectService } from './project.service';
     EmptyStateComponent,
     LoadingBarComponent,
     AppDatePipe,
+    ScrollDirective,
     StatusChipComponent,
   ],
   styles: [
     `
-      h1 { margin: var(--nx-space-0); }
+      h2, h3, p, ul { margin: var(--nx-space-0); }
       mat-form-field { width: 100%; }
-      .nx-form__acciones .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
-      .err { margin: 0 0 var(--nx-space-4); color: var(--nx-color-status-error-fg); }
-      .asignados { margin-top: var(--nx-space-8); }
-      .asignados__enc { display: flex; align-items: center; gap: var(--nx-space-4); margin-bottom: var(--nx-space-4); }
+      form { display: flex; flex-direction: column; gap: var(--nx-space-gap-related); }
+      .nx-capa__pie .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
+      .err { color: var(--nx-color-status-error-fg); }
+      .asignados { display: flex; flex-direction: column; gap: var(--nx-space-gap-related); }
+      .asignados__enc { display: flex; align-items: center; gap: var(--nx-space-gap-related); }
       .asignados__enc div { flex: 1; }
-      .asignados__enc h2, .asignados__enc p { margin: var(--nx-space-0); }
-      td { white-space: nowrap; }
-      .revisar { color: var(--nx-color-status-warning-fg); vertical-align: middle; font-size: 18px; width: 18px; height: 18px; }
+      .revisar { color: var(--nx-color-status-warning-fg); vertical-align: middle; font-size: var(--nx-icon-size-sm); width: var(--nx-icon-size-sm); height: var(--nx-icon-size-sm); }
     `,
   ],
   template: `
-    <div class="nx-regresar">
-      <a mat-button routerLink="/projects"><mat-icon>arrow_back</mat-icon>{{ 'common.back' | transloco }}</a>
+    <div class="nx-capa__enc">
+      <h2 class="nx-text-heading-3" mat-dialog-title>{{ (isEdit() ? 'projects.edit' : 'projects.new') | transloco }}</h2>
+      <button mat-icon-button type="button" mat-dialog-close [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
     </div>
-    <app-loading-bar [active]="loading()" />
 
+    <div class="nx-capa__cuerpo nx-scroll" nxScroll aria-live="polite">
+    <app-loading-bar [active]="loading()" />
     @if (error()) {
       <app-empty-state tone="error" [message]="'common.loadError' | transloco" [description]="'common.loadErrorHint' | transloco" />
     } @else {
-      <form class="nx-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
-        <h1 class="nx-text-heading-1">{{ (isEdit() ? 'projects.edit' : 'projects.new') | transloco }}</h1>
+      <form id="proyecto" [formGroup]="form" (ngSubmit)="save()" novalidate>
         @if (problem()) { <app-alert tone="error">{{ problem() }}</app-alert> }
 
         <div class="nx-form__grid">
@@ -79,17 +88,15 @@ import { ProjectService } from './project.service';
             <input matInput formControlName="code" required autocomplete="off" />
           </mat-form-field>
           <mat-form-field appearance="outline">
+            <mat-label>{{ 'common.status' | transloco }}</mat-label>
+            <mat-select formControlName="status">
+              @for (s of statuses; track s) { <mat-option [value]="s">{{ 'projects.status.' + s | transloco }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="nx-campo--ancho">
             <mat-label>{{ 'common.name' | transloco }}</mat-label>
             <input matInput formControlName="name" required autocomplete="off" />
           </mat-form-field>
-          @if (isEdit()) {
-            <mat-form-field appearance="outline">
-              <mat-label>{{ 'common.status' | transloco }}</mat-label>
-              <mat-select formControlName="status">
-                @for (s of statuses; track s) { <mat-option [value]="s">{{ 'projects.status.' + s | transloco }}</mat-option> }
-              </mat-select>
-            </mat-form-field>
-          }
           <mat-form-field appearance="outline">
             <mat-label>{{ 'projects.startsOn' | transloco }}</mat-label>
             <input matInput type="date" formControlName="startsOn" />
@@ -100,23 +107,15 @@ import { ProjectService } from './project.service';
           </mat-form-field>
         </div>
         @if (rangeInvalid()) {
-          <p class="nx-text-small err">{{ 'projects.rangeInvalid' | transloco }}</p>
+          <p class="nx-text-caption err">{{ 'projects.rangeInvalid' | transloco }}</p>
         }
-
-        <div class="nx-form__acciones">
-          <button mat-button type="button" (click)="cancel()"><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
-          <button mat-flat-button type="submit" [disabled]="saving()" [attr.aria-busy]="saving()">
-            @if (saving()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>save</mat-icon> }
-            {{ 'common.save' | transloco }}
-          </button>
-        </div>
       </form>
 
       @if (isEdit() && canManageContracts) {
-        <section class="nx-panel asignados">
+        <section class="asignados">
           <div class="asignados__enc">
             <div>
-              <h2 class="nx-text-heading-3">{{ 'projects.contracts' | transloco }}</h2>
+              <h3 class="nx-text-heading-4 nx-form__seccion">{{ 'projects.contracts' | transloco }}</h3>
               <p class="nx-text-small nx-sec">{{ 'projects.contractsHint' | transloco }}</p>
             </div>
             @if (project()?.status === 'ACTIVE') {
@@ -126,47 +125,45 @@ import { ProjectService } from './project.service';
           @if (contracts().length === 0) {
             <app-empty-state icon="badge" [message]="'projects.noContracts' | transloco" />
           } @else {
-            <div class="nx-tabla">
-              <div class="nx-tabla__scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th scope="col">{{ 'contracts.collaborator' | transloco }}</th>
-                      <th scope="col" class="num">{{ 'contracts.period' | transloco }}</th>
-                      <th scope="col">{{ 'common.status' | transloco }}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (c of contracts(); track c.id) {
-                      <tr>
-                        <td>
-                          {{ c.userName || c.userId }}
-                          @if (c.employeeCode) { <span class="nx-sec nx-text-small"> · {{ c.employeeCode }}</span> }
-                        </td>
-                        <td class="num nx-text-numeric">
-                          {{ c.startsOn | appDate: 'dd/MM/yyyy' }} –
-                          {{ c.endsOn ? (c.endsOn | appDate: 'dd/MM/yyyy') : ('contracts.indefinite' | transloco) }}
-                          @if (c.needsReview) {
-                            <mat-icon class="revisar" [attr.aria-label]="'contracts.needsReview' | transloco" [attr.title]="'contracts.needsReviewHint' | transloco">warning</mat-icon>
-                          }
-                        </td>
-                        <td><app-status-chip [status]="c.status" [label]="'contracts.status.' + c.status | transloco" /></td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ul class="nx-lista">
+              @for (c of contracts(); track c.id) {
+                <li class="nx-lista__fila">
+                  <div class="nx-lista__texto">
+                    <span class="nx-trunc">
+                      {{ c.userName || c.userId }}
+                      @if (c.employeeCode) { <span class="nx-sec nx-text-small"> · {{ c.employeeCode }}</span> }
+                    </span>
+                    <span class="nx-lista__secundario nx-text-numeric">
+                      {{ c.startsOn | appDate: 'dd/MM/yyyy' }} –
+                      {{ c.endsOn ? (c.endsOn | appDate: 'dd/MM/yyyy') : ('contracts.indefinite' | transloco) }}
+                      @if (c.needsReview) {
+                        <mat-icon class="revisar" [attr.aria-label]="'contracts.needsReview' | transloco" [attr.title]="'contracts.needsReviewHint' | transloco">warning</mat-icon>
+                      }
+                    </span>
+                  </div>
+                  <div class="nx-lista__trail"><app-status-chip [status]="c.status" [label]="'contracts.status.' + c.status | transloco" /></div>
+                </li>
+              }
+            </ul>
           }
         </section>
       }
     }
+    </div>
+
+    <div class="nx-capa__pie">
+      <button mat-button type="button" mat-dialog-close><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
+      <button mat-flat-button type="submit" form="proyecto" [disabled]="saving()" [attr.aria-busy]="saving()">
+        @if (saving()) { <span class="nx-spin" aria-hidden="true"></span> } @else { <mat-icon>save</mat-icon> }
+        {{ 'common.save' | transloco }}
+      </button>
+    </div>
   `,
 })
 export class ProjectFormComponent {
   private readonly fb = inject(FormBuilder);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
+  private readonly data = inject<ProjectDrawerData>(MAT_DIALOG_DATA);
+  private readonly ref = inject<MatDialogRef<ProjectFormComponent, boolean>>(MatDialogRef);
   private readonly service = inject(ProjectService);
   private readonly notify = inject(NotificationService);
   private readonly transloco = inject(TranslocoService);
@@ -176,7 +173,7 @@ export class ProjectFormComponent {
   protected readonly contracts = signal<Contract[]>([]);
 
   protected readonly statuses = PROJECT_STATUSES;
-  protected readonly projectId = this.route.snapshot.paramMap.get('id');
+  protected readonly projectId = this.data.projectId;
   protected readonly isEdit = computed(() => !!this.projectId);
 
   protected readonly project = signal<Project | null>(null);
@@ -188,7 +185,7 @@ export class ProjectFormComponent {
   protected readonly form = this.fb.nonNullable.group({
     code: ['', [Validators.required]],
     name: ['', [Validators.required]],
-    status: ['ACTIVE'],
+    status: [{ value: 'ACTIVE', disabled: !this.data.projectId }],
     startsOn: [''],
     endsOn: [''],
   });
@@ -233,20 +230,14 @@ export class ProjectFormComponent {
 
   protected assign(): void {
     if (!this.projectId) return;
-    this.dialog
-      .open(ContractDialogComponent, {
-        data: { preset: { type: 'PROJECT', projectId: this.projectId } },
-        width: '640px',
-        maxWidth: '96vw',
-      })
+    openDrawer(this.dialog, ContractDialogComponent, {
+      data: { preset: { type: 'PROJECT', projectId: this.projectId } },
+      ariaLabel: this.transloco.translate('projects.assign'),
+    })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) this.loadContracts();
       });
-  }
-
-  protected cancel(): void {
-    void this.router.navigate(['/projects']);
   }
 
   protected save(): void {
@@ -268,7 +259,7 @@ export class ProjectFormComponent {
     request$.subscribe({
       next: () => {
         this.notify.success(this.transloco.translate(this.projectId ? 'projects.form.updated' : 'projects.form.created'));
-        void this.router.navigate(['/projects']);
+        this.ref.close(true);
       },
       error: (err) => {
         this.saving.set(false);

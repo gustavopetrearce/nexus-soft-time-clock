@@ -14,7 +14,7 @@ import { ApiClientCredentials } from './api-client.models';
 import { ApiClientService } from './api-client.service';
 
 /**
- * Alta de una credencial: solo pide el nombre. Se cierra con la respuesta para que el listado
+ * Alta de una credencial (Drawer, como las altas del catálogo; sin maqueta propia): solo pide el nombre. Se cierra con la respuesta para que el listado
  * muestre el secreto; un nombre repetido se queda abierto con el motivo.
  */
 @Component({
@@ -31,10 +31,13 @@ import { ApiClientService } from './api-client.service';
     AlertComponent,
     LoadingBarComponent,
   ],
-  styles: [`h2 { margin: var(--nx-space-0); } mat-form-field { width: 100%; }`],
+  styles: [`h2 { margin: var(--nx-space-0); } mat-form-field { width: 100%; } form { display: flex; flex-direction: column; flex: 1; min-height: var(--nx-space-0); }`],
   template: `
     <form [formGroup]="form" (ngSubmit)="save()">
-      <div class="nx-capa__enc"><h2 class="nx-text-heading-3" mat-dialog-title>{{ 'apiClients.new' | transloco }}</h2></div>
+      <div class="nx-capa__enc">
+        <h2 class="nx-text-heading-3" mat-dialog-title>{{ 'apiClients.new' | transloco }}</h2>
+        <button mat-icon-button type="button" [disabled]="saving()" (click)="dialogRef.close()" [attr.aria-label]="'common.close' | transloco"><mat-icon>close</mat-icon></button>
+      </div>
       <div class="nx-capa__cuerpo" aria-live="polite">
         <app-loading-bar [active]="saving()" />
         @if (error()) {
@@ -48,7 +51,7 @@ import { ApiClientService } from './api-client.service';
       </div>
       <div class="nx-capa__pie">
         <button mat-button type="button" [disabled]="saving()" (click)="dialogRef.close()"><mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}</button>
-        <button mat-flat-button type="submit" [disabled]="saving() || name.value.trim() === ''">
+        <button mat-flat-button type="submit" [disabled]="saving()" [attr.aria-busy]="saving()">
           <mat-icon>vpn_key</mat-icon>{{ 'apiClients.generate' | transloco }}
         </button>
       </div>
@@ -67,7 +70,13 @@ export class ApiClientFormDialogComponent {
 
   protected save(): void {
     const name = this.name.value.trim();
-    if (!name || this.saving()) return;
+    if (this.saving()) return;
+    if (!name) {
+      // El botón nunca se deshabilita antes del primer intento: el error aparece al enviar (C1, C2).
+      this.name.setValue('');
+      this.name.markAsTouched();
+      return;
+    }
     this.saving.set(true);
     this.error.set(null);
     this.service.create(name).subscribe({

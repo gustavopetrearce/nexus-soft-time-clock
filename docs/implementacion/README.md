@@ -4,11 +4,11 @@ Tres archivos para llevar el design system y el rediseño hi-fi al código, por 
 
 | Archivo | Qué es |
 |---|---|
-| `tokens.json` | Todos los design tokens en formato **DTCG** (el estándar del W3C): primitivos, semánticos del tema claro, estilos de texto compuestos, sombras y el ejemplo de nivel componente. 216 tokens. |
-| `tokens.dark.json` | El tema oscuro: reasigna **solo** los roles semánticos (31). Se aplica encima de `tokens.json`. |
+| `tokens.json` | Todos los design tokens en formato **DTCG** (el estándar del W3C): primitivos, semánticos del tema claro, estilos de texto compuestos, sombras y el ejemplo de nivel componente. 229 tokens. |
+| `tokens.dark.json` | El tema oscuro: reasigna **solo** los roles semánticos (42). Se aplica encima de `tokens.json`. |
 | `BRIEF.md` | Las instrucciones para quien implementa: fuentes de verdad, orden de trabajo en 5 tandas, reglas transversales, accesibilidad, cambios de backend y riesgos abiertos. |
 
-Se generaron el 2026-10-26 desde `sss/nexus-soft-time-clock/design-system.md` (`DS/01`–`DS/07`) y `highfi.md`. **No se editan a mano:** si un valor cambia, cambia en el design system y se regeneran.
+Se generaron el 2026-10-26 y se regeneraron el 2026-11-13 desde `sss/nexus-soft-time-clock/design-system.md` (`DS/01`–`DS/07`) y `highfi.md`. **No se editan a mano:** si un valor cambia, cambia en el design system y se regeneran.
 
 ## Cómo leer `tokens.json`
 
@@ -68,5 +68,5 @@ Para el tema oscuro, una segunda configuración con `source: ['tokens/tokens.jso
 
 ## Para ver cómo debe quedar
 
-- **Maqueta hi-fi:** `output/nexus-soft-time-clock/maquetas/hifi/index.html`, con las 40 pantallas, sus estados, tema claro y oscuro, anchos y la redline de cada una.
+- **Maqueta hi-fi:** `output/nexus-soft-time-clock/maquetas/hifi/index.html`, con las 43 pantallas, sus estados, tema claro y oscuro, anchos y la redline de cada una.
 - **Presentación del design system:** `output/nexus-soft-time-clock/presentacion/design-system.html`.
