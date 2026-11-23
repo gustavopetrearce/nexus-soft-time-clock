@@ -64,7 +64,7 @@ public class MeController {
         UUID tenantId = CurrentUser.tenantId(auth);
         UUID userId = CurrentUser.userId(auth);
         EmployeeProfile p = profiles.get(tenantId, userId);
-        EmployeeDirectoryQuery.Info info = directory.byIds(List.of(userId)).get(userId);
+        EmployeeDirectoryQuery.Info info = directory.byIds(tenantId, List.of(userId)).get(userId);
         return new MeProfileResponse(
                 userId.toString(),
                 info == null ? null : info.fullName(),
@@ -102,7 +102,7 @@ public class MeController {
     public List<VacationRequestResponse> vacations(Authentication auth) {
         UUID tenantId = CurrentUser.tenantId(auth);
         UUID userId = CurrentUser.userId(auth);
-        EmployeeDirectoryQuery.Info info = directory.byIds(List.of(userId)).get(userId);
+        EmployeeDirectoryQuery.Info info = directory.byIds(tenantId, List.of(userId)).get(userId);
         return requests.listForUser(tenantId, userId).stream().map(r -> new VacationRequestResponse(
                 r.id().toString(), r.userId().toString(),
                 info == null ? null : info.fullName(),

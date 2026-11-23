@@ -11,6 +11,7 @@ import com.condor.nexussoft.timeclock.hr.domain.port.in.VacationRequestUseCase;
 import com.condor.nexussoft.timeclock.hr.infrastructure.persistence.EmployeeDirectoryQuery;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.PageResponse;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.VacationDtos.*;
+import com.condor.nexussoft.timeclock.shared.domain.AuthorizationException;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +84,7 @@ public class VacationController {
         VacationStatus st = (status == null || status.isBlank()) ? null : VacationStatus.valueOf(status.trim().toUpperCase());
         PagedResult<VacationRequest> result = requestUseCase.list(CurrentUser.tenantId(auth), st, search, page, size);
 
-        Map<UUID, EmployeeDirectoryQuery.Info> names = directory.byIds(
+        Map<UUID, EmployeeDirectoryQuery.Info> names = directory.byIds(CurrentUser.tenantId(auth),
                 result.content().stream().map(VacationRequest::userId).collect(Collectors.toSet()));
         List<VacationRequestResponse> content = result.content().stream()
                 .map(r -> toResponse(r, names.get(r.userId())))
@@ -95,11 +96,17 @@ public class VacationController {
     @PreAuthorize("hasAnyAuthority('vacation:request','vacation:approve')")
     public VacationRequestResponse create(@Valid @RequestBody CreateVacationRequest body, Authentication auth) {
         UUID tenantId = CurrentUser.tenantId(auth);
+        UUID self = CurrentUser.userId(auth);
         UUID userId = (body.userId() == null || body.userId().isBlank())
-                ? CurrentUser.userId(auth) : UUID.fromString(body.userId());
+                ? self : UUID.fromString(body.userId());
+        // Solo quien aprueba vacaciones puede solicitarlas a nombre de otro colaborador.
+        if (!userId.equals(self) && !hasAuthority(auth, "vacation:approve")) {
+            throw new AuthorizationException("VACATION_FOR_OTHER_FORBIDDEN",
+                    "Solo puedes solicitar vacaciones para ti.");
+        }
         VacationRequest r = requestUseCase.create(new VacationRequestUseCase.CreateCommand(
                 tenantId, userId, body.startDate(), body.endDate(), body.reason()));
-        return toResponse(r, directory.byIds(List.of(userId)).get(userId));
+        return toResponse(r, directory.byIds(tenantId, List.of(userId)).get(userId));
     }
 
     @PatchMapping("/requests/{id}/resolve")
@@ -113,7 +120,11 @@ public class VacationController {
         }
         VacationRequest r = requestUseCase.resolve(new VacationRequestUseCase.ResolveCommand(
                 CurrentUser.tenantId(auth), id, CurrentUser.userId(auth), approve, body.note()));
-        return toResponse(r, directory.byIds(List.of(r.userId())).get(r.userId()));
+        return toResponse(r, directory.byIds(r.tenantId(), List.of(r.userId())).get(r.userId()));
+    }
+
+    private static boolean hasAuthority(Authentication auth, String authority) {
+        return auth != null && auth.getAuthorities().stream().anyMatch(a -> authority.equals(a.getAuthority()));
     }
 
     private static VacationRequestResponse toResponse(VacationRequest r, EmployeeDirectoryQuery.Info info) {

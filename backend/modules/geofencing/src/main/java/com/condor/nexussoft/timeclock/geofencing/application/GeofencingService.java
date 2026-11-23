@@ -8,6 +8,7 @@ import com.condor.nexussoft.timeclock.geofencing.domain.port.in.GeofencingUseCas
 import com.condor.nexussoft.timeclock.geofencing.domain.port.out.GeofenceRepositoryPort;
 import com.condor.nexussoft.timeclock.geofencing.domain.port.out.QrTokenSignerPort;
 import com.condor.nexussoft.timeclock.geofencing.domain.port.out.SiteQrTokenRepositoryPort;
+import com.condor.nexussoft.timeclock.geofencing.domain.port.out.WorkSiteDirectoryPort;
 import com.condor.nexussoft.timeclock.shared.domain.DomainException;
 import com.condor.nexussoft.timeclock.shared.domain.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,18 +31,20 @@ public class GeofencingService implements GeofencingUseCase {
     private final GeofenceRepositoryPort geofences;
     private final SiteQrTokenRepositoryPort qrTokens;
     private final QrTokenSignerPort signer;
+    private final WorkSiteDirectoryPort workSites;
     private final Clock clock;
     private final long qrTtlSeconds;
     private final long qrMaxFarExpiryDays;
     private final SecureRandom random = new SecureRandom();
 
     public GeofencingService(GeofenceRepositoryPort geofences, SiteQrTokenRepositoryPort qrTokens,
-                             QrTokenSignerPort signer, Clock clock,
+                             QrTokenSignerPort signer, WorkSiteDirectoryPort workSites, Clock clock,
                              @Value("${security.qr.ttl-seconds:120}") long qrTtlSeconds,
                              @Value("${security.qr.max-far-expiry-days:366}") long qrMaxFarExpiryDays) {
         this.geofences = geofences;
         this.qrTokens = qrTokens;
         this.signer = signer;
+        this.workSites = workSites;
         this.clock = clock;
         this.qrTtlSeconds = qrTtlSeconds;
         this.qrMaxFarExpiryDays = qrMaxFarExpiryDays;
@@ -50,6 +53,7 @@ public class GeofencingService implements GeofencingUseCase {
     @Override
     @Transactional
     public Geofence upsertGeofence(UUID tenantId, UUID workSiteId, double lat, double lng, double radiusM) {
+        requireWorkSite(tenantId, workSiteId);
         GeoPoint center = new GeoPoint(lat, lng);
         return geofences.findActiveByWorkSite(workSiteId, tenantId)
                 .map(existing -> {
@@ -75,6 +79,7 @@ public class GeofencingService implements GeofencingUseCase {
     @Override
     @Transactional
     public GeneratedQr generateQr(UUID tenantId, UUID workSiteId, Integer ttlMinutes, Instant expiresAtOverride) {
+        requireWorkSite(tenantId, workSiteId);
         return issue(tenantId, workSiteId, ttlMinutes, expiresAtOverride);
     }
 
@@ -82,6 +87,12 @@ public class GeofencingService implements GeofencingUseCase {
     @Transactional
     public GeneratedQr generateCompanyQr(UUID tenantId, Integer ttlMinutes, Instant expiresAtOverride) {
         return issue(tenantId, null, ttlMinutes, expiresAtOverride);
+    }
+
+    private void requireWorkSite(UUID tenantId, UUID workSiteId) {
+        if (!workSites.belongsToTenant(tenantId, workSiteId)) {
+            throw new ResourceNotFoundException("Centro de trabajo", workSiteId);
+        }
     }
 
     /** Emisión común: {@code workSiteId} nulo produce el QR de empresa. */

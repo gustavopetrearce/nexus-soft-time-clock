@@ -7,6 +7,7 @@ import '../../../core/i18n/language_picker.dart';
 import '../../../core/i18n/locale_controller.dart';
 import '../../../core/ui/nx_ui.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../auth/data/auth_repository.dart';
 import '../data/profile_repository.dart';
 import '../domain/my_contract.dart';
 import '../domain/my_profile.dart';
@@ -32,6 +33,8 @@ class ProfileScreen extends ConsumerWidget {
     final async = ref.watch(myProfileProvider);
     // Complementario: si falla o no hay contrato, el perfil se muestra igual.
     final contract = ref.watch(myContractProvider).valueOrNull;
+    // Empresa (tenant) del usuario, de GET /auth/me; complementaria como el contrato.
+    final company = ref.watch(meProvider).valueOrNull?.tenantName;
     final l10n = context.l10n;
     final c = NxColors.of(context);
     final text = Theme.of(context).textTheme;
@@ -46,6 +49,7 @@ class ProfileScreen extends ConsumerWidget {
           onRefresh: () async {
             ref.invalidate(myProfileProvider);
             ref.invalidate(myContractProvider);
+            ref.invalidate(meProvider);
           },
           child: NxContenido(
             children: [
@@ -58,7 +62,7 @@ class ProfileScreen extends ConsumerWidget {
                 )
               else if (async.hasValue) ...[
                 _Header(profile: async.value!),
-                _Groups(profile: async.value!, contract: contract, gender: _gender, date: _date),
+                _Groups(profile: async.value!, company: company, contract: contract, gender: _gender, date: _date),
               ],
               LanguageMenu(
                 builder: (context, controller) => NxTarjetaAcceso(
@@ -133,9 +137,17 @@ class _Header extends StatelessWidget {
 
 /// Datos (R2) en tres grupos, cada uno en su contenedor.
 class _Groups extends StatelessWidget {
-  const _Groups({required this.profile, required this.contract, required this.gender, required this.date});
+  const _Groups({
+    required this.profile,
+    required this.company,
+    required this.contract,
+    required this.gender,
+    required this.date,
+  });
 
   final MyProfile profile;
+  /// Nombre de la empresa (tenant) a la que pertenece el usuario; `null` si no cargó.
+  final String? company;
   /// Contrato vigente o próximo (iteración 14); `null` si no tiene o no cargó.
   final MyContract? contract;
   final String? Function(AppLocalizations, String?) gender;
@@ -158,6 +170,7 @@ class _Groups extends StatelessWidget {
         ],),
         const SizedBox(height: NxTokens.space5),
         NxGrupo(title: l10n.profileCompanyData, children: [
+          NxDatoFila(icon: Icons.domain_outlined, label: l10n.profileCompany, value: company),
           NxDatoFila(
             icon: Icons.event_available_outlined,
             label: l10n.profileHireDate,

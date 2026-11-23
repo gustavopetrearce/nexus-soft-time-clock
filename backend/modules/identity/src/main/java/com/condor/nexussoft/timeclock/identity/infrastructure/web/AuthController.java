@@ -2,6 +2,7 @@ package com.condor.nexussoft.timeclock.identity.infrastructure.web;
 
 import com.condor.nexussoft.timeclock.identity.domain.port.in.AuthenticationUseCase;
 import com.condor.nexussoft.timeclock.identity.domain.port.in.LoginCommand;
+import com.condor.nexussoft.timeclock.identity.domain.port.out.CompanyDirectoryPort;
 import com.condor.nexussoft.timeclock.identity.infrastructure.web.dto.*;
 import com.condor.nexussoft.timeclock.platform.web.HttpRequestMetadata;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,9 +24,11 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthenticationUseCase authentication;
+    private final CompanyDirectoryPort companies;
 
-    public AuthController(AuthenticationUseCase authentication) {
+    public AuthController(AuthenticationUseCase authentication, CompanyDirectoryPort companies) {
         this.authentication = authentication;
+        this.companies = companies;
     }
 
     @PostMapping("/login")
@@ -57,9 +60,13 @@ public class AuthController {
 
     @GetMapping("/me")
     public MeResponse me(@AuthenticationPrincipal Jwt jwt) {
+        String tenantId = jwt.getClaimAsString("tenant_id");
+        String tenantName = tenantId == null ? null
+                : companies.companyName(UUID.fromString(tenantId)).orElse(null);
         return new MeResponse(
                 jwt.getSubject(),
-                jwt.getClaimAsString("tenant_id"),
+                tenantId,
+                tenantName,
                 Boolean.TRUE.equals(jwt.getClaimAsBoolean("platform_admin")),
                 orEmpty(jwt.getClaimAsStringList("roles")),
                 orEmpty(jwt.getClaimAsStringList("permissions")));

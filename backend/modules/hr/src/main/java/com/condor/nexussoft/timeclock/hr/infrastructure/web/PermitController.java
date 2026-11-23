@@ -126,6 +126,10 @@ public class PermitController {
     }
 
     static List<PermitResponse> toResponses(Collection<Permit> permits, EmployeeDirectoryQuery directory) {
+        if (permits.isEmpty()) {
+            return List.of();
+        }
+        UUID tenantId = permits.iterator().next().tenantId();
         Set<UUID> ids = new HashSet<>();
         for (Permit p : permits) {
             ids.add(p.userId());
@@ -133,7 +137,7 @@ public class PermitController {
             if (p.cancelledBy() != null) ids.add(p.cancelledBy());
             if (p.payDecidedBy() != null) ids.add(p.payDecidedBy());
         }
-        Map<UUID, EmployeeDirectoryQuery.Info> names = directory.byIds(ids);
+        Map<UUID, EmployeeDirectoryQuery.Info> names = directory.byIds(tenantId, ids);
         return permits.stream().map(p -> toResponse(p, names)).toList();
     }
 

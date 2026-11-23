@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexus_time_clock/l10n/app_localizations.dart';
 import 'package:nexus_time_clock/src/app/theme.dart';
 import 'package:nexus_time_clock/src/core/i18n/locale_controller.dart';
+import 'package:nexus_time_clock/src/features/auth/data/auth_repository.dart';
+import 'package:nexus_time_clock/src/features/auth/domain/auth_models.dart';
 import 'package:nexus_time_clock/src/features/profile/data/profile_repository.dart';
 import 'package:nexus_time_clock/src/features/profile/domain/my_contract.dart';
 import 'package:nexus_time_clock/src/features/profile/domain/my_profile.dart';
@@ -20,6 +22,16 @@ Future<Widget> _app(MyContract? contract) async {
           (ref) async => const MyProfile(userId: 'u1', fullName: 'Ada Lovelace', hireDate: '2026-01-05'),
         ),
         myContractProvider.overrideWith((ref) async => contract),
+        meProvider.overrideWith(
+          (ref) async => const Me(
+            userId: 'u1',
+            tenantId: 't1',
+            tenantName: 'Constructora Norte',
+            platformAdmin: false,
+            roles: ['EMPLOYEE'],
+            permissions: [],
+          ),
+        ),
       ],
       child: MaterialApp(
         locale: const Locale('es'),
@@ -64,6 +76,7 @@ void main() {
     ),),);
     await tester.pumpAndSettle();
 
+    expect(find.text('Constructora Norte'), findsOneWidget);
     expect(find.text('Por proyecto'), findsOneWidget);
     expect(find.text('OBRA · Obra norte'), findsOneWidget);
     expect(find.textContaining('indefinido'), findsOneWidget);
