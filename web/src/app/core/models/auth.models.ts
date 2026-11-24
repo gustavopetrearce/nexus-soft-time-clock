@@ -16,6 +16,8 @@ export interface TokenResponse {
 export interface Me {
   userId: string;
   tenantId: string | null;
+  /** Nombre de la empresa (tenant) del usuario; nulo para el administrador de plataforma. */
+  tenantName?: string | null;
   platformAdmin: boolean;
   roles: string[];
   permissions: string[];

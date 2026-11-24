@@ -20,9 +20,16 @@ public class VacationRequestPersistenceAdapter implements VacationRequestReposit
     private static final List<VacationStatus> ACTIVE = List.of(VacationStatus.PENDING, VacationStatus.APPROVED);
 
     private final VacationRequestJpaRepository repository;
+    private final EmployeeDirectoryQuery directory;
 
-    public VacationRequestPersistenceAdapter(VacationRequestJpaRepository repository) {
+    public VacationRequestPersistenceAdapter(VacationRequestJpaRepository repository, EmployeeDirectoryQuery directory) {
         this.repository = repository;
+        this.directory = directory;
+    }
+
+    @Override
+    public boolean isTenantUser(UUID tenantId, UUID userId) {
+        return directory.belongsTo(tenantId, userId);
     }
 
     @Override

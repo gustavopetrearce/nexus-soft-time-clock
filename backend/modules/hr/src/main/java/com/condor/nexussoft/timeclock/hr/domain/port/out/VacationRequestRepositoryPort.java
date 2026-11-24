@@ -15,4 +15,6 @@ public interface VacationRequestRepositoryPort {
     VacationRequest save(VacationRequest request);
     /** Verdadero si el colaborador ya tiene una solicitud vigente (PENDING/APPROVED) que se traslapa. */
     boolean overlaps(UUID tenantId, UUID userId, LocalDate start, LocalDate end);
+    /** Verdadero si el usuario pertenece al tenant (no se aceptan colaboradores de otra empresa). */
+    boolean isTenantUser(UUID tenantId, UUID userId);
 }

@@ -35,6 +35,15 @@ public class CompanyDirectoryAdapter implements CompanyDirectoryPort {
     }
 
     @Override
+    public Optional<String> companyName(UUID tenantId) {
+        if (tenantId == null) {
+            return Optional.empty();
+        }
+        return jdbc.query("SELECT name FROM companies WHERE id = ?",
+                rs -> rs.next() ? Optional.ofNullable(rs.getString(1)) : Optional.<String>empty(), tenantId);
+    }
+
+    @Override
     public boolean isActiveTenant(UUID tenantId) {
         Integer found = jdbc.queryForObject(
                 "SELECT count(*) FROM companies WHERE id = ? AND status = 'ACTIVE'", Integer.class, tenantId);

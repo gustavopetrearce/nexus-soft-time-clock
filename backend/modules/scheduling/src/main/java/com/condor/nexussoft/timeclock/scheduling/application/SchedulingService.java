@@ -8,6 +8,7 @@ import com.condor.nexussoft.timeclock.scheduling.domain.port.in.SchedulingUseCas
 import com.condor.nexussoft.timeclock.scheduling.domain.port.out.ScheduleRepositoryPort;
 import com.condor.nexussoft.timeclock.scheduling.domain.port.out.ShiftAssignmentRepositoryPort;
 import com.condor.nexussoft.timeclock.scheduling.domain.port.out.ShiftRepositoryPort;
+import com.condor.nexussoft.timeclock.scheduling.domain.port.out.TenantDirectoryPort;
 import com.condor.nexussoft.timeclock.shared.domain.DomainException;
 import com.condor.nexussoft.timeclock.shared.domain.Paged;
 import com.condor.nexussoft.timeclock.shared.domain.ResourceNotFoundException;
@@ -24,12 +25,14 @@ public class SchedulingService implements SchedulingUseCase {
     private final ScheduleRepositoryPort schedules;
     private final ShiftRepositoryPort shifts;
     private final ShiftAssignmentRepositoryPort assignments;
+    private final TenantDirectoryPort directory;
 
     public SchedulingService(ScheduleRepositoryPort schedules, ShiftRepositoryPort shifts,
-                             ShiftAssignmentRepositoryPort assignments) {
+                             ShiftAssignmentRepositoryPort assignments, TenantDirectoryPort directory) {
         this.schedules = schedules;
         this.shifts = shifts;
         this.assignments = assignments;
+        this.directory = directory;
     }
 
     @Override
@@ -113,6 +116,12 @@ public class SchedulingService implements SchedulingUseCase {
     public ShiftAssignment assignShift(UUID tenantId, SchedulingCommands.AssignShiftCommand c) {
         shifts.findByIdAndTenant(c.shiftId(), tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Turno", c.shiftId()));
+        if (!directory.isTenantUser(tenantId, c.userId())) {
+            throw new ResourceNotFoundException("Colaborador", c.userId());
+        }
+        if (c.workSiteId() != null && !directory.isTenantWorkSite(tenantId, c.workSiteId())) {
+            throw new ResourceNotFoundException("Centro de trabajo", c.workSiteId());
+        }
         return assignments.save(ShiftAssignment.create(tenantId, c.userId(), c.shiftId(),
                 c.workSiteId(), c.validFrom(), c.validTo()));
     }

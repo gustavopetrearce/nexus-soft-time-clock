@@ -2,6 +2,7 @@ package com.condor.nexussoft.timeclock.hr.infrastructure.persistence;
 
 import com.condor.nexussoft.timeclock.hr.domain.EmployeeProfile;
 import com.condor.nexussoft.timeclock.hr.domain.port.out.EmployeeProfileRepositoryPort;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -10,9 +11,16 @@ import org.springframework.stereotype.Component;
 public class EmployeeProfilePersistenceAdapter implements EmployeeProfileRepositoryPort {
 
     private final EmployeeProfileJpaRepository repository;
+    private final EmployeeDirectoryQuery directory;
 
-    public EmployeeProfilePersistenceAdapter(EmployeeProfileJpaRepository repository) {
+    public EmployeeProfilePersistenceAdapter(EmployeeProfileJpaRepository repository, EmployeeDirectoryQuery directory) {
         this.repository = repository;
+        this.directory = directory;
+    }
+
+    @Override
+    public boolean isTenantUser(UUID tenantId, UUID userId) {
+        return directory.belongsTo(tenantId, userId);
     }
 
     @Override
@@ -25,6 +33,10 @@ public class EmployeeProfilePersistenceAdapter implements EmployeeProfileReposit
     @Override
     public EmployeeProfile save(EmployeeProfile p) {
         EmployeeProfileJpaEntity e = repository.findById(p.userId()).orElseGet(EmployeeProfileJpaEntity::new);
+        // Nunca se mueve un perfil existente a otro tenant.
+        if (e.getTenantId() != null && !e.getTenantId().equals(p.tenantId())) {
+            throw new NoSuchElementException("Colaborador no encontrado.");
+        }
         e.setUserId(p.userId());
         e.setTenantId(p.tenantId());
         e.setBirthDate(p.birthDate());

@@ -7,4 +7,6 @@ import java.util.UUID;
 public interface EmployeeProfileRepositoryPort {
     Optional<EmployeeProfile> findByUserId(UUID tenantId, UUID userId);
     EmployeeProfile save(EmployeeProfile profile);
+    /** Verdadero si el usuario pertenece al tenant (no se editan perfiles de otra empresa). */
+    boolean isTenantUser(UUID tenantId, UUID userId);
 }

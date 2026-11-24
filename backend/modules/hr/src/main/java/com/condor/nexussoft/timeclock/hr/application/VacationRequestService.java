@@ -50,6 +50,9 @@ public class VacationRequestService implements VacationRequestUseCase {
         if (c.startDate() == null || c.endDate() == null || c.endDate().isBefore(c.startDate())) {
             throw new IllegalArgumentException("El periodo es inválido: la fecha fin no puede ser anterior al inicio.");
         }
+        if (c.userId() == null || !requests.isTenantUser(c.tenantId(), c.userId())) {
+            throw new NoSuchElementException("Colaborador no encontrado.");
+        }
         if (requests.overlaps(c.tenantId(), c.userId(), c.startDate(), c.endDate())) {
             throw new IllegalStateException("El colaborador ya tiene una solicitud vigente que se traslapa con este periodo.");
         }

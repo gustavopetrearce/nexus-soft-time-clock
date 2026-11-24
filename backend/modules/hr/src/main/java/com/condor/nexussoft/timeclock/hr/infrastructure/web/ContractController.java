@@ -124,6 +124,10 @@ public class ContractController {
 
     /** Enriquecer con nombres en un solo query (colaborador y quienes registraron, terminaron o cancelaron). */
     private List<ContractResponse> toResponses(Collection<ContractView> views) {
+        if (views.isEmpty()) {
+            return List.of();
+        }
+        UUID tenantId = views.iterator().next().contract().tenantId();
         Set<UUID> ids = new HashSet<>();
         for (ContractView v : views) {
             EmploymentContract c = v.contract();
@@ -132,7 +136,7 @@ public class ContractController {
             if (c.endedBy() != null) ids.add(c.endedBy());
             if (c.cancelledBy() != null) ids.add(c.cancelledBy());
         }
-        Map<UUID, EmployeeDirectoryQuery.Info> names = directory.byIds(ids);
+        Map<UUID, EmployeeDirectoryQuery.Info> names = directory.byIds(tenantId, ids);
         return views.stream().map(v -> toResponse(v, names)).toList();
     }
 

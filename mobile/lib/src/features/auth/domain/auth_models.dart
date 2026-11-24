@@ -39,6 +39,7 @@ class Me {
   const Me({
     required this.userId,
     required this.tenantId,
+    this.tenantName,
     required this.platformAdmin,
     required this.roles,
     required this.permissions,
@@ -46,6 +47,8 @@ class Me {
 
   final String userId;
   final String? tenantId;
+  /// Nombre de la empresa (tenant) del usuario; nulo para el administrador de plataforma.
+  final String? tenantName;
   final bool platformAdmin;
   final List<String> roles;
   final List<String> permissions;
@@ -62,6 +65,7 @@ class Me {
   factory Me.fromJson(Map<String, dynamic> json) => Me(
         userId: json['userId'] as String,
         tenantId: json['tenantId'] as String?,
+        tenantName: json['tenantName'] as String?,
         platformAdmin: json['platformAdmin'] as bool? ?? false,
         roles: (json['roles'] as List<dynamic>? ?? []).cast<String>(),
         permissions: (json['permissions'] as List<dynamic>? ?? []).cast<String>(),

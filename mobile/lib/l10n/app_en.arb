@@ -66,6 +66,7 @@
   "profilePhone": "Phone",
   "profileAddress": "Address",
   "profileCompanyData": "Company details",
+  "profileCompany": "Company",
   "profileHireDate": "Hire date",
   "profileContractType": "Contract type",
   "profileContractProject": "Project-based",

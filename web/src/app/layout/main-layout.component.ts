@@ -148,6 +148,15 @@ const NAV: readonly NavGroup[] = [
 
       .nx-pagina { margin: var(--nx-space-0) auto; }
 
+      /* Nombre de empresa largo: se recorta con elipsis (el completo va en el title). */
+      .nx-toolbar__empresa { min-width: var(--nx-space-0); }
+      .nx-toolbar__empresa-nombre {
+        max-width: calc(var(--nx-space-16) * 4);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
       .menu-head { padding: var(--nx-space-3) var(--nx-space-4); max-width: calc(var(--nx-space-16) * 4); }
       .menu-head .who { font-weight: var(--nx-font-weight-semibold); }
 
@@ -216,8 +225,8 @@ const NAV: readonly NavGroup[] = [
             <span class="nx-toolbar__nombre">Nexus Soft Time Clock</span>
           </a>
           <span class="nx-toolbar__esp"></span>
-          <span class="nx-toolbar__empresa nx-text-small-strong">
-            <mat-icon>domain</mat-icon>{{ tenantLabel() }}
+          <span class="nx-toolbar__empresa nx-text-small-strong" [attr.title]="tenantLabel()">
+            <mat-icon>domain</mat-icon><span class="nx-toolbar__empresa-nombre">{{ tenantLabel() }}</span>
           </span>
           <app-language-switcher />
           <button
@@ -339,11 +348,14 @@ export class MainLayoutComponent {
     return (this.store.user()?.roles ?? []).map(roleLabel).join(', ');
   }
 
-  /** Ámbito legible del usuario, sin ids (Plataforma para admins de plataforma). */
+  /**
+   * Ámbito legible del usuario, sin ids: «Plataforma» para admins de plataforma; si no, el
+   * nombre de su empresa (tenant), con «Empresa» como respaldo mientras llega /me.
+   */
   protected tenantLabel(): string {
-    return this.store.user()?.platformAdmin
-      ? this.transloco.translate('layout.scope.platform')
-      : this.transloco.translate('layout.scope.company');
+    const user = this.store.user();
+    if (user?.platformAdmin) return this.transloco.translate('layout.scope.platform');
+    return user?.tenantName?.trim() || this.transloco.translate('layout.scope.company');
   }
 
   protected openChangePassword(): void {
