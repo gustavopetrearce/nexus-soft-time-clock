@@ -28,13 +28,15 @@ import { Role, roleLabel } from '../roles/role.models';
 import { RoleService } from '../roles/role.service';
 import { UserEditData, UserEditDialogComponent } from './user-edit-dialog.component';
 import { UserFormData, UserFormDialogComponent } from './user-form-dialog.component';
+import { UserImportData, UserImportDialogComponent } from './user-import-dialog.component';
 import { USER_STATUSES, User, UserStatus } from './user.models';
 import { UserService } from './user.service';
 
 /**
  * P20 · Usuarios (RF-06, RF-22): chip de cupo (error si no queda), «Nuevo usuario», buscador de
  * nombre, apellidos o correo y filtros de código, rol y estado, todo en el servidor con espera de
- * 400 ms. Orden por correo; «Editar» abre P21 en un drawer.
+ * 400 ms. Orden por correo; «Editar» abre P21 en un drawer. «Importar» abre la carga masiva por
+ * CSV/XLSX (iteración 15).
  */
 @Component({
   selector: 'app-users',
@@ -106,6 +108,7 @@ import { UserService } from './user.service';
             }
           </div>
           <div class="nx-panel__acciones">
+            <button mat-stroked-button type="button" (click)="openImport()"><mat-icon>upload_file</mat-icon>{{ 'userImport.open' | transloco }}</button>
             <button mat-flat-button type="button" (click)="openCreate()"><mat-icon>add</mat-icon>{{ 'users.new' | transloco }}</button>
           </div>
         </div>
@@ -281,6 +284,19 @@ export class UsersComponent {
     });
     ref.afterClosed().subscribe((created) => {
       if (created) {
+        this.reload();
+        this.reloadCapacity();
+      }
+    });
+  }
+
+  protected openImport(): void {
+    const ref = openDrawer<UserImportDialogComponent, UserImportData, boolean>(this.dialog, UserImportDialogComponent, {
+      data: { assignableRoles: this.assignableRoles() },
+      ariaLabel: this.transloco.translate('userImport.title'),
+    });
+    ref.afterClosed().subscribe((imported) => {
+      if (imported) {
         this.reload();
         this.reloadCapacity();
       }

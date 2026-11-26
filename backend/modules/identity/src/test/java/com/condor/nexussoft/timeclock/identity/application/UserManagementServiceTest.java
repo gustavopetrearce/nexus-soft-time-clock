@@ -9,6 +9,7 @@ import com.condor.nexussoft.timeclock.identity.domain.port.out.TenantCapacityPor
 import com.condor.nexussoft.timeclock.identity.domain.port.out.UserAdminRepositoryPort;
 import com.condor.nexussoft.timeclock.shared.domain.AuthorizationException;
 import com.condor.nexussoft.timeclock.shared.domain.ConflictException;
+import com.condor.nexussoft.timeclock.shared.domain.DomainException;
 import com.condor.nexussoft.timeclock.shared.domain.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -109,6 +111,80 @@ class UserManagementServiceTest {
     void create_companyAdminOtorgandoRolDesconocido_rechaza() {
         assertThatThrownBy(() -> service.create(tenantId, companyAdmin, command(Set.of("ROOT"))))
                 .isInstanceOf(AuthorizationException.class);
+        verify(users, never()).create(any(), any(), any(), any(), any(), any(), anySet());
+    }
+
+    @Test
+    void create_numeroDeEmpleadoDuplicado_422EnVezDe500() {
+        when(users.existsByTenantAndEmail(tenantId, "nuevo@demo.com")).thenReturn(false);
+        when(users.existsByTenantAndEmployeeCode(tenantId, "EMP-1")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.create(tenantId, companyAdmin, command(Set.of("EMPLOYEE"))))
+                .isInstanceOf(DomainException.class)
+                .extracting(e -> ((DomainException) e).getCode())
+                .isEqualTo("DUPLICATE_EMPLOYEE_CODE");
+        verify(users, never()).create(any(), any(), any(), any(), any(), any(), anySet());
+    }
+
+    @Test
+    void create_correoInvalido_422() {
+        UserCommands.CreateUserCommand malo = new UserCommands.CreateUserCommand("no-es-correo", "N", "U",
+                null, "secret123", Set.of("EMPLOYEE"));
+
+        assertThatThrownBy(() -> service.create(tenantId, companyAdmin, malo))
+                .isInstanceOf(DomainException.class)
+                .extracting(e -> ((DomainException) e).getCode())
+                .isEqualTo("INVALID_EMAIL");
+    }
+
+    @Test
+    void create_numeroDeEmpleadoEnBlanco_seGuardaNulo() {
+        when(users.existsByTenantAndEmail(tenantId, "nuevo@demo.com")).thenReturn(false);
+        when(passwordHasher.hash("secret123")).thenReturn("hashed");
+        when(users.create(any(), any(), any(), any(), any(), any(), anySet())).thenReturn(anyUserView());
+
+        service.create(tenantId, companyAdmin, new UserCommands.CreateUserCommand("nuevo@demo.com", "N", "U",
+                "  ", "secret123", Set.of("EMPLOYEE")));
+
+        verify(users).create(eq(tenantId), eq("nuevo@demo.com"), eq("hashed"), eq("N"), eq("U"), isNull(), anySet());
+        verify(users, never()).existsByTenantAndEmployeeCode(any(), any());
+    }
+
+    // --- createAll (importación masiva) -----------------------------------
+
+    @Test
+    void createAll_creaEnOrdenYPasaCadaAltaPorElCupo() {
+        when(users.existsByTenantAndEmail(eq(tenantId), any())).thenReturn(false);
+        when(users.rolesEnableAttendanceRegister(Set.of("EMPLOYEE"))).thenReturn(true);
+        when(passwordHasher.hash(any())).thenAnswer(inv -> "h:" + inv.getArgument(0));
+        when(users.create(any(), any(), any(), any(), any(), any(), anySet())).thenAnswer(inv ->
+                new UserView(UUID.randomUUID(), inv.getArgument(1), inv.getArgument(3), inv.getArgument(4),
+                        inv.getArgument(5), "ACTIVE", List.of("EMPLOYEE")));
+
+        List<UserCommands.CreateUserCommand> cmds = List.of(
+                new UserCommands.CreateUserCommand("a@demo.com", "A", "Uno", "E-1", "pass-a-123", Set.of("EMPLOYEE")),
+                new UserCommands.CreateUserCommand("b@demo.com", "B", "Dos", "E-2", "pass-b-123", Set.of("EMPLOYEE")),
+                new UserCommands.CreateUserCommand("c@demo.com", "C", "Tres", "E-3", "pass-c-123", Set.of("EMPLOYEE")));
+
+        List<UserView> result = service.createAll(tenantId, companyAdmin, cmds);
+
+        assertThat(result).extracting(UserView::email).containsExactly("a@demo.com", "b@demo.com", "c@demo.com");
+        verify(users).create(eq(tenantId), eq("b@demo.com"), eq("h:pass-b-123"), any(), any(), eq("E-2"), anySet());
+        verify(capacity, times(3)).requireSlotForNewCollaborator(tenantId);
+    }
+
+    @Test
+    void createAll_unaFilaInvalida_noCreaNinguna() {
+        when(users.existsByTenantAndEmail(tenantId, "a@demo.com")).thenReturn(false);
+        when(users.existsByTenantAndEmail(tenantId, "b@demo.com")).thenReturn(true);
+
+        List<UserCommands.CreateUserCommand> cmds = List.of(
+                new UserCommands.CreateUserCommand("a@demo.com", "A", "Uno", null, "pass-a-123", Set.of("EMPLOYEE")),
+                new UserCommands.CreateUserCommand("b@demo.com", "B", "Dos", null, "pass-b-123", Set.of("EMPLOYEE")));
+
+        assertThatThrownBy(() -> service.createAll(tenantId, companyAdmin, cmds))
+                .isInstanceOf(DomainException.class);
+        verifyNoInteractions(passwordHasher);
         verify(users, never()).create(any(), any(), any(), any(), any(), any(), anySet());
     }
 

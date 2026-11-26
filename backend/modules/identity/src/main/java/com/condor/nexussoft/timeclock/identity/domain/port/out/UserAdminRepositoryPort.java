@@ -13,6 +13,9 @@ public interface UserAdminRepositoryPort {
 
     boolean existsByTenantAndEmail(UUID tenantId, String email);
 
+    /** ¿Ya hay un usuario del tenant con ese número de empleado? (único por tenant, V2). */
+    boolean existsByTenantAndEmployeeCode(UUID tenantId, String employeeCode);
+
     /**
      * ¿Alguno de esos roles habilita a registrar accesos, es decir, incluye el permiso
      * {@code attendance:register}? Se consulta por <b>permiso efectivo</b> y no comparando contra

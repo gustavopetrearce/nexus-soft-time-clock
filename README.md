@@ -56,6 +56,7 @@ El desarrollo es **incremental**; cada iteración debe quedar funcional, compila
 | 12 | Notificaciones, integraciones y optimización | ✅ Completada |
 | 13 | Pruebas, documentación y preparación para producción | ✅ Completada |
 | 14 | Tipos de contrato por colaborador (proyecto / turno) | ✅ Completada (contratos, marcación, reportes y móvil) |
+| 15 | Importación masiva de usuarios (CSV / XLSX) | ✅ Completada (portal + módulo onboarding) |
 
 > **Estado:** las 13 iteraciones están completas. El backend (16 módulos) compila y sus **23 pruebas unitarias pasan**; el portal Angular compila. La verificación en runtime (JDK 21 + Docker) queda lista vía `mvn verify` y `docker compose up`. Ver [`docs/iteracion-13-produccion`](docs/iteracion-13-produccion/).
 
@@ -85,6 +86,7 @@ Guía completa: [`docs/iteracion-13-produccion/01-guia-instalacion-desarrollo.md
 - [`docs/iteracion-12-notificaciones-optimizacion/`](docs/iteracion-12-notificaciones-optimizacion/) — Notificaciones (BC-12), Transactional Outbox y caché Redis
 - [`docs/iteracion-13-produccion/`](docs/iteracion-13-produccion/) — **Guías** (instalación, despliegue), **manuales** (usuario, admin), estrategia de pruebas y checklist de producción
 - [`docs/iteracion-14-contratos/`](docs/iteracion-14-contratos/) — Evaluación de tipos de contrato (proyecto / turno) e impacto del módulo de proyectos
+- [`docs/iteracion-15-importacion-usuarios/`](docs/iteracion-15-importacion-usuarios/) — Importación masiva de usuarios: estructura del archivo, reglas y API
 
 ---
 _Proyecto en construcción iterativa. Ver `promt_001.txt` para la especificación original._

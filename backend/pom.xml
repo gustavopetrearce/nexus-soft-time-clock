@@ -64,6 +64,7 @@
         <module>modules/reporting</module>
         <module>modules/realtime</module>
         <module>modules/notifications</module>
+        <module>modules/onboarding</module>
         <module>bootstrap</module>
     </modules>
 
@@ -148,6 +149,11 @@
             <dependency>
                 <groupId>com.condor.nexussoft.timeclock</groupId>
                 <artifactId>notifications</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.condor.nexussoft.timeclock</groupId>
+                <artifactId>onboarding</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

@@ -35,6 +35,11 @@ public class UserAdminPersistenceAdapter implements UserAdminRepositoryPort {
     }
 
     @Override
+    public boolean existsByTenantAndEmployeeCode(UUID tenantId, String employeeCode) {
+        return users.existsByTenantIdAndEmployeeCode(tenantId, employeeCode);
+    }
+
+    @Override
     public boolean rolesEnableAttendanceRegister(Set<String> roleCodes) {
         if (roleCodes == null || roleCodes.isEmpty()) {
             return false;
@@ -50,7 +55,10 @@ public class UserAdminPersistenceAdapter implements UserAdminRepositoryPort {
         UserJpaEntity entity = new UserJpaEntity(UUID.randomUUID(), tenantId, false, email, passwordHash,
                 firstName, lastName, employeeCode, "ACTIVE");
         entity.setRoles(resolveRoles(roleCodes));
-        return toView(users.save(entity));
+        // Volcado inmediato: el cupo (Tenancy), el perfil (HR) y los turnos (Scheduling) comprueban
+        // la existencia del usuario con SQL directo en la misma transacción, y sin flush no lo verían
+        // (alta en lote de la importación masiva).
+        return toView(users.saveAndFlush(entity));
     }
 
     @Override
