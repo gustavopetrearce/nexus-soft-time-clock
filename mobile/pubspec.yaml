@@ -35,7 +35,7 @@ dependencies:
   # Ubicación y captura
   geolocator: ^13.0.1
   geocoding: ^3.0.0
-  mobile_scanner: ^5.2.3
+  mobile_scanner: ^7.0.0
   # Evidencia fotográfica (RF-18). image_picker delega en la cámara del sistema: no requiere
   # gestionar el ciclo de vida de la cámara ni permisos adicionales a los ya declarados.
   image_picker: ^1.1.2

@@ -84,7 +84,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     controller: _controller,
                     onDetect: _onDetect,
                     // El error se pinta encima del velo (más abajo).
-                    errorBuilder: (context, error, child) => const SizedBox.shrink(),
+                    errorBuilder: (context, error) => const SizedBox.shrink(),
                   ),
                 ),
               ),
