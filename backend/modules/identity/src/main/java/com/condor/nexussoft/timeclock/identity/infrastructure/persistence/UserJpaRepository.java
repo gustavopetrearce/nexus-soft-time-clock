@@ -19,6 +19,8 @@ public interface UserJpaRepository extends JpaRepository<UserJpaEntity, UUID>, J
     // --- Administración de usuarios (BC-01) ---
     boolean existsByTenantIdAndEmail(UUID tenantId, String email);
 
+    boolean existsByTenantIdAndEmployeeCode(UUID tenantId, String employeeCode);
+
     Optional<UserJpaEntity> findByIdAndTenantId(UUID id, UUID tenantId);
 
     Page<UserJpaEntity> findByTenantId(UUID tenantId, Pageable pageable);

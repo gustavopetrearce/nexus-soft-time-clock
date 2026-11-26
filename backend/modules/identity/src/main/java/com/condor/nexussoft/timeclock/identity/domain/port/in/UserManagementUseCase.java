@@ -2,6 +2,7 @@ package com.condor.nexussoft.timeclock.identity.domain.port.in;
 
 import com.condor.nexussoft.timeclock.shared.domain.Paged;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -9,6 +10,13 @@ import java.util.UUID;
 public interface UserManagementUseCase {
 
     UserView create(UUID tenantId, GranterAuthority granter, UserCommands.CreateUserCommand command);
+
+    /**
+     * Alta en lote (importación masiva): mismas reglas que {@link #create} por cada usuario, en la
+     * transacción del llamador. Las contraseñas se cifran en paralelo antes de escribir, porque
+     * BCrypt es lo que domina el tiempo de un lote grande. Devuelve las vistas en el mismo orden.
+     */
+    List<UserView> createAll(UUID tenantId, GranterAuthority granter, List<UserCommands.CreateUserCommand> commands);
 
     UserView get(UUID tenantId, UUID userId);
 

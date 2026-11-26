@@ -76,6 +76,10 @@
             <groupId>com.condor.nexussoft.timeclock</groupId>
             <artifactId>notifications</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.condor.nexussoft.timeclock</groupId>
+            <artifactId>onboarding</artifactId>
+        </dependency>
 
         <!-- Starters de Spring Boot (stack obligatorio) -->
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>

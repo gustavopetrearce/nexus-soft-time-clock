@@ -18,6 +18,8 @@ import com.condor.nexussoft.timeclock.shared.domain.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -43,16 +45,69 @@ public class UserManagementService implements UserManagementUseCase {
     @Override
     @Transactional
     public UserView create(UUID tenantId, GranterAuthority granter, UserCommands.CreateUserCommand command) {
-        String email = Email.of(command.email()).value();
+        NewUser user = prepare(tenantId, granter, command);
+        // El cupo va antes del hash: si está agotado no se gasta el BCrypt ni se toca nada.
+        requireCapacityIfNeeded(tenantId, null, false, ESTADO_INICIAL, user.roles());
+        return insert(tenantId, user, passwordHasher.hash(command.password()));
+    }
+
+    @Override
+    @Transactional
+    public List<UserView> createAll(UUID tenantId, GranterAuthority granter,
+                                    List<UserCommands.CreateUserCommand> commands) {
+        List<NewUser> prepared = commands.stream().map(c -> prepare(tenantId, granter, c)).toList();
+        // BCrypt (~80 ms por hash) es CPU pura y no toca la base: en paralelo, un lote de 1000 baja de
+        // minutos a segundos. toList() de un stream ordenado conserva el orden de entrada.
+        List<String> hashes = commands.parallelStream().map(c -> passwordHasher.hash(c.password())).toList();
+        List<UserView> created = new ArrayList<>(prepared.size());
+        for (int i = 0; i < prepared.size(); i++) {
+            NewUser user = prepared.get(i);
+            // Cupo justo antes de cada escritura, no en prepare(): el adaptador vuelca cada alta a la
+            // base, así que el conteo ya incluye a los anteriores del mismo lote (RN-37).
+            requireCapacityIfNeeded(tenantId, null, false, ESTADO_INICIAL, user.roles());
+            created.add(insert(tenantId, user, hashes.get(i)));
+        }
+        return created;
+    }
+
+    /** Validaciones del alta, sin escribir: correo, número de empleado y potestad sobre los roles. */
+    private NewUser prepare(UUID tenantId, GranterAuthority granter, UserCommands.CreateUserCommand command) {
+        String email = normalizedEmail(command.email());
         if (users.existsByTenantAndEmail(tenantId, email)) {
             throw new DomainException("DUPLICATE_EMAIL", "Ya existe un usuario con el correo " + email);
         }
+        // Un código en blanco se guarda como NULL: el índice único parcial (V2) solo excluye NULL,
+        // así que dos "" chocarían entre sí.
+        String employeeCode = blankToNull(command.employeeCode());
+        if (employeeCode != null && users.existsByTenantAndEmployeeCode(tenantId, employeeCode)) {
+            // Sin esta comprobación el choque llegaba como DataIntegrityViolationException → 500.
+            throw new DomainException("DUPLICATE_EMPLOYEE_CODE",
+                    "Ya existe un usuario con el número de empleado " + employeeCode);
+        }
         Set<String> roles = command.roleCodes() == null ? Set.of() : command.roleCodes();
         RoleGrantPolicy.assertCanGrant(granter.platformAdmin(), granter.roleCodes(), roles);
-        requireCapacityIfNeeded(tenantId, null, false, ESTADO_INICIAL, roles);
-        String passwordHash = passwordHasher.hash(command.password());
-        return users.create(tenantId, email, passwordHash, command.firstName(),
-                command.lastName(), command.employeeCode(), roles);
+        return new NewUser(email, command.firstName(), command.lastName(), employeeCode, roles);
+    }
+
+    private UserView insert(UUID tenantId, NewUser u, String passwordHash) {
+        return users.create(tenantId, u.email(), passwordHash, u.firstName(), u.lastName(),
+                u.employeeCode(), u.roles());
+    }
+
+    private record NewUser(String email, String firstName, String lastName, String employeeCode,
+                           Set<String> roles) {
+    }
+
+    private static String normalizedEmail(String raw) {
+        try {
+            return Email.of(raw).value();
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new DomainException("INVALID_EMAIL", "El correo no es válido: " + raw);
+        }
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     @Override
