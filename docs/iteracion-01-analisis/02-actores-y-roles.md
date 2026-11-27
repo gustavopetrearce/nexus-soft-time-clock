@@ -106,3 +106,11 @@ Formato `recurso:acción`. Acciones: `read`, `create`, `update`, `delete`, `expo
 > El aislamiento **multi-tenant** es transversal a toda la matriz: ningún rol puede acceder a datos
 > de otro tenant, y SUPER_ADMIN directamente no opera sobre datos de tenants. Ver
 > [RN-30..RN-33](04-reglas-de-negocio.md).
+
+## 2.5 Sanciones (V39)
+
+| Permiso | SUPER_ADMIN | COMPANY_ADMIN | HR_ADMIN | SUPERVISOR | AUDITOR | EMPLOYEE |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| `sanction:manage` — abrir, ver y anular sanciones | — | ✅ | ✅ | ✅ | — | — |
+
+El colaborador consulta las suyas (solo lectura) en la app, sin permiso específico (`GET /api/v1/me/sanctions`).

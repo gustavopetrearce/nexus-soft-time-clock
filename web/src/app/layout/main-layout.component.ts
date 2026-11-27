@@ -77,6 +77,7 @@ const NAV: readonly NavGroup[] = [
       { route: '/vacations', icon: 'beach_access', key: 'vacations', permission: 'vacation:approve' },
       { route: '/permits', icon: 'event_busy', key: 'permits', permission: 'permit:manage' },
       { route: '/permits/incapacities', icon: 'personal_injury', key: 'incapacities', permission: 'permit:manage' },
+      { route: '/sanctions', icon: 'gavel', key: 'sanctions', permission: 'sanction:manage' },
     ],
   },
   {

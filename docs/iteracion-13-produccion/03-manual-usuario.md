@@ -35,6 +35,9 @@ En **Mis vacaciones** ves tu saldo y tus solicitudes. Con **Nueva solicitud** el
 ## Descansos
 Al iniciar un descanso eliges su tipo (almuerzo, comida…). Solo puedes elegir los que **tu turno permite** y cada uno **una vez al día**; los demás aparecen deshabilitados con el motivo. Si ya no te queda ninguno, la app te lo indica.
 
+## Mis sanciones
+En **Mis sanciones** ves las amonestaciones, actas administrativas o suspensiones que te registró RR. HH., tu supervisor o el administrador: tipo, motivo, fecha, la descripción de los hechos, el periodo de la suspensión si aplica y si sigue **vigente** o fue **anulada** (con su motivo).
+
 ## Pendientes de sincronizar
 El icono de sincronización muestra cuántos registros están **pendientes**. Puedes forzar la sincronización pulsándolo. Ningún registro se pierde por falta de conexión.
 
