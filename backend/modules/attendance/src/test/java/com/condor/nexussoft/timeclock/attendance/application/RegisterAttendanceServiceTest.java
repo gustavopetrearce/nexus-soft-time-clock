@@ -2,6 +2,7 @@ package com.condor.nexussoft.timeclock.attendance.application;
 
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceEventType;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceSequenceValidator.LastEvent;
+import com.condor.nexussoft.timeclock.attendance.domain.BreakAllowancePolicy;
 import com.condor.nexussoft.timeclock.attendance.domain.BreakType;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.AttendanceResult;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.RegisterAttendanceCommand;
@@ -17,6 +18,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +38,7 @@ class RegisterAttendanceServiceTest {
     @Mock SchedulePolicyPort schedulePolicy;
     @Mock EventTypeConfigPort eventTypeConfig;
     @Mock BreakTypePort breakTypes;
+    @Mock BreakAllowancePort breakAllowance;
     @Mock EvidenceStoragePort evidenceStorage;
     @Mock CompanyPolicyPort companyPolicy;
     @Mock ContractPolicyPort contractPolicy;
@@ -57,11 +60,13 @@ class RegisterAttendanceServiceTest {
     void setUp() {
         service = new RegisterAttendanceService(attendance, idempotency, qrValidation,
                 geofenceCheck, fraudCheck, deviceRecognition, sitePolicy, schedulePolicy,
-                eventTypeConfig, breakTypes, evidenceStorage, companyPolicy, contractPolicy, events, clock,
+                eventTypeConfig, breakTypes, breakAllowance, evidenceStorage, companyPolicy, contractPolicy, events, clock,
                 OFFLINE_MAX_AGE_HOURS,
                 DEFAULT_GPS_ACCURACY_MAX_M);
         lenient().when(contractPolicy.check(any(), any(), any(), any()))
                 .thenReturn(ContractPolicyPort.ContractDecision.none());
+        lenient().when(breakAllowance.find(any(), any(), any(), any()))
+                .thenReturn(BreakAllowancePolicy.Allowance.unrestricted());
         lenient().when(companyPolicy.find(tenantId)).thenReturn(
                 new CompanyPolicyPort.CompanyPolicy(null, false, false, OPEN_SHIFT_HOURS, false));
         // Por defecto el dispositivo es reconocido (device binding no interfiere). Lenient: el caso de
@@ -438,6 +443,38 @@ class RegisterAttendanceServiceTest {
 
         assertThat(result.status()).isEqualTo("ACCEPTED");
         assertThat(savedRecord().breakTypeId()).isEqualTo(almuerzo);
+    }
+
+    @Test
+    void inicioDescanso_conCategoriaYaUsadaHoy_esRechazado() {
+        validationsUpToSequenceStubs();
+        allEventTypesEnabledStub();
+        breakTypesStub();
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.FIN_DESCANSO, siteId, almuerzo)));
+        when(breakAllowance.find(eq(tenantId), eq(userId), any(), eq(serverNow)))
+                .thenReturn(new BreakAllowancePolicy.Allowance(false, Set.of(), Set.of(almuerzo)));
+
+        AttendanceResult result = service.register(tenantId, userId, breakCmd("INICIO_DESCANSO", almuerzo));
+
+        assertThat(result.status()).isEqualTo("REJECTED");
+        assertThat(result.rejectionReason()).isEqualTo("BREAK_ALREADY_USED");
+    }
+
+    @Test
+    void inicioDescanso_queElTurnoNoAdmite_esRechazado() {
+        validationsUpToSequenceStubs();
+        allEventTypesEnabledStub();
+        breakTypesStub();
+        when(attendance.findLastAcceptedEvent(eq(tenantId), eq(userId), any()))
+                .thenReturn(Optional.of(new LastEvent(AttendanceEventType.ENTRADA, siteId)));
+        // Turno nocturno: restringido y sin categorías.
+        when(breakAllowance.find(eq(tenantId), eq(userId), any(), any()))
+                .thenReturn(new BreakAllowancePolicy.Allowance(true, Set.of(), Set.of()));
+
+        AttendanceResult result = service.register(tenantId, userId, breakCmd("INICIO_DESCANSO", almuerzo));
+
+        assertThat(result.rejectionReason()).isEqualTo("BREAK_NOT_ALLOWED_FOR_SHIFT");
     }
 
     @Test

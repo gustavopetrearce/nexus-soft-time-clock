@@ -770,7 +770,15 @@
     "shiftEnd": "End",
     "lateTolerance": "Clock-in tolerance (min)",
     "newShift": "New shift",
-    "collapseShift": "Collapse the shift"
+    "collapseShift": "Collapse the shift",
+    "breakRules": {
+      "restrict": "Limit the breaks of this shift",
+      "allowed": "Allowed breaks",
+      "hint": "Each break can be used once a day. With none selected, the shift allows no breaks (e.g. night shift).",
+      "all": "all breaks",
+      "none": "no breaks",
+      "only": "breaks: {{names}}"
+    }
   },
   "settings": {
     "subtitle": "General company parameters. They apply to the whole tenant.",
@@ -865,7 +873,9 @@
       "BIOMETRIC_REQUIRED": "Missing biometric verification",
       "EVENT_TYPE_DISABLED": "Event type disabled",
       "SITELESS_NOT_ALLOWED": "The company does not allow clocking in without a work site",
-      "INVALID_BREAK_TYPE": "Invalid break type"
+      "INVALID_BREAK_TYPE": "Invalid break type",
+      "BREAK_ALREADY_USED": "Break already used today",
+      "BREAK_NOT_ALLOWED_FOR_SHIFT": "Break not allowed for the shift"
     }
   },
   "attendanceEvents": {

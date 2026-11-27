@@ -7,6 +7,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
 import java.time.LocalTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /** DTOs de turnos. */
@@ -24,7 +27,19 @@ public final class ShiftDtos {
             @PositiveOrZero Integer lateToleranceMin,
             @PositiveOrZero Integer earlyToleranceMin,
             @PositiveOrZero Integer windowBeforeMin,
-            @PositiveOrZero Integer windowAfterMin) {
+            @PositiveOrZero Integer windowAfterMin,
+            /** V38: limitar los descansos a {@code allowedBreakTypeIds}; nulo = no cambiar. */
+            Boolean breaksRestricted,
+            List<UUID> allowedBreakTypeIds) {
+
+        /** Reglas de descanso pedidas, o {@code null} si el cliente no las envía (se conservan). */
+        public SchedulingCommands.BreakRules toBreakRules() {
+            if (breaksRestricted == null) {
+                return null;
+            }
+            return new SchedulingCommands.BreakRules(breaksRestricted,
+                    allowedBreakTypeIds == null ? Set.of() : new HashSet<>(allowedBreakTypeIds));
+        }
 
         /** Convierte el DTO en el comando de dominio aplicando valores por defecto. */
         public SchedulingCommands.ShiftData toData() {
@@ -41,11 +56,13 @@ public final class ShiftDtos {
 
     public record ShiftResponse(UUID id, UUID scheduleId, String name, LocalTime startTime, LocalTime endTime,
                                 boolean crossesMidnight, int breakMinutes, int lateToleranceMin,
-                                int earlyToleranceMin, int windowBeforeMin, int windowAfterMin) {
+                                int earlyToleranceMin, int windowBeforeMin, int windowAfterMin,
+                                boolean breaksRestricted, List<UUID> allowedBreakTypeIds) {
         public static ShiftResponse from(Shift s) {
             return new ShiftResponse(s.id(), s.scheduleId(), s.name(), s.startTime(), s.endTime(),
                     s.crossesMidnight(), s.breakMinutes(), s.lateToleranceMin(), s.earlyToleranceMin(),
-                    s.windowBeforeMin(), s.windowAfterMin());
+                    s.windowBeforeMin(), s.windowAfterMin(), s.breaksRestricted(),
+                    List.copyOf(s.allowedBreakTypeIds()));
         }
     }
 }

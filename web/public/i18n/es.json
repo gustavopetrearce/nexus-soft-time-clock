@@ -770,7 +770,15 @@
     "shiftEnd": "Fin",
     "lateTolerance": "Tolerancia de entrada (min)",
     "newShift": "Nuevo turno",
-    "collapseShift": "Plegar el turno"
+    "collapseShift": "Plegar el turno",
+    "breakRules": {
+      "restrict": "Limitar los descansos de este turno",
+      "allowed": "Descansos permitidos",
+      "hint": "Cada descanso se usa una vez por día. Sin ninguno marcado, el turno no admite descansos (p. ej. nocturno).",
+      "all": "todos los descansos",
+      "none": "sin descansos",
+      "only": "descansos: {{names}}"
+    }
   },
   "settings": {
     "subtitle": "Parámetros generales de la empresa. Aplican a todo el tenant.",
@@ -865,7 +873,9 @@
       "BIOMETRIC_REQUIRED": "Falta verificación biométrica",
       "EVENT_TYPE_DISABLED": "Tipo de evento deshabilitado",
       "SITELESS_NOT_ALLOWED": "La empresa no permite registrar sin centro de trabajo",
-      "INVALID_BREAK_TYPE": "Tipo de descanso no válido"
+      "INVALID_BREAK_TYPE": "Tipo de descanso no válido",
+      "BREAK_ALREADY_USED": "Descanso ya usado hoy",
+      "BREAK_NOT_ALLOWED_FOR_SHIFT": "Descanso no permitido en el turno"
     }
   },
   "attendanceEvents": {

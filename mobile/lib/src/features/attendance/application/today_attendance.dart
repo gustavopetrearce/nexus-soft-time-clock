@@ -9,10 +9,24 @@ import '../domain/attendance_record.dart';
 /// Marcación que sigue en la cola local («Pendiente de enviar», RN-53): aún no tiene hora del
 /// servidor, así que se muestra con la del dispositivo al registrarla.
 class LocalPendingRecord {
-  const LocalPendingRecord({required this.eventType, required this.deviceTime});
+  const LocalPendingRecord({required this.eventType, required this.deviceTime, this.breakTypeId});
 
   final String eventType;
   final DateTime deviceTime;
+
+  /// Categoría del descanso, si es un INICIO_DESCANSO con categoría.
+  final String? breakTypeId;
+}
+
+/// Categorías de descanso iniciadas hoy que aún no llegan al servidor: sin red, el selector las
+/// marca como ya usadas para no ofrecer un segundo almuerzo que se rechazaría al sincronizar.
+Set<String> breakTypesUsedOfflineToday(List<LocalPendingRecord> pending, DateTime now) {
+  final startOfDay = DateTime(now.year, now.month, now.day);
+  return {
+    for (final p in pending)
+      if (p.eventType == 'INICIO_DESCANSO' && p.breakTypeId != null && !p.deviceTime.isBefore(startOfDay))
+        p.breakTypeId!,
+  };
 }
 
 /// Operaciones aún por enviar, de la más reciente a la más antigua.
@@ -26,6 +40,7 @@ Future<List<LocalPendingRecord>> localPendingRecords(AppDatabase db) async {
       out.add(LocalPendingRecord(
         eventType: json['eventType'] as String,
         deviceTime: epoch == null ? row.createdAt : DateTime.fromMillisecondsSinceEpoch(epoch),
+        breakTypeId: json['breakTypeId'] as String?,
       ),);
     } catch (_) {
       // Una fila ilegible no debe tumbar la pantalla: el sync la resolverá o la marcará.

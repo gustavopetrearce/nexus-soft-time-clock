@@ -347,5 +347,14 @@
   "adminVacationsCancelAccepted": "Vacaciones canceladas a petición del colaborador.",
   "adminVacationsCancelDenied": "Cancelación denegada.",
   "vacationsCancelDeniedNote": "Cancelación denegada: {note}",
-  "@vacationsCancelDeniedNote": { "placeholders": {"note": {"type": "String"}} }
+  "@vacationsCancelDeniedNote": { "placeholders": {"note": {"type": "String"}} },
+  "attendanceNoBreaksLeft": "Ya no tienes descansos disponibles hoy en tu turno.",
+  "attendanceBreakUsedToday": "Ya lo usaste hoy",
+  "attendanceBreakNotInShift": "Tu turno no lo permite",
+  "rejectMsgBreakAlreadyUsed": "Ese descanso ya lo usaste hoy. Elige otro si tu turno lo permite.",
+  "rejectMsgBreakNotAllowed": "Tu turno no permite ese descanso.",
+  "rejectBreakAlreadyUsed": "descanso ya usado hoy",
+  "rejectBreakNotAllowed": "descanso no permitido en el turno",
+  "reasonBreakAlreadyUsed": "Descanso ya usado hoy",
+  "reasonBreakNotAllowed": "Descanso no permitido en el turno"
 }

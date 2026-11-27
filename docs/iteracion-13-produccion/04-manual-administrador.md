@@ -43,6 +43,8 @@ Si la empresa agotó su cupo (ver arriba), el alta, la reactivación y la asigna
 ### Horarios y turnos
 `/api/v1/schedules` y `/schedules/{id}/shifts` → definir turnos con tolerancias y ventanas de registro; asignar turnos a colaboradores (`/shift-assignments`).
 
+**Descansos por turno** (V38): si la empresa usa tipos de descanso (almuerzo, comida…), en cada turno puede activarse **Limitar los descansos de este turno** y marcar los permitidos; sin ninguno marcado, el turno no admite descansos. Ejemplo: nocturno sin descansos, matutino almuerzo y comida, vespertino solo comida. Manda el turno de la entrada que abrió la jornada; sin turno asignado se admiten todos. Además, **cada tipo de descanso se usa una vez por día** (el día de la entrada, aunque el colaborador salga y vuelva a entrar): un segundo almuerzo se rechaza con *descanso ya usado hoy* y uno que el turno no admite con *descanso no permitido en el turno*. La secuencia sigue igual: entrada → inicio/fin de descanso → … → salida. API: `breaksRestricted` y `allowedBreakTypeIds` en `/schedules/{id}/shifts`; la app consulta `GET /api/v1/attendance/me/break-options`.
+
 ### Incidencias
 `/api/v1/incidents` → revisar incidencias (retardos, rechazos), **aprobar/rechazar** con comentario. Las incidencias por registro rechazado se crean automáticamente.
 

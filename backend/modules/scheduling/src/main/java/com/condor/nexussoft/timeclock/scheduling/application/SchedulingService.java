@@ -73,21 +73,29 @@ public class SchedulingService implements SchedulingUseCase {
 
     @Override
     @Transactional
-    public Shift createShift(UUID tenantId, UUID scheduleId, SchedulingCommands.ShiftData d) {
+    public Shift createShift(UUID tenantId, UUID scheduleId, SchedulingCommands.ShiftData d,
+                             SchedulingCommands.BreakRules rules) {
         requireSchedule(tenantId, scheduleId);   // valida pertenencia del horario al tenant
         Shift shift = Shift.create(tenantId, scheduleId, d.name(), d.startTime(), d.endTime(),
                 d.crossesMidnight(), d.breakMinutes(), d.lateToleranceMin(), d.earlyToleranceMin(),
                 d.windowBeforeMin(), d.windowAfterMin());
+        if (rules != null) {
+            shift.setBreakRules(rules.restricted(), rules.breakTypeIds());
+        }
         return shifts.save(shift);
     }
 
     @Override
     @Transactional
-    public Shift updateShift(UUID tenantId, UUID shiftId, SchedulingCommands.ShiftData d) {
+    public Shift updateShift(UUID tenantId, UUID shiftId, SchedulingCommands.ShiftData d,
+                             SchedulingCommands.BreakRules rules) {
         Shift shift = shifts.findByIdAndTenant(shiftId, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Turno", shiftId));
         shift.update(d.name(), d.startTime(), d.endTime(), d.crossesMidnight(), d.breakMinutes(),
                 d.lateToleranceMin(), d.earlyToleranceMin(), d.windowBeforeMin(), d.windowAfterMin());
+        if (rules != null) {
+            shift.setBreakRules(rules.restricted(), rules.breakTypeIds());
+        }
         return shifts.update(shift);
     }
 

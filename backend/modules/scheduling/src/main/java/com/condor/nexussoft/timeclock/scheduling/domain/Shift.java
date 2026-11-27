@@ -1,6 +1,7 @@
 package com.condor.nexussoft.timeclock.scheduling.domain;
 
 import java.time.LocalTime;
+import java.util.Set;
 import java.util.UUID;
 
 /** Turno (RF-08): definición horaria con tolerancias y ventana de registro (RN-15, RN-16). */
@@ -18,6 +19,9 @@ public class Shift {
     private int earlyToleranceMin;
     private int windowBeforeMin;
     private int windowAfterMin;
+    /** V38: si el turno limita las categorías de descanso a {@link #allowedBreakTypeIds}. */
+    private boolean breaksRestricted;
+    private Set<UUID> allowedBreakTypeIds = Set.of();
 
     public Shift(UUID id, UUID tenantId, UUID scheduleId, String name, LocalTime startTime, LocalTime endTime,
                  boolean crossesMidnight, int breakMinutes, int lateToleranceMin, int earlyToleranceMin,
@@ -56,6 +60,18 @@ public class Shift {
         this.windowBeforeMin = windowBeforeMin;
         this.windowAfterMin = windowAfterMin;
     }
+
+    /**
+     * Reglas de descanso del turno (V38). Restringido y sin categorías = turno sin descansos; sin
+     * restringir, admite todas (y la lista se descarta).
+     */
+    public void setBreakRules(boolean restricted, Set<UUID> breakTypeIds) {
+        this.breaksRestricted = restricted;
+        this.allowedBreakTypeIds = restricted && breakTypeIds != null ? Set.copyOf(breakTypeIds) : Set.of();
+    }
+
+    public boolean breaksRestricted() { return breaksRestricted; }
+    public Set<UUID> allowedBreakTypeIds() { return allowedBreakTypeIds; }
 
     public UUID id() { return id; }
     public UUID tenantId() { return tenantId; }

@@ -32,6 +32,9 @@ En **Mis vacaciones** ves tu saldo y tus solicitudes. Con **Nueva solicitud** el
 
 **Solicitar cancelación**: si ya enviaste una solicitud (pendiente) o la tienes aprobada y aún no empieza, tócala y pide su cancelación indicando el **motivo** (obligatorio), por ejemplo para reagendar. Verás «Cancelación solicitada, en revisión». Si RR. HH. la acepta, la solicitud queda **cancelada a petición del colaborador** y los días vuelven a tu saldo; si la deniega, sigue como estaba y verás su nota.
 
+## Descansos
+Al iniciar un descanso eliges su tipo (almuerzo, comida…). Solo puedes elegir los que **tu turno permite** y cada uno **una vez al día**; los demás aparecen deshabilitados con el motivo. Si ya no te queda ninguno, la app te lo indica.
+
 ## Pendientes de sincronizar
 El icono de sincronización muestra cuántos registros están **pendientes**. Puedes forzar la sincronización pulsándolo. Ningún registro se pierde por falta de conexión.
 

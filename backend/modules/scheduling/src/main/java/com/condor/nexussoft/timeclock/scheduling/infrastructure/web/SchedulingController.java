@@ -61,7 +61,7 @@ public class SchedulingController {
     @PostMapping("/api/v1/schedules/{scheduleId}/shifts")
     @ResponseStatus(HttpStatus.CREATED)
     public ShiftResponse createShift(@PathVariable UUID scheduleId, @Valid @RequestBody ShiftRequest r) {
-        return ShiftResponse.from(scheduling.createShift(tenant(), scheduleId, r.toData()));
+        return ShiftResponse.from(scheduling.createShift(tenant(), scheduleId, r.toData(), r.toBreakRules()));
     }
 
     @GetMapping("/api/v1/schedules/{scheduleId}/shifts")
@@ -71,7 +71,7 @@ public class SchedulingController {
 
     @PutMapping("/api/v1/shifts/{shiftId}")
     public ShiftResponse updateShift(@PathVariable UUID shiftId, @Valid @RequestBody ShiftRequest r) {
-        return ShiftResponse.from(scheduling.updateShift(tenant(), shiftId, r.toData()));
+        return ShiftResponse.from(scheduling.updateShift(tenant(), shiftId, r.toData(), r.toBreakRules()));
     }
 
     // --- Asignaciones ---

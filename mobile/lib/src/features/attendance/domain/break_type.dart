@@ -26,6 +26,9 @@ class BreakType {
         maxMinutes: json['maxMinutes'] as int?,
       );
 
+  /// Copia con la disponibilidad que devuelve `/attendance/me/break-options` (V38).
+  factory BreakType.fromOptionJson(Map<String, dynamic> json) => BreakType.fromJson({...json, 'enabled': true});
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'code': code,
@@ -34,4 +37,25 @@ class BreakType {
         'paid': paid,
         if (maxMinutes != null) 'maxMinutes': maxMinutes,
       };
+}
+
+/// Disponibilidad de una categoría para la jornada actual (V38): el turno puede no admitirla
+/// (`NOT_ALLOWED_FOR_SHIFT`) o ya se usó hoy (`ALREADY_USED`). El servidor sigue decidiendo al
+/// registrar; esto solo evita ofrecer lo que se rechazaría.
+class BreakOption {
+  const BreakOption({required this.type, this.availability = 'AVAILABLE'});
+
+  final BreakType type;
+
+  /// AVAILABLE | NOT_ALLOWED_FOR_SHIFT | ALREADY_USED
+  final String availability;
+
+  bool get available => availability == 'AVAILABLE';
+
+  factory BreakOption.fromJson(Map<String, dynamic> json) => BreakOption(
+        type: BreakType.fromOptionJson(json),
+        availability: json['availability'] as String? ?? 'AVAILABLE',
+      );
+
+  BreakOption withAvailability(String value) => BreakOption(type: type, availability: value);
 }

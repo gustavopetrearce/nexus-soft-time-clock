@@ -6,6 +6,7 @@ import com.condor.nexussoft.timeclock.attendance.domain.AttendanceSequenceValida
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceSequenceValidator.LastEvent;
 import com.condor.nexussoft.timeclock.attendance.domain.AttendanceStatus;
 import com.condor.nexussoft.timeclock.attendance.domain.BreakType;
+import com.condor.nexussoft.timeclock.attendance.domain.BreakAllowancePolicy;
 import com.condor.nexussoft.timeclock.attendance.domain.BreakTypePolicy;
 import com.condor.nexussoft.timeclock.attendance.domain.EventTypeCatalog;
 import com.condor.nexussoft.timeclock.attendance.domain.RejectionReason;
@@ -59,6 +60,7 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
     private final SchedulePolicyPort schedulePolicy;
     private final EventTypeConfigPort eventTypeConfig;
     private final BreakTypePort breakTypes;
+    private final BreakAllowancePort breakAllowance;
     private final CompanyPolicyPort companyPolicy;
     private final ContractPolicyPort contractPolicy;
     private final AttendanceEventPublisherPort events;
@@ -68,7 +70,8 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
     public RegisterExternalAttendanceService(ExternalIntegrationPort integration, AttendanceRepositoryPort attendance,
                                              IdempotencyStorePort idempotency, WorkSitePolicyPort sitePolicy,
                                              SchedulePolicyPort schedulePolicy, EventTypeConfigPort eventTypeConfig,
-                                             BreakTypePort breakTypes, CompanyPolicyPort companyPolicy,
+                                             BreakTypePort breakTypes, BreakAllowancePort breakAllowance,
+                                             CompanyPolicyPort companyPolicy,
                                              ContractPolicyPort contractPolicy, AttendanceEventPublisherPort events,
                                              Clock clock,
                                              @Value("${attendance.offline.max-age-hours:72}") long maxAgeHours) {
@@ -79,6 +82,7 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
         this.schedulePolicy = schedulePolicy;
         this.eventTypeConfig = eventTypeConfig;
         this.breakTypes = breakTypes;
+        this.breakAllowance = breakAllowance;
         this.companyPolicy = companyPolicy;
         this.contractPolicy = contractPolicy;
         this.events = events;
@@ -165,6 +169,12 @@ public class RegisterExternalAttendanceService implements RegisterExternalAttend
             if (eventType == AttendanceEventType.FIN_DESCANSO) {
                 breakTypeId = BreakTypePolicy.resolve(eventType, null, List.of(), sequence.last(), false)
                         .breakTypeId();
+            }
+            // Límites de descanso (V38), con la hora del evento: solo si el emisor mandó categoría.
+            if (reason == null && eventType == AttendanceEventType.INICIO_DESCANSO && breakTypeId != null) {
+                Instant since = eventTime.minus(companyPolicy.find(tenantId).openShiftMaxHours(), ChronoUnit.HOURS);
+                reason = BreakAllowancePolicy.check(breakTypeId,
+                        breakAllowance.find(tenantId, userId, since, eventTime)).orElse(null);
             }
         }
 

@@ -76,6 +76,8 @@ extension AttendanceL10n on AppLocalizations {
         'EVENT_TYPE_DISABLED' => rejectMsgEventTypeDisabled,
         'SITELESS_NOT_ALLOWED' => rejectMsgSitelessNotAllowed,
         'INVALID_BREAK_TYPE' => rejectMsgInvalidBreakType,
+        'BREAK_ALREADY_USED' => rejectMsgBreakAlreadyUsed,
+        'BREAK_NOT_ALLOWED_FOR_SHIFT' => rejectMsgBreakNotAllowed,
         _ => attendanceNotRegistered(rejectionPhrase(reason)),
       };
 
@@ -106,6 +108,8 @@ extension AttendanceL10n on AppLocalizations {
         'EVENT_TYPE_DISABLED' => rejectEventTypeDisabled,
         'SITELESS_NOT_ALLOWED' => rejectSitelessNotAllowed,
         'INVALID_BREAK_TYPE' => rejectInvalidBreakType,
+        'BREAK_ALREADY_USED' => rejectBreakAlreadyUsed,
+        'BREAK_NOT_ALLOWED_FOR_SHIFT' => rejectBreakNotAllowed,
         null => failureUnknown,
         _ => reason,
       };
@@ -159,6 +163,8 @@ extension AttendanceL10n on AppLocalizations {
       'BIOMETRIC_REQUIRED' => reasonBiometricRequired,
       'EVENT_TYPE_DISABLED' => reasonEventTypeDisabled,
       'INVALID_BREAK_TYPE' => reasonInvalidBreakType,
+      'BREAK_ALREADY_USED' => reasonBreakAlreadyUsed,
+      'BREAK_NOT_ALLOWED_FOR_SHIFT' => reasonBreakNotAllowed,
       _ => prettifyCode(reason),
     };
   }

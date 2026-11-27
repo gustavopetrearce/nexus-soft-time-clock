@@ -62,6 +62,8 @@ class RegisterExternalAttendanceServiceTest {
     @Mock
     private BreakTypePort breakTypes;
     @Mock
+    private BreakAllowancePort breakAllowance;
+    @Mock
     private CompanyPolicyPort companyPolicy;
     @Mock
     private ContractPolicyPort contractPolicy;
@@ -78,10 +80,12 @@ class RegisterExternalAttendanceServiceTest {
     @BeforeEach
     void setUp() {
         service = new RegisterExternalAttendanceService(integration, attendance, idempotency, sitePolicy,
-                schedulePolicy, eventTypeConfig, breakTypes, companyPolicy, contractPolicy, events,
+                schedulePolicy, eventTypeConfig, breakTypes, breakAllowance, companyPolicy, contractPolicy, events,
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 MAX_AGE_HOURS);
         lenient().when(integration.isClientActive(tenantId, clientId)).thenReturn(true);
+        lenient().when(breakAllowance.find(any(), any(), any(), any()))
+                .thenReturn(com.condor.nexussoft.timeclock.attendance.domain.BreakAllowancePolicy.Allowance.unrestricted());
         lenient().when(contractPolicy.check(any(), any(), any(), any()))
                 .thenReturn(ContractPolicyPort.ContractDecision.none());
         lenient().when(idempotency.find(eq(tenantId), any())).thenReturn(Optional.empty());
