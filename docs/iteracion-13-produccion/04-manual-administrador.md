@@ -49,11 +49,13 @@ Si la empresa agotó su cupo (ver arriba), el alta, la reactivación y la asigna
 ### Permisos (entradas tarde, salidas temprano, faltas)
 Portal **Permisos** (`permit:manage`: administrador, RR. HH., supervisor) → **Registrar permiso** para un colaborador: tipo (entrada tarde / salida temprano con la hora autorizada, o falta con rango de fechas), motivo (personal, incapacidad, cita médica, asunto familiar, trámite, otro) y observaciones. El permiso **queda aprobado** al registrarlo; no puede haber dos del mismo tipo traslapados. **Cancelar permiso** es definitivo.
 
+**Solicitudes de incapacidad del colaborador**: desde la app el colaborador solicita una incapacidad (falta con motivo *incapacidad*) con observaciones obligatorias; llega a la bandeja como **Pendiente** («Solicitado por el colaborador»). Quien tiene `permit:manage` la **aprueba** (queda como otorgante) o la **rechaza**, con nota opcional. Pendientes y rechazadas no justifican faltas, no admiten goce ni cancelación; el filtro de estatus *Pendiente* muestra las que faltan por resolver.
+
 **Goce de sueldo** (`permit:pay`, solo **RR. HH.**): al registrar o después, sobre cualquier permiso aprobado —también los que aprobó un supervisor— RR. HH. decide *con goce* o *sin goce* (con nota); mientras no lo haga queda *pendiente de revisión*. La bandeja filtra por goce para encontrar los pendientes.
 
 Efecto en el reporte de asistencia: una falta en un día cubierto por un permiso de falta cuenta como **justificada**, y un retardo en un día con permiso de entrada tarde **no cuenta**. Las incidencias no se modifican.
 
-**Reporte de incapacidades** (Permisos → Incapacidades): faltas con motivo *incapacidad* en el periodo, con goce (con/sin/pendiente), periodo, días y estatus (aprobado/cancelado y vigencia: próxima, en curso, concluida); totales y exportación Excel/PDF/CSV. API: `GET/POST /api/v1/permits`, `PATCH /permits/{id}/cancel`, `PATCH /permits/{id}/pay`, `GET /permits/incapacities`.
+**Reporte de incapacidades** (Permisos → Incapacidades): faltas con motivo *incapacidad* en el periodo, con goce (con/sin/pendiente), periodo, días, estatus (pendiente/aprobado/rechazado/cancelado y vigencia: próxima, en curso, concluida) y la columna **Motivo (observaciones)** con el motivo exacto; totales y exportación Excel/PDF/CSV. API: `GET/POST /api/v1/permits`, `PATCH /permits/{id}/resolve`, `PATCH /permits/{id}/cancel`, `PATCH /permits/{id}/pay`, `GET /permits/incapacities`, `POST /api/v1/me/permits/incapacity` (colaborador).
 
 ### Dashboards y tiempo real
 `/admin/dashboard` → KPIs (asistencias/rechazos del día, incidencias abiertas, usuarios/centros activos). El canal WebSocket (`/ws`, tópico `/topic/tenant/{id}/attendance`) alimenta el mapa/monitor en vivo.

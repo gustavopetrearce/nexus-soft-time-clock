@@ -11,7 +11,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AppDatePipe } from '../../core/i18n/app-date.pipe';
 import { PayStatus, Permit } from './permit.models';
 
-export type PermitDecisionMode = 'pay' | 'cancel';
+export type PermitDecisionMode = 'pay' | 'cancel' | 'approve' | 'reject';
 
 export interface PermitDecisionData {
   mode: PermitDecisionMode;
@@ -25,8 +25,9 @@ export interface PermitDecision {
 }
 
 /**
- * Dos decisiones sobre un permiso ya aprobado, con nota opcional:
+ * Decisiones sobre un permiso, con nota opcional:
  * <ul>
+ *   <li>{@code approve} / {@code reject} — resolver una solicitud de incapacidad del colaborador.</li>
  *   <li>{@code pay} — RR. HH. revisa y decide con o sin goce de sueldo (puede re-decidir).</li>
  *   <li>{@code cancel} — anular el permiso; es definitivo (botón en tono error).</li>
  * </ul>
@@ -46,7 +47,7 @@ export interface PermitDecision {
   template: `
     <div class="nx-capa__enc">
       <h2 class="nx-text-heading-3" mat-dialog-title>
-        {{ (data.mode === 'pay' ? 'permits.payDialog.title' : 'permits.cancelDialog.title') | transloco }}
+        {{ 'permits.' + data.mode + 'Dialog.title' | transloco }}
       </h2>
     </div>
     <form class="nx-capa__cuerpo" [formGroup]="form">
@@ -56,6 +57,9 @@ export interface PermitDecision {
           {{ 'permits.types.' + data.permit.type | transloco }} · {{ 'permits.reasons.' + data.permit.reason | transloco }} ·
           {{ data.permit.startDate | appDate: 'dd/MM/yyyy' }}@if (data.permit.endDate !== data.permit.startDate) { – {{ data.permit.endDate | appDate: 'dd/MM/yyyy' }} }
         </span>
+        @if (data.mode === 'approve' || data.mode === 'reject') {
+          <span class="nx-text-small"><b>{{ 'permits.notes' | transloco }}:</b> {{ data.permit.notes }}</span>
+        }
         @if (data.permit.grantedByName) {
           <span class="nx-sec nx-text-small">{{ 'permits.grantedBy' | transloco }}: {{ data.permit.grantedByName }}</span>
         }
@@ -67,7 +71,7 @@ export interface PermitDecision {
           <mat-radio-button value="WITHOUT_PAY">{{ 'permits.payStatus.WITHOUT_PAY' | transloco }}</mat-radio-button>
         </mat-radio-group>
       } @else {
-        <p class="nx-text-small" style="margin-bottom: var(--nx-space-4)">{{ 'permits.cancelDialog.message' | transloco }}</p>
+        <p class="nx-text-small" style="margin-bottom: var(--nx-space-4)">{{ 'permits.' + data.mode + 'Dialog.message' | transloco }}</p>
       }
 
       <mat-form-field appearance="outline">
@@ -79,9 +83,9 @@ export interface PermitDecision {
       <button mat-button type="button" cdkFocusInitial (click)="ref.close()">
         <mat-icon>close</mat-icon>{{ 'common.cancel' | transloco }}
       </button>
-      <button mat-flat-button type="button" [color]="data.mode === 'cancel' ? 'warn' : 'primary'"
+      <button mat-flat-button type="button" [color]="data.mode === 'cancel' || data.mode === 'reject' ? 'warn' : 'primary'"
               [disabled]="data.mode === 'pay' && !form.controls.payStatus.value" (click)="confirm()">
-        {{ (data.mode === 'pay' ? 'permits.payDialog.submit' : 'permits.cancelDialog.submit') | transloco }}
+        {{ 'permits.' + data.mode + 'Dialog.submit' | transloco }}
       </button>
     </div>
   `,

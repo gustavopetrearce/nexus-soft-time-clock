@@ -148,6 +148,87 @@ class PermitIT extends PostgisIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /** V36: el colaborador solicita una incapacidad con el motivo exacto; el personal la resuelve. */
+    @Test
+    void colaboradorSolicitaIncapacidad_supervisorAprueba_yJustificaSoloAlAprobarse() throws Exception {
+        String emp = token("emp");
+        String sup = token("sup");
+
+        // Sin observaciones → 400; la columna no admite una solicitud sin motivo.
+        mvc.perform(post("/api/v1/me/permits/incapacity").header(HttpHeaders.AUTHORIZATION, "Bearer " + emp)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startDate\":\"2026-11-16\",\"endDate\":\"2026-11-17\",\"notes\":\"  \"}"))
+                .andExpect(status().isBadRequest());
+
+        JsonNode req = json.readTree(mvc.perform(post("/api/v1/me/permits/incapacity")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + emp)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "startDate", "2026-11-16", "endDate", "2026-11-17",
+                                "notes", "Infección estomacal, incapacidad IMSS folio 123"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.reason").value("INCAPACIDAD"))
+                .andExpect(jsonPath("$.requestedByEmployee").value(true))
+                .andExpect(jsonPath("$.grantedByName").doesNotExist())
+                .andReturn().getResponse().getContentAsString());
+        String id = req.get("id").asText();
+
+        // Otra solicitud que se traslapa con la pendiente → 409.
+        mvc.perform(post("/api/v1/me/permits/incapacity").header(HttpHeaders.AUTHORIZATION, "Bearer " + emp)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("startDate", "2026-11-17", "notes", "otra"))))
+                .andExpect(status().isConflict());
+
+        // Pendiente: no se decide goce ni se cancela; el colaborador no puede resolverla.
+        mvc.perform(patch(URL + "/" + id + "/pay").header(HttpHeaders.AUTHORIZATION, "Bearer " + token("hr"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"payStatus\":\"WITH_PAY\"}"))
+                .andExpect(status().isConflict());
+        mvc.perform(patch(URL + "/" + id + "/resolve").header(HttpHeaders.AUTHORIZATION, "Bearer " + emp)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"resolution\":\"APPROVED\"}"))
+                .andExpect(status().isForbidden());
+
+        // La bandeja filtra por pendientes.
+        mvc.perform(get(URL).param("status", "PENDING").header(HttpHeaders.AUTHORIZATION, "Bearer " + sup))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].notes").value("Infección estomacal, incapacidad IMSS folio 123"));
+
+        mvc.perform(patch(URL + "/" + id + "/resolve").header(HttpHeaders.AUTHORIZATION, "Bearer " + sup)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"resolution\":\"APPROVED\",\"note\":\"Comprobante recibido\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.grantedByName").value("Sara Lovelace"))
+                .andExpect(jsonPath("$.resolvedByName").value("Sara Lovelace"))
+                .andExpect(jsonPath("$.resolutionNote").value("Comprobante recibido"));
+        mvc.perform(patch(URL + "/" + id + "/resolve").header(HttpHeaders.AUTHORIZATION, "Bearer " + sup)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"resolution\":\"REJECTED\"}"))
+                .andExpect(status().isConflict());
+
+        // Una segunda solicitud rechazada queda REJECTED y fuera del traslape.
+        String second = json.readTree(mvc.perform(post("/api/v1/me/permits/incapacity")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + emp)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("startDate", "2026-11-25", "notes", "migraña"))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("id").asText();
+        mvc.perform(patch(URL + "/" + second + "/resolve").header(HttpHeaders.AUTHORIZATION, "Bearer " + sup)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"resolution\":\"REJECTED\",\"note\":\"sin comprobante\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"));
+        mvc.perform(post("/api/v1/me/permits/incapacity").header(HttpHeaders.AUTHORIZATION, "Bearer " + emp)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("startDate", "2026-11-25", "notes", "migraña, con receta"))))
+                .andExpect(status().isCreated());
+
+        // El reporte de incapacidades trae el motivo exacto.
+        mvc.perform(get(URL + "/incapacities").param("status", "APPROVED").header(HttpHeaders.AUTHORIZATION, "Bearer " + sup))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].notes").value("Infección estomacal, incapacidad IMSS folio 123"));
+    }
+
     private UUID seedUser(UUID tenant, String alias, String firstName, String code) {
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO users (id, tenant_id, email, password_hash, first_name, last_name, employee_code) "

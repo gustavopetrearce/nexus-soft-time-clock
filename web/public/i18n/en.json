@@ -1143,7 +1143,6 @@
     "payAction": "Pay",
     "cancelAction": "Cancel permit",
     "empty": "No permits recorded.",
-    "alreadyCancelled": "The permit was already cancelled by someone else.",
     "payDecided": "Pay decision saved.",
     "cancelled": "Permit cancelled.",
     "actionError": "The action could not be completed.",
@@ -1161,7 +1160,9 @@
       "OTRO": "Other"
     },
     "status": {
+      "PENDING": "Pending",
       "APPROVED": "Approved",
+      "REJECTED": "Rejected",
       "CANCELLED": "Cancelled"
     },
     "payStatus": {
@@ -1201,7 +1202,24 @@
       "kpi": {
         "total": "Sick leaves",
         "days": "Approved days"
-      }
+      },
+      "notes": "Reason (notes)"
+    },
+    "alreadyResolved": "The permit was already resolved or cancelled by someone else.",
+    "requestedByEmployee": "Requested by the employee",
+    "approveAction": "Approve",
+    "rejectAction": "Reject",
+    "approved": "Request approved.",
+    "rejected": "Request rejected.",
+    "approveDialog": {
+      "title": "Approve sick leave",
+      "message": "Once approved it justifies the absences in the period. HR decides on pay.",
+      "submit": "Approve"
+    },
+    "rejectDialog": {
+      "title": "Reject sick leave",
+      "message": "The employee will see the request as rejected; explain why in the note.",
+      "submit": "Reject"
     }
   },
   "contracts": {

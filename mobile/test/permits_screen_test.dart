@@ -7,8 +7,36 @@ import 'package:nexus_time_clock/src/features/permits/data/permit_repository.dar
 import 'package:nexus_time_clock/src/features/permits/domain/permit_models.dart';
 import 'package:nexus_time_clock/src/features/permits/presentation/permits_screen.dart';
 
-Widget _app(List<MyPermit> permits) => ProviderScope(
-      overrides: [myPermitsProvider.overrideWith((ref) async => permits)],
+/// Repositorio falso: registra lo que se envía en vez de llamar a la API.
+class _FakeRepo implements PermitRepository {
+  final sent = <Map<String, String>>[];
+
+  @override
+  Future<List<MyPermit>> myPermits() async => const [];
+
+  @override
+  Future<MyPermit> requestIncapacity({required String startDate, required String endDate, required String notes}) async {
+    sent.add({'startDate': startDate, 'endDate': endDate, 'notes': notes});
+    return MyPermit(
+      id: 'n1',
+      type: 'ABSENCE',
+      reason: 'INCAPACIDAD',
+      startDate: startDate,
+      endDate: endDate,
+      days: 1,
+      status: 'PENDING',
+      payStatus: 'PENDING_REVIEW',
+      notes: notes,
+      requestedByEmployee: true,
+    );
+  }
+}
+
+Widget _app(List<MyPermit> permits, {PermitRepository? repo}) => ProviderScope(
+      overrides: [
+        myPermitsProvider.overrideWith((ref) async => permits),
+        if (repo != null) permitRepositoryProvider.overrideWithValue(repo),
+      ],
       child: MaterialApp(
         locale: const Locale('es'),
         theme: buildLightTheme(),
@@ -77,5 +105,76 @@ void main() {
     await tester.pumpWidget(_app(const []));
     await tester.pumpAndSettle();
     expect(find.text('No tienes permisos registrados.'), findsOneWidget);
+  });
+
+  testWidgets('una solicitud pendiente muestra su estatus y el motivo, sin goce', (tester) async {
+    await tester.pumpWidget(_app(const [
+      MyPermit(
+        id: 'p3',
+        type: 'ABSENCE',
+        reason: 'INCAPACIDAD',
+        startDate: '2026-11-16',
+        endDate: '2026-11-16',
+        days: 1,
+        status: 'PENDING',
+        payStatus: 'PENDING_REVIEW',
+        notes: 'Gripe, folio 123',
+        requestedByEmployee: true,
+      ),
+      MyPermit(
+        id: 'p4',
+        type: 'ABSENCE',
+        reason: 'INCAPACIDAD',
+        startDate: '2026-11-18',
+        endDate: '2026-11-18',
+        days: 1,
+        status: 'REJECTED',
+        payStatus: 'PENDING_REVIEW',
+        notes: 'Migraña',
+        resolvedByName: 'Sara López',
+        resolutionNote: 'Sin comprobante',
+        requestedByEmployee: true,
+      ),
+    ]));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pendiente'), findsOneWidget);
+    expect(find.text('Rechazado'), findsOneWidget);
+    expect(find.text('Observaciones: Gripe, folio 123'), findsOneWidget);
+    expect(find.text('Nota: Sin comprobante'), findsOneWidget);
+    expect(find.text('Rechazado por Sara López'), findsOneWidget);
+    expect(find.text('Goce pendiente'), findsNothing);
+  });
+
+  testWidgets('solicitar incapacidad exige fechas y observaciones', (tester) async {
+    final repo = _FakeRepo();
+    await tester.pumpWidget(_app(const [], repo: repo));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Solicitar incapacidad').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enviar solicitud'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Escribe el motivo exacto de la incapacidad.'), findsOneWidget);
+    expect(repo.sent, isEmpty);
+
+    // Elegir hoy en ambos selectores y escribir el motivo.
+    for (var i = 0; i < 2; i++) {
+      // Tras elegir la primera, solo queda un marcador "Elige una fecha".
+      await tester.tap(find.text('Elige una fecha').first);
+      await tester.pumpAndSettle();
+      final ok = MaterialLocalizations.of(tester.element(find.byType(DatePickerDialog))).okButtonLabel;
+      await tester.tap(find.text(ok));
+      await tester.pumpAndSettle();
+    }
+    await tester.enterText(find.byType(TextField).last, '  Infección, folio 99  ');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enviar solicitud'));
+    await tester.pumpAndSettle();
+
+    expect(repo.sent, hasLength(1));
+    expect(repo.sent.single['notes'], 'Infección, folio 99');
+    expect(find.text('Solicitud de incapacidad enviada.'), findsOneWidget);
   });
 }

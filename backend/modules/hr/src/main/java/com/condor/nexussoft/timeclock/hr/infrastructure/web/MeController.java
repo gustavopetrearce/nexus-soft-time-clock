@@ -17,6 +17,12 @@ import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.MeDtos.MeContrac
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.MeDtos.MeProfileResponse;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.MeDtos.MeVacationSummaryResponse;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.PermitDtos.PermitResponse;
+import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.PermitDtos.RequestIncapacityRequest;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.VacationDtos.VacationRequestResponse;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -117,6 +123,18 @@ public class MeController {
     public List<PermitResponse> permits(Authentication auth) {
         return PermitController.toResponses(
                 permits.listForUser(CurrentUser.tenantId(auth), CurrentUser.userId(auth)), directory);
+    }
+
+    /**
+     * Solicitud de incapacidad del propio colaborador: nace PENDING y la resuelve quien tiene
+     * {@code permit:manage}. Las observaciones con el motivo exacto son obligatorias.
+     */
+    @PostMapping("/permits/incapacity")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PermitResponse requestIncapacity(@Valid @RequestBody RequestIncapacityRequest body, Authentication auth) {
+        UUID tenantId = CurrentUser.tenantId(auth);
+        return PermitController.toResponses(List.of(permits.requestIncapacity(new PermitUseCase.RequestIncapacityCommand(
+                tenantId, CurrentUser.userId(auth), body.startDate(), body.endDate(), body.notes()))), directory).get(0);
     }
 
     /**

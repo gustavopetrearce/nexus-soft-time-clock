@@ -4,15 +4,18 @@ export type PermitType = 'LATE_ARRIVAL' | 'EARLY_DEPARTURE' | 'ABSENCE';
 /** Motivo (lista fija). INCAPACIDAD alimenta el reporte de incapacidades. */
 export type PermitReason = 'PERSONAL' | 'INCAPACIDAD' | 'MEDICO' | 'FAMILIAR' | 'TRAMITE' | 'OTRO';
 
-/** El permiso nace aprobado; la cancelación es definitiva. */
-export type PermitStatus = 'APPROVED' | 'CANCELLED';
+/**
+ * El registrado por el personal nace aprobado; la solicitud de incapacidad del colaborador nace
+ * pendiente y se aprueba o rechaza. La cancelación (solo de aprobados) es definitiva.
+ */
+export type PermitStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 
 /** Goce de sueldo; lo decide RR. HH. (`permit:pay`). */
 export type PayStatus = 'PENDING_REVIEW' | 'WITH_PAY' | 'WITHOUT_PAY';
 
 export const PERMIT_TYPES: readonly PermitType[] = ['LATE_ARRIVAL', 'EARLY_DEPARTURE', 'ABSENCE'];
 export const PERMIT_REASONS: readonly PermitReason[] = ['PERSONAL', 'INCAPACIDAD', 'MEDICO', 'FAMILIAR', 'TRAMITE', 'OTRO'];
-export const PERMIT_STATUSES: readonly PermitStatus[] = ['APPROVED', 'CANCELLED'];
+export const PERMIT_STATUSES: readonly PermitStatus[] = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'];
 export const PAY_STATUSES: readonly PayStatus[] = ['PENDING_REVIEW', 'WITH_PAY', 'WITHOUT_PAY'];
 
 /** Permiso (espejo de PermitResponse). */
@@ -38,6 +41,11 @@ export interface Permit {
   payDecidedByName?: string;
   payDecidedAt?: string;
   payNote?: string;
+  /** Solicitud del colaborador desde la app (incapacidad). */
+  requestedByEmployee?: boolean;
+  resolvedByName?: string;
+  resolvedAt?: string;
+  resolutionNote?: string;
   createdAt: string;
 }
 

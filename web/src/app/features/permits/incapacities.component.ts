@@ -65,6 +65,7 @@ const PHASE_TONE: Record<PermitPhase, string> = { UPCOMING: 'OPEN', IN_PROGRESS:
       mat-form-field { width: 100%; }
       td { white-space: nowrap; }
       .sub { display: block; }
+      td.notas { white-space: normal; min-width: calc(var(--nx-space-16) * 3); max-width: calc(var(--nx-space-16) * 5); }
       .nx-kpis { margin-bottom: var(--nx-space-4); }
       .nx-kpi__concepto mat-icon { width: var(--nx-icon-size-md); height: var(--nx-icon-size-md); font-size: var(--nx-icon-size-md); }
       .exportar .nx-spin { margin-right: var(--nx-space-gap-inline); vertical-align: middle; }
@@ -187,6 +188,7 @@ const PHASE_TONE: Record<PermitPhase, string> = { UPCOMING: 'OPEN', IN_PROGRESS:
                     <th scope="col" class="nx-col-sec">{{ 'permits.decidedBy' | transloco }}</th>
                     <th scope="col">{{ 'common.status' | transloco }}</th>
                     <th scope="col" class="nx-col-sec">{{ 'permits.grantedBy' | transloco }}</th>
+                    <th scope="col">{{ 'permits.incapacities.notes' | transloco }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -209,6 +211,7 @@ const PHASE_TONE: Record<PermitPhase, string> = { UPCOMING: 'OPEN', IN_PROGRESS:
                         }
                       </td>
                       <td class="nx-col-sec"><span class="nx-trunc">{{ p.grantedByName || '—' }}</span></td>
+                      <td class="notas nx-text-small">{{ p.notes || '—' }}</td>
                     </tr>
                   }
                 </tbody>

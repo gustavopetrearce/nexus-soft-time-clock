@@ -23,6 +23,9 @@ public interface PermitRepositoryPort {
     /** Verdadero si ya hay un permiso APPROVED del mismo tipo que se traslapa con el periodo. */
     boolean overlaps(UUID tenantId, UUID userId, PermitType type, LocalDate start, LocalDate end);
 
+    /** Como {@link #overlaps} pero contando también las solicitudes PENDING. */
+    boolean overlapsApprovedOrPending(UUID tenantId, UUID userId, PermitType type, LocalDate start, LocalDate end);
+
     /** Verdadero si el usuario pertenece al tenant y no es administrador de plataforma. */
     boolean isCollaborator(UUID tenantId, UUID userId);
 }

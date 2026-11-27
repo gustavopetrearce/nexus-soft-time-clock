@@ -43,12 +43,21 @@ import {
 } from './permit.models';
 import { PermitService } from './permit.service';
 
+/** Mensaje de éxito por acción. */
+const DONE_KEY: Record<PermitDecisionMode, string> = {
+  pay: 'permits.payDecided',
+  cancel: 'permits.cancelled',
+  approve: 'permits.approved',
+  reject: 'permits.rejected',
+};
+
 /** Tono del chip de goce: pendiente en aviso, con goce en éxito, sin goce neutro. */
 const PAY_TONE: Record<PayStatus, string> = { PENDING_REVIEW: 'PENDING_REVIEW', WITH_PAY: 'APPROVED', WITHOUT_PAY: 'INACTIVE' };
 
 /**
  * Permisos (portal): entradas tarde, salidas temprano y faltas, en formato de reporte. Los registra
- * admin, RR. HH. o supervisor ({@code permit:manage}) y nacen aprobados. «Goce de sueldo» solo lo
+ * admin, RR. HH. o supervisor ({@code permit:manage}) y nacen aprobados; las solicitudes de
+ * incapacidad que el colaborador envía desde la app llegan pendientes y aquí se aprueban o rechazan. «Goce de sueldo» solo lo
  * ve RR. HH. ({@code permit:pay}), que puede revisar un permiso que aprobó otra persona y decidir
  * con o sin goce. Filtros en el servidor: búsqueda (400 ms), tipo, motivo, goce, estatus y periodo.
  */
@@ -143,7 +152,7 @@ const PAY_TONE: Record<PayStatus, string> = { PENDING_REVIEW: 'PENDING_REVIEW', 
         </div>
 
         @if (conflict()) {
-          <app-alert tone="error">{{ 'permits.alreadyCancelled' | transloco }}</app-alert>
+          <app-alert tone="error">{{ 'permits.alreadyResolved' | transloco }}</app-alert>
         }
 
         @if (!loading() && permits().length === 0) {
@@ -196,11 +205,22 @@ const PAY_TONE: Record<PayStatus, string> = { PENDING_REVIEW: 'PENDING_REVIEW', 
                       </td>
                       <td>
                         <app-status-chip [status]="p.status" [label]="'permits.status.' + p.status | transloco"
-                          [matTooltip]="p.status === 'CANCELLED' ? (p.cancelledByName || '') + (p.cancelNote ? ' — ' + p.cancelNote : '') : ''" />
+                          [matTooltip]="statusTooltip(p)" />
+                        @if (p.requestedByEmployee) { <span class="sub nx-sec nx-text-small">{{ 'permits.requestedByEmployee' | transloco }}</span> }
                       </td>
                       <td class="nx-col-sec"><span class="nx-trunc">{{ p.grantedByName || '—' }}</span></td>
                       <td class="nx-col-sec notas"><span class="nx-trunc" [attr.title]="p.notes || null">{{ p.notes || '—' }}</span></td>
                       <td class="nx-col-acciones">
+                        @if (p.status === 'PENDING' && canManage) {
+                          <span class="nx-acciones-fila">
+                            <button mat-flat-button type="button" [disabled]="savingId() === p.id" (click)="decide(p, 'approve')">
+                              <mat-icon>check</mat-icon>{{ 'permits.approveAction' | transloco }}
+                            </button>
+                            <button mat-button type="button" [disabled]="savingId() === p.id" (click)="decide(p, 'reject')">
+                              {{ 'permits.rejectAction' | transloco }}
+                            </button>
+                          </span>
+                        }
                         @if (p.status === 'APPROVED') {
                           <span class="nx-acciones-fila">
                             @if (canDecidePay) {
@@ -336,6 +356,13 @@ export class PermitsComponent {
     this.applyFilter();
   }
 
+  /** Quién y por qué canceló, aprobó o rechazó. */
+  protected statusTooltip(p: Permit): string {
+    if (p.status === 'CANCELLED') return (p.cancelledByName || '') + (p.cancelNote ? ' — ' + p.cancelNote : '');
+    if (p.resolvedByName) return p.resolvedByName + (p.resolutionNote ? ' — ' + p.resolutionNote : '');
+    return '';
+  }
+
   protected decide(p: Permit, mode: PermitDecisionMode): void {
     this.dialog
       .open<PermitDecisionDialogComponent, unknown, PermitDecision>(PermitDecisionDialogComponent, {
@@ -351,11 +378,13 @@ export class PermitsComponent {
         const call =
           mode === 'pay' && decision.payStatus
             ? this.service.decidePay(p.id, decision.payStatus, decision.note)
-            : this.service.cancel(p.id, decision.note);
+            : mode === 'approve' || mode === 'reject'
+              ? this.service.resolve(p.id, mode === 'approve' ? 'APPROVED' : 'REJECTED', decision.note)
+              : this.service.cancel(p.id, decision.note);
         call.subscribe({
           next: () => {
             this.savingId.set(null);
-            this.notify.success(this.transloco.translate(mode === 'pay' ? 'permits.payDecided' : 'permits.cancelled'));
+            this.notify.success(this.transloco.translate(DONE_KEY[mode]));
             this.reload();
           },
           error: (err: unknown) => {
