@@ -97,7 +97,8 @@
       "settings": "Settings",
       "permits": "Permits",
       "incapacities": "Sick leave",
-      "contracts": "Contracts"
+      "contracts": "Contracts",
+      "sanctions": "Sanctions"
     },
     "closeMenu": "Close menu",
     "home": "Nexus Soft Time Clock: go to Dashboard",
@@ -1305,6 +1306,63 @@
       "message": "Use this only if the contract was registered by mistake. It cannot be undone.",
       "reason": "Reason",
       "submit": "Cancel contract"
+    }
+  },
+  "sanctions": {
+    "newSanction": "Open sanction",
+    "search": "Search employee or number",
+    "collaborator": "Employee",
+    "type": "Type",
+    "reason": "Reason",
+    "incidentDate": "Date of the facts",
+    "description": "Description of the facts",
+    "suspension": "Suspension",
+    "suspensionStart": "Suspension start",
+    "suspensionDays": "Suspension days",
+    "until": "Until",
+    "daysCount": "{{n}} days",
+    "issuedBy": "Opened by",
+    "voidReason": "Void reason",
+    "voidAction": "Void",
+    "voided": "Sanction voided.",
+    "alreadyVoided": "The sanction was already voided by someone else.",
+    "actionError": "The action could not be completed.",
+    "empty": "No sanctions recorded.",
+    "fileName": "sanctions",
+    "sheet": "Sanctions",
+    "types": {
+      "VERBAL_WARNING": "Verbal warning",
+      "WRITTEN_WARNING": "Written warning",
+      "ADMINISTRATIVE_RECORD": "Administrative record",
+      "SUSPENSION": "Suspension"
+    },
+    "reasons": {
+      "TARDINESS": "Tardiness",
+      "UNJUSTIFIED_ABSENCE": "Unjustified absence",
+      "MISCONDUCT": "Misconduct",
+      "POLICY_VIOLATION": "Policy violation",
+      "NEGLIGENCE": "Negligence",
+      "OTHER": "Other"
+    },
+    "status": {
+      "ACTIVE": "In effect",
+      "VOIDED": "Voided"
+    },
+    "dialog": {
+      "title": "Open sanction",
+      "subtitle": "The sanction is in effect once recorded and the employee will see it in the app.",
+      "descriptionHint": "Describe precisely what happened, when and where.",
+      "descriptionRequired": "Describe the facts behind the sanction.",
+      "submit": "Record sanction",
+      "created": "Sanction recorded.",
+      "createError": "The sanction could not be recorded."
+    },
+    "voidDialog": {
+      "title": "Void sanction",
+      "message": "Voiding is final. The employee will see the sanction as voided.",
+      "reason": "Void reason",
+      "reasonRequired": "Give the reason for voiding.",
+      "submit": "Void sanction"
     }
   }
 }

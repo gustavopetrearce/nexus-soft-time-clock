@@ -66,6 +66,9 @@ Efecto en el reporte de asistencia: una falta en un día cubierto por un permiso
 
 **Reporte de incapacidades** (Permisos → Incapacidades): faltas con motivo *incapacidad* en el periodo, con goce (con/sin/pendiente), periodo, días, estatus (pendiente/aprobado/rechazado/cancelado y vigencia: próxima, en curso, concluida) y la columna **Motivo (observaciones)** con el motivo exacto; totales y exportación Excel/PDF/CSV. API: `GET/POST /api/v1/permits`, `PATCH /permits/{id}/resolve`, `PATCH /permits/{id}/cancel`, `PATCH /permits/{id}/pay`, `GET /permits/incapacities`, `POST /api/v1/me/permits/incapacity` (colaborador).
 
+### Sanciones
+Portal **Sanciones** (`sanction:manage`: administrador, RR. HH., supervisor) → **Abrir sanción** a un colaborador: tipo (amonestación verbal, amonestación por escrito, acta administrativa o **suspensión** con fecha de inicio y días), motivo (retardos, falta injustificada, mala conducta, incumplimiento de políticas, negligencia, otro), fecha de los hechos y **descripción obligatoria**. Nace **vigente**; **Anular** exige motivo y es definitivo. Filtros por tipo, motivo, estado y fechas; exportación Excel/PDF/CSV. El colaborador ve sus sanciones en la app (solo lectura). Por ahora la suspensión no reclasifica el reporte de asistencia. API: `GET/POST /api/v1/sanctions`, `GET /sanctions/report`, `PATCH /sanctions/{id}/void`, `GET /api/v1/me/sanctions`.
+
 ### Dashboards y tiempo real
 `/admin/dashboard` → KPIs (asistencias/rechazos del día, incidencias abiertas, usuarios/centros activos). El canal WebSocket (`/ws`, tópico `/topic/tenant/{id}/attendance`) alimenta el mapa/monitor en vivo.
 

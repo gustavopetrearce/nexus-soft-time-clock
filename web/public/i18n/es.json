@@ -97,7 +97,8 @@
       "settings": "Configuración",
       "permits": "Permisos",
       "incapacities": "Incapacidades",
-      "contracts": "Contratos"
+      "contracts": "Contratos",
+      "sanctions": "Sanciones"
     },
     "closeMenu": "Cerrar menú",
     "home": "Nexus Soft Time Clock: ir al Panel",
@@ -1305,6 +1306,63 @@
       "message": "Usa esta opción solo si el contrato se registró por error. Es definitivo.",
       "reason": "Causa",
       "submit": "Cancelar contrato"
+    }
+  },
+  "sanctions": {
+    "newSanction": "Abrir sanción",
+    "search": "Buscar colaborador o número",
+    "collaborator": "Colaborador",
+    "type": "Tipo",
+    "reason": "Motivo",
+    "incidentDate": "Fecha de los hechos",
+    "description": "Descripción de los hechos",
+    "suspension": "Suspensión",
+    "suspensionStart": "Inicio de la suspensión",
+    "suspensionDays": "Días de suspensión",
+    "until": "Hasta el",
+    "daysCount": "{{n}} días",
+    "issuedBy": "Abierta por",
+    "voidReason": "Motivo de anulación",
+    "voidAction": "Anular",
+    "voided": "Sanción anulada.",
+    "alreadyVoided": "La sanción ya fue anulada por otra persona.",
+    "actionError": "No se pudo completar la acción.",
+    "empty": "No hay sanciones registradas.",
+    "fileName": "sanciones",
+    "sheet": "Sanciones",
+    "types": {
+      "VERBAL_WARNING": "Amonestación verbal",
+      "WRITTEN_WARNING": "Amonestación por escrito",
+      "ADMINISTRATIVE_RECORD": "Acta administrativa",
+      "SUSPENSION": "Suspensión"
+    },
+    "reasons": {
+      "TARDINESS": "Retardos",
+      "UNJUSTIFIED_ABSENCE": "Falta injustificada",
+      "MISCONDUCT": "Mala conducta",
+      "POLICY_VIOLATION": "Incumplimiento de políticas",
+      "NEGLIGENCE": "Negligencia",
+      "OTHER": "Otro"
+    },
+    "status": {
+      "ACTIVE": "Vigente",
+      "VOIDED": "Anulada"
+    },
+    "dialog": {
+      "title": "Abrir sanción",
+      "subtitle": "La sanción queda vigente al registrarla y el colaborador la verá en su app.",
+      "descriptionHint": "Describe con precisión qué pasó, cuándo y dónde.",
+      "descriptionRequired": "Describe los hechos que motivan la sanción.",
+      "submit": "Registrar sanción",
+      "created": "Sanción registrada.",
+      "createError": "No se pudo registrar la sanción."
+    },
+    "voidDialog": {
+      "title": "Anular sanción",
+      "message": "La anulación es definitiva. El colaborador verá la sanción como anulada.",
+      "reason": "Motivo de la anulación",
+      "reasonRequired": "Indica el motivo de la anulación.",
+      "submit": "Anular sanción"
     }
   }
 }

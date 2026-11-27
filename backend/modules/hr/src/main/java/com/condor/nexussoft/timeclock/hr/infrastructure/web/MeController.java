@@ -10,6 +10,7 @@ import com.condor.nexussoft.timeclock.hr.domain.VacationStatus;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.ContractUseCase;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.EmployeeProfileUseCase;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.PermitUseCase;
+import com.condor.nexussoft.timeclock.hr.domain.port.in.SanctionUseCase;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.VacationPolicyUseCase;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.VacationRequestUseCase;
 import com.condor.nexussoft.timeclock.hr.infrastructure.persistence.EmployeeDirectoryQuery;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.VacationDtos.RequestVacationCancellation;
+import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.SanctionDtos.SanctionResponse;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.VacationDtos.VacationRequestResponse;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -53,12 +55,15 @@ public class MeController {
     private final VacationPolicyUseCase policies;
     private final VacationRequestUseCase requests;
     private final PermitUseCase permits;
+    private final SanctionUseCase sanctionUseCase;
     private final ContractUseCase contracts;
     private final EmployeeDirectoryQuery directory;
 
     public MeController(EmployeeProfileUseCase profiles, VacationPolicyUseCase policies,
                         VacationRequestUseCase requests, PermitUseCase permits,
-                        ContractUseCase contracts, EmployeeDirectoryQuery directory) {
+                        ContractUseCase contracts, EmployeeDirectoryQuery directory,
+                        SanctionUseCase sanctionUseCase) {
+        this.sanctionUseCase = sanctionUseCase;
         this.contracts = contracts;
         this.profiles = profiles;
         this.policies = policies;
@@ -124,6 +129,13 @@ public class MeController {
         VacationRequest r = requests.requestCancellation(new VacationRequestUseCase.RequestCancellationCommand(
                 CurrentUser.tenantId(auth), id, CurrentUser.userId(auth), body.reason()));
         return VacationController.toResponses(List.of(r), directory).get(0);
+    }
+
+    /** Sanciones propias (V39), vigentes y anuladas, de la más reciente a la más antigua. */
+    @GetMapping("/sanctions")
+    public List<SanctionResponse> sanctions(Authentication auth) {
+        return SanctionController.toResponses(
+                sanctionUseCase.listForUser(CurrentUser.tenantId(auth), CurrentUser.userId(auth)), directory);
     }
 
     /** Permisos propios (entradas tarde, salidas temprano, faltas), con su goce de sueldo. */
