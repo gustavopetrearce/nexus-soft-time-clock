@@ -1,9 +1,11 @@
 package com.condor.nexussoft.timeclock.attendance.infrastructure.web;
 
+import com.condor.nexussoft.timeclock.attendance.domain.port.in.BreakOptionsUseCase;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.CancelAttendanceUseCase;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.CancelAttendanceUseCase.CancelledAttendance;
 import com.condor.nexussoft.timeclock.attendance.domain.port.in.RegisterAttendanceUseCase;
 import com.condor.nexussoft.timeclock.attendance.infrastructure.web.dto.AttendanceResponse;
+import com.condor.nexussoft.timeclock.attendance.infrastructure.web.dto.BreakOptionDto;
 import com.condor.nexussoft.timeclock.attendance.infrastructure.web.dto.AttendanceSummaryResponse;
 import com.condor.nexussoft.timeclock.attendance.infrastructure.web.dto.CancelAttendanceRequest;
 import com.condor.nexussoft.timeclock.attendance.infrastructure.web.dto.RegisterAttendanceRequest;
@@ -30,10 +32,24 @@ public class AttendanceController {
 
     private final RegisterAttendanceUseCase attendance;
     private final CancelAttendanceUseCase cancellation;
+    private final BreakOptionsUseCase breakOptions;
 
-    public AttendanceController(RegisterAttendanceUseCase attendance, CancelAttendanceUseCase cancellation) {
+    public AttendanceController(RegisterAttendanceUseCase attendance, CancelAttendanceUseCase cancellation,
+                                BreakOptionsUseCase breakOptions) {
         this.attendance = attendance;
         this.cancellation = cancellation;
+        this.breakOptions = breakOptions;
+    }
+
+    /**
+     * Categorías de descanso habilitadas con su disponibilidad ahora (V38): las que el turno de la
+     * jornada abierta no admite o que ya se usaron hoy vienen con {@code available=false}.
+     */
+    @GetMapping("/me/break-options")
+    @PreAuthorize("isAuthenticated()")
+    public List<BreakOptionDto> myBreakOptions() {
+        return breakOptions.optionsFor(TenantContext.require(), currentUserId()).stream()
+                .map(BreakOptionDto::from).toList();
     }
 
     @PostMapping

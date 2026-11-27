@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/db/app_database.dart';
 import '../../../core/i18n/l10n.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/location_service.dart';
@@ -65,12 +66,21 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
     // 0) Al iniciar un descanso, su categoría (almuerzo, comida…) si la empresa las define. Se
     //    pregunta antes de abrir la cámara: es una decisión del colaborador, no del QR.
+    //    Solo se pueden elegir las que el turno admite y no se usaron hoy (V38); si no queda
+    //    ninguna, se avisa sin abrir la cámara.
     String? breakTypeId;
     if (eventType == 'INICIO_DESCANSO') {
-      final types = await ref.read(breakTypeServiceProvider).enabled();
+      final pending = await localPendingRecords(ref.read(appDatabaseProvider));
+      final options = await ref
+          .read(breakTypeServiceProvider)
+          .options(usedOffline: breakTypesUsedOfflineToday(pending, DateTime.now()));
       if (!mounted) return;
-      if (types.isNotEmpty) {
-        final chosen = await _pickBreakType(types);
+      if (options.isNotEmpty) {
+        if (!options.any((o) => o.available)) {
+          setState(() => _notice = _Notice(NxTone.info, context.l10n.attendanceNoBreaksLeft));
+          return;
+        }
+        final chosen = await _pickBreakType(options);
         if (!mounted || chosen == null) return;
         breakTypeId = chosen.id;
       }
@@ -153,8 +163,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
   }
 
-  /// Hoja inferior para elegir la categoría del descanso; `null` si el colaborador la cierra.
-  Future<BreakType?> _pickBreakType(List<BreakType> types) {
+  /// Hoja inferior para elegir la categoría del descanso; `null` si el colaborador la cierra. Las no
+  /// disponibles se muestran deshabilitadas con el motivo.
+  Future<BreakType?> _pickBreakType(List<BreakOption> options) {
     final l10n = context.l10n;
     return showModalBottomSheet<BreakType>(
       context: context,
@@ -167,12 +178,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
               child: Text(l10n.attendanceBreakTypeTitle, style: Theme.of(sheetContext).textTheme.titleMedium),
             ),
-            for (final type in types)
+            for (final option in options)
               ListTile(
                 leading: const Icon(Icons.free_breakfast_outlined),
-                title: Text(type.label),
-                subtitle: _breakTypeDetails(l10n, type),
-                onTap: () => Navigator.of(sheetContext).pop(type),
+                title: Text(option.type.label),
+                subtitle: _breakTypeDetails(l10n, option),
+                enabled: option.available,
+                onTap: option.available ? () => Navigator.of(sheetContext).pop(option.type) : null,
               ),
           ],
         ),
@@ -180,8 +192,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     );
   }
 
-  Widget? _breakTypeDetails(AppLocalizations l10n, BreakType type) {
+  Widget? _breakTypeDetails(AppLocalizations l10n, BreakOption option) {
+    final type = option.type;
     final parts = [
+      if (option.availability == 'ALREADY_USED') l10n.attendanceBreakUsedToday,
+      if (option.availability == 'NOT_ALLOWED_FOR_SHIFT') l10n.attendanceBreakNotInShift,
       if (type.maxMinutes != null) l10n.attendanceBreakTypeMax(type.maxMinutes!),
       if (type.paid) l10n.attendanceBreakTypePaid,
     ];

@@ -312,5 +312,14 @@
   "adminVacationsCancelAccepted": "Vacation cancelled at the employee request.",
   "adminVacationsCancelDenied": "Cancellation denied.",
   "vacationsCancelDeniedNote": "Cancellation denied: {note}",
-  "@vacationsCancelDeniedNote": { "placeholders": {"note": {"type": "String"}} }
+  "@vacationsCancelDeniedNote": { "placeholders": {"note": {"type": "String"}} },
+  "attendanceNoBreaksLeft": "You have no breaks left today in your shift.",
+  "attendanceBreakUsedToday": "Already used today",
+  "attendanceBreakNotInShift": "Not allowed in your shift",
+  "rejectMsgBreakAlreadyUsed": "You already used that break today. Pick another one if your shift allows it.",
+  "rejectMsgBreakNotAllowed": "Your shift doesn't allow that break.",
+  "rejectBreakAlreadyUsed": "break already used today",
+  "rejectBreakNotAllowed": "break not allowed for the shift",
+  "reasonBreakAlreadyUsed": "Break already used today",
+  "reasonBreakNotAllowed": "Break not allowed for the shift"
 }

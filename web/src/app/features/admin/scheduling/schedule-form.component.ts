@@ -18,6 +18,8 @@ import { LoadingBarComponent } from '../../../core/ui/loading-bar.component';
 import { NotificationService } from '../../../core/ui/notification.service';
 import { localizedProblem } from '../../../core/ui/problem-detail';
 import { ScrollDirective } from '../../../core/ui/scroll.directive';
+import { BreakTypesService } from '../event-types/break-types.service';
+import { BreakType } from '../event-types/event-type.models';
 import { SCHEDULE_STATUSES, Schedule, Shift, ShiftRequest } from './scheduling.models';
 import { SchedulingService } from './scheduling.service';
 
@@ -147,7 +149,8 @@ type OpenShift = string | 'new' | null;
           <span class="nx-acordeon__res nx-text-numeric">
             {{ 'scheduling.break' | transloco }} {{ s.breakMinutes }} min ·
             {{ 'scheduling.tolerances' | transloco }} {{ s.lateToleranceMin }} / {{ s.earlyToleranceMin }} min ·
-            {{ 'scheduling.windows' | transloco }} {{ s.windowBeforeMin }} / {{ s.windowAfterMin }} min
+            {{ 'scheduling.windows' | transloco }} {{ s.windowBeforeMin }} / {{ s.windowAfterMin }} min ·
+            {{ breaksSummary(s) }}
           </span>
         </div>
         <button
@@ -198,6 +201,18 @@ type OpenShift = string | 'new' | null;
             <mat-label>{{ 'scheduling.windowAfter' | transloco }}</mat-label>
             <input matInput type="number" min="0" formControlName="windowAfterMin" />
           </mat-form-field>
+          @if (breakTypes().length > 0) {
+            <mat-slide-toggle class="nx-campo--ancho" formControlName="breaksRestricted">{{ 'scheduling.breakRules.restrict' | transloco }}</mat-slide-toggle>
+            @if (shiftForm.controls.breaksRestricted.value) {
+              <mat-form-field appearance="outline" class="nx-campo--ancho">
+                <mat-label>{{ 'scheduling.breakRules.allowed' | transloco }}</mat-label>
+                <mat-select multiple formControlName="allowedBreakTypeIds">
+                  @for (b of breakTypes(); track b.id) { <mat-option [value]="b.id">{{ b.label }}</mat-option> }
+                </mat-select>
+                <mat-hint>{{ 'scheduling.breakRules.hint' | transloco }}</mat-hint>
+              </mat-form-field>
+            }
+          }
         </div>
       </div>
     </ng-template>
@@ -216,6 +231,7 @@ export class ScheduleFormComponent {
   private readonly ref = inject<MatDialogRef<ScheduleFormComponent, boolean>>(MatDialogRef);
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(SchedulingService);
+  private readonly breakTypesService = inject(BreakTypesService);
   private readonly notify = inject(NotificationService);
   private readonly transloco = inject(TranslocoService);
 
@@ -224,6 +240,8 @@ export class ScheduleFormComponent {
 
   protected readonly schedule = signal<Schedule | null>(null);
   protected readonly shifts = signal<Shift[]>([]);
+  /** Categorías de descanso habilitadas de la empresa (V30), para las reglas por turno (V38). */
+  protected readonly breakTypes = signal<BreakType[]>([]);
   protected readonly openShift = signal<OpenShift>(null);
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
@@ -253,9 +271,15 @@ export class ScheduleFormComponent {
     earlyToleranceMin: [10],
     windowBeforeMin: [30],
     windowAfterMin: [30],
+    breaksRestricted: [false],
+    allowedBreakTypeIds: [[] as string[]],
   });
 
   constructor() {
+    this.breakTypesService.list().subscribe({
+      next: (list) => this.breakTypes.set(list.filter((b) => b.enabled)),
+      error: () => this.breakTypes.set([]),
+    });
     const id = this.data.scheduleId;
     if (!id) return;
     this.loading.set(true);
@@ -292,6 +316,8 @@ export class ScheduleFormComponent {
             earlyToleranceMin: shift.earlyToleranceMin,
             windowBeforeMin: shift.windowBeforeMin,
             windowAfterMin: shift.windowAfterMin,
+            breaksRestricted: !!shift.breaksRestricted,
+            allowedBreakTypeIds: shift.allowedBreakTypeIds ?? [],
           }
         : undefined,
     );
@@ -328,8 +354,24 @@ export class ScheduleFormComponent {
       });
   }
 
+  /** Resumen de las reglas de descanso para la cabecera del turno. */
+  protected breaksSummary(s: Shift): string {
+    if (!s.breaksRestricted) return this.transloco.translate('scheduling.breakRules.all');
+    const ids = s.allowedBreakTypeIds ?? [];
+    if (ids.length === 0) return this.transloco.translate('scheduling.breakRules.none');
+    const names = this.breakTypes()
+      .filter((b) => b.id && ids.includes(b.id))
+      .map((b) => b.label);
+    return this.transloco.translate('scheduling.breakRules.only', { names: names.join(', ') || ids.length });
+  }
+
   private saveShift(scheduleId: string): Observable<Shift> {
-    const request: ShiftRequest = this.shiftForm.getRawValue();
+    const raw = this.shiftForm.getRawValue();
+    // Sin categorías en la empresa no hay nada que restringir: no se tocan las reglas guardadas.
+    const request: ShiftRequest =
+      this.breakTypes().length > 0
+        ? { ...raw, allowedBreakTypeIds: raw.breaksRestricted ? raw.allowedBreakTypeIds : [] }
+        : { ...raw, breaksRestricted: undefined, allowedBreakTypeIds: undefined };
     const open = this.openShift();
     return open === 'new' || open === null
       ? this.service.createShift(scheduleId, request)

@@ -25,9 +25,21 @@ public interface SchedulingUseCase {
 
     Paged<Schedule> listSchedules(UUID tenantId, int page, int size, String search);
 
-    Shift createShift(UUID tenantId, UUID scheduleId, SchedulingCommands.ShiftData data);
+    default Shift createShift(UUID tenantId, UUID scheduleId, SchedulingCommands.ShiftData data) {
+        return createShift(tenantId, scheduleId, data, null);
+    }
 
-    Shift updateShift(UUID tenantId, UUID shiftId, SchedulingCommands.ShiftData data);
+    /** @param breakRules reglas de descanso (V38); {@code null} = admite todas. */
+    Shift createShift(UUID tenantId, UUID scheduleId, SchedulingCommands.ShiftData data,
+                      SchedulingCommands.BreakRules breakRules);
+
+    default Shift updateShift(UUID tenantId, UUID shiftId, SchedulingCommands.ShiftData data) {
+        return updateShift(tenantId, shiftId, data, null);
+    }
+
+    /** @param breakRules reglas de descanso (V38); {@code null} = se conservan las actuales. */
+    Shift updateShift(UUID tenantId, UUID shiftId, SchedulingCommands.ShiftData data,
+                      SchedulingCommands.BreakRules breakRules);
 
     Shift getShift(UUID tenantId, UUID shiftId);
 

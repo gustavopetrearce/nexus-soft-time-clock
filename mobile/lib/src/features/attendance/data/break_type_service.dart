@@ -34,6 +34,20 @@ class BreakTypeService {
     return all.where((b) => b.enabled).toList();
   }
 
+  /// Categorías con su disponibilidad para la jornada abierta (V38). Sin red, las de la caché como
+  /// disponibles, descontando [usedOffline] (descansos iniciados hoy que siguen en la cola local).
+  Future<List<BreakOption>> options({Set<String> usedOffline = const {}}) async {
+    try {
+      final res = await _dio.get<List<dynamic>>('/attendance/me/break-options');
+      return (res.data ?? const []).cast<Map<String, dynamic>>().map(BreakOption.fromJson).toList();
+    } on DioException {
+      return [
+        for (final t in await enabled())
+          BreakOption(type: t, availability: usedOffline.contains(t.id) ? 'ALREADY_USED' : 'AVAILABLE'),
+      ];
+    }
+  }
+
   Future<void> clearCache() => _prefs.remove(cacheKey);
 
   List<BreakType> _cached() {

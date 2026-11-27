@@ -49,6 +49,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
     private final SchedulePolicyPort schedulePolicy;
     private final EventTypeConfigPort eventTypeConfig;
     private final BreakTypePort breakTypes;
+    private final BreakAllowancePort breakAllowance;
     private final EvidenceStoragePort evidenceStorage;
     private final CompanyPolicyPort companyPolicy;
     private final ContractPolicyPort contractPolicy;
@@ -74,6 +75,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
                                      DeviceRecognitionPort deviceRecognition,
                                      WorkSitePolicyPort sitePolicy, SchedulePolicyPort schedulePolicy,
                                      EventTypeConfigPort eventTypeConfig, BreakTypePort breakTypes,
+                                     BreakAllowancePort breakAllowance,
                                      EvidenceStoragePort evidenceStorage,
                                      CompanyPolicyPort companyPolicy,
                                      ContractPolicyPort contractPolicy,
@@ -92,6 +94,7 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
         this.schedulePolicy = schedulePolicy;
         this.eventTypeConfig = eventTypeConfig;
         this.breakTypes = breakTypes;
+        this.breakAllowance = breakAllowance;
         this.evidenceStorage = evidenceStorage;
         this.companyPolicy = companyPolicy;
         this.contractPolicy = contractPolicy;
@@ -265,6 +268,12 @@ public class RegisterAttendanceService implements RegisterAttendanceUseCase {
             reason = AttendanceSequenceValidator.validate(last, eventType, cmd.workSiteId()).orElse(null);
             if (eventType == AttendanceEventType.FIN_DESCANSO) {
                 breakTypeId = BreakTypePolicy.resolve(eventType, null, List.of(), last, false).breakTypeId();
+            }
+            // 3.55) Límites de descanso (V38): la categoría debe admitirla el turno de la jornada y
+            //        no haberse usado ya ese día.
+            if (reason == null && eventType == AttendanceEventType.INICIO_DESCANSO && breakTypeId != null) {
+                reason = BreakAllowancePolicy.check(breakTypeId,
+                        breakAllowance.find(tenantId, userId, since, now)).orElse(null);
             }
         }
 

@@ -34,6 +34,9 @@ export interface Shift {
   earlyToleranceMin: number;
   windowBeforeMin: number;
   windowAfterMin: number;
+  /** V38: el turno solo admite las categorías de `allowedBreakTypeIds` (ninguna = sin descansos). */
+  breaksRestricted?: boolean;
+  allowedBreakTypeIds?: string[];
 }
 
 export interface ShiftRequest {
@@ -46,6 +49,8 @@ export interface ShiftRequest {
   earlyToleranceMin?: number;
   windowBeforeMin?: number;
   windowAfterMin?: number;
+  breaksRestricted?: boolean;
+  allowedBreakTypeIds?: string[];
 }
 
 export interface Assignment {

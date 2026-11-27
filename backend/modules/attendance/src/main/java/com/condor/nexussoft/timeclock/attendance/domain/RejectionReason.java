@@ -19,5 +19,9 @@ public enum RejectionReason {
     /** Categoría de descanso ausente (si la empresa las exige), desconocida o deshabilitada (V30). */
     INVALID_BREAK_TYPE,
     /** La empresa no admite registrar sin centro de trabajo (V25). */
-    SITELESS_NOT_ALLOWED
+    SITELESS_NOT_ALLOWED,
+    /** Esa categoría de descanso ya se usó en el día de la jornada (V38). */
+    BREAK_ALREADY_USED,
+    /** El turno de la jornada no admite esa categoría de descanso (V38). */
+    BREAK_NOT_ALLOWED_FOR_SHIFT
 }
