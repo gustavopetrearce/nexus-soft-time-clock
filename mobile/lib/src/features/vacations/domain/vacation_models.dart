@@ -23,7 +23,9 @@ class VacationSummary {
       );
 }
 
-/// Una solicitud de vacaciones del colaborador (espejo de VacationRequestResponse).
+/// Una solicitud de vacaciones del colaborador (espejo de VacationRequestResponse). Puede llevar
+/// una solicitud de cancelación propia (`cancelRequest*`): PENDING mientras RR. HH. la revisa,
+/// ACCEPTED (status pasa a CANCELLED) o DENIED.
 class MyVacationRequest {
   const MyVacationRequest({
     required this.id,
@@ -33,6 +35,10 @@ class MyVacationRequest {
     required this.status,
     this.reason,
     this.resolutionNote,
+    this.cancelRequestStatus,
+    this.cancelRequestReason,
+    this.cancelResolutionNote,
+    this.canRequestCancellation = false,
   });
 
   final String id;
@@ -43,6 +49,16 @@ class MyVacationRequest {
   final String? reason;
   final String? resolutionNote;
 
+  /// null | PENDING | ACCEPTED | DENIED
+  final String? cancelRequestStatus;
+  final String? cancelRequestReason;
+  final String? cancelResolutionNote;
+
+  /// Aún se puede pedir cancelarla (pendiente, o aprobada que no empieza); lo decide el backend.
+  final bool canRequestCancellation;
+
+  bool get cancellationPending => cancelRequestStatus == 'PENDING';
+
   factory MyVacationRequest.fromJson(Map<String, dynamic> j) => MyVacationRequest(
         id: j['id'] as String? ?? '',
         startDate: j['startDate'] as String? ?? '',
@@ -51,5 +67,9 @@ class MyVacationRequest {
         status: j['status'] as String? ?? 'PENDING',
         reason: j['reason'] as String?,
         resolutionNote: j['resolutionNote'] as String?,
+        cancelRequestStatus: j['cancelRequestStatus'] as String?,
+        cancelRequestReason: j['cancelRequestReason'] as String?,
+        cancelResolutionNote: j['cancelResolutionNote'] as String?,
+        canRequestCancellation: j['canRequestCancellation'] as bool? ?? false,
       );
 }

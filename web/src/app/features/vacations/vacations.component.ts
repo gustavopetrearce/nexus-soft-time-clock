@@ -22,17 +22,23 @@ import { NotificationService } from '../../core/ui/notification.service';
 import { PageHeaderComponent } from '../../core/ui/page-header.component';
 import { ScrollDirective } from '../../core/ui/scroll.directive';
 import { StatusChipComponent } from '../../core/ui/status-chip.component';
-import { VacationRequest, VacationResolution, VacationStatus } from './vacation.models';
+import { Observable } from 'rxjs';
+
+import { CancellationResolution, VacationRequest, VacationResolution, VacationStatus } from './vacation.models';
 import { VacationService } from './vacation.service';
 import { VacationRequestDialogComponent } from './vacation-request-dialog.component';
 import { openDrawer } from '../../core/ui/drawer';
 
-const STATUSES: readonly (VacationStatus | '')[] = ['PENDING', 'APPROVED', 'REJECTED', ''];
+/** Filtro de la bandeja: un estado, "con cancelación solicitada" o todas. */
+type InboxFilter = VacationStatus | 'CANCELLATION' | '';
+const STATUSES: readonly InboxFilter[] = ['PENDING', 'CANCELLATION', 'APPROVED', 'REJECTED', 'CANCELLED', ''];
 
 /**
  * P19 · Bandeja de vacaciones (portal): buscador de colaborador (en el servidor, con espera de
  * 400 ms) y estado (pendientes por defecto); Aprobar y Rechazar en la propia fila, sin confirmación.
- * Si otra persona ya la resolvió (409) se avisa arriba del listado y se recarga.
+ * Si el colaborador pidió cancelarla, la fila muestra su motivo y suma «Aceptar cancelación»
+ * (y «Denegar cancelación» cuando ya estaba aprobada). Rechazada = negativa de la empresa;
+ * cancelada = a petición del colaborador. Si otra persona ya la resolvió (409) se avisa y se recarga.
  */
 @Component({
   selector: 'app-vacations',
@@ -60,6 +66,7 @@ const STATUSES: readonly (VacationStatus | '')[] = ['PENDING', 'APPROVED', 'REJE
       mat-form-field { width: 100%; }
       td { white-space: nowrap; }
       td.motivo .nx-trunc { max-width: calc(var(--nx-space-16) * 4); }
+      .cancelacion { display: block; margin-top: var(--nx-space-1); max-width: calc(var(--nx-space-16) * 4); white-space: normal; }
     `,
   ],
   template: `
@@ -125,18 +132,39 @@ const STATUSES: readonly (VacationStatus | '')[] = ['PENDING', 'APPROVED', 'REJE
                       <td class="num nx-text-numeric">{{ v.endDate | appDate: 'dd/MM/yyyy' }}</td>
                       <td class="num nx-text-numeric">{{ v.days | appNumber }}</td>
                       <td class="nx-col-sec motivo"><span class="nx-trunc" [attr.title]="v.reason || null">{{ v.reason || '—' }}</span></td>
-                      <td><app-status-chip [status]="v.status" [label]="'vacations.status.' + v.status | transloco" /></td>
+                      <td>
+                        <app-status-chip [status]="v.status" [label]="'vacations.status.' + v.status | transloco"
+                          [attr.title]="v.resolvedByName ? v.resolvedByName + (v.resolutionNote ? ' — ' + v.resolutionNote : '') : null" />
+                        @if (v.cancelRequestStatus === 'PENDING') {
+                          <span class="cancelacion nx-text-small">
+                            <app-status-chip status="PENDING_REVIEW" [label]="'vacations.cancellation.requested' | transloco" />
+                            <span class="nx-sec"> {{ v.cancelRequestReason }}</span>
+                          </span>
+                        } @else if (v.cancelRequestStatus === 'DENIED') {
+                          <span class="cancelacion nx-text-small nx-sec">{{ 'vacations.cancellation.denied' | transloco }}</span>
+                        }
+                      </td>
                       <td class="nx-col-acciones">
-                        @if (v.status === 'PENDING') {
-                          <span class="nx-acciones-fila">
+                        <span class="nx-acciones-fila">
+                          @if (v.status === 'PENDING') {
                             <button mat-stroked-button type="button" [disabled]="savingId() === v.id" (click)="resolve(v, 'REJECTED')">
                               {{ 'vacations.reject' | transloco }}
                             </button>
                             <button mat-flat-button type="button" [disabled]="savingId() === v.id" (click)="resolve(v, 'APPROVED')">
                               {{ 'vacations.approve' | transloco }}
                             </button>
-                          </span>
-                        }
+                          }
+                          @if (v.cancelRequestStatus === 'PENDING') {
+                            @if (v.status === 'APPROVED') {
+                              <button mat-stroked-button type="button" [disabled]="savingId() === v.id" (click)="resolveCancellation(v, 'DENIED')">
+                                {{ 'vacations.cancellation.deny' | transloco }}
+                              </button>
+                            }
+                            <button mat-flat-button color="warn" type="button" [disabled]="savingId() === v.id" (click)="resolveCancellation(v, 'ACCEPTED')">
+                              {{ 'vacations.cancellation.accept' | transloco }}
+                            </button>
+                          }
+                        </span>
                       </td>
                     </tr>
                   }
@@ -179,7 +207,7 @@ export class VacationsComponent {
   protected readonly total = signal(0);
 
   protected readonly searchControl = this.fb.nonNullable.control('');
-  protected readonly statusFilter = this.fb.nonNullable.control<VacationStatus | ''>('PENDING');
+  protected readonly statusFilter = this.fb.nonNullable.control<InboxFilter>('PENDING');
 
   constructor() {
     debouncedSearch(this.searchControl.valueChanges)
@@ -203,7 +231,9 @@ export class VacationsComponent {
     this.loading.set(true);
     this.error.set(false);
     const search = this.searchControl.value.trim() || undefined;
-    this.service.list(this.page(), this.size(), this.statusFilter.value, search).subscribe({
+    const filter = this.statusFilter.value;
+    const cancellation = filter === 'CANCELLATION';
+    this.service.list(this.page(), this.size(), cancellation ? '' : filter, search, cancellation).subscribe({
       next: (result) => {
         this.requests.set(result.content);
         this.total.set(result.totalElements);
@@ -236,12 +266,25 @@ export class VacationsComponent {
 
   /** Sin confirmación (HIFI/08 R3): la decisión se toma desde la fila. */
   protected resolve(v: VacationRequest, resolution: VacationResolution): void {
+    this.run(v, this.service.resolve(v.id, { resolution }), resolution === 'APPROVED' ? 'vacations.approved' : 'vacations.rejected');
+  }
+
+  /** Aceptar o denegar la cancelación que pidió el colaborador. */
+  protected resolveCancellation(v: VacationRequest, resolution: CancellationResolution): void {
+    this.run(
+      v,
+      this.service.resolveCancellation(v.id, resolution),
+      resolution === 'ACCEPTED' ? 'vacations.cancellation.accepted' : 'vacations.cancellation.deniedDone',
+    );
+  }
+
+  private run(v: VacationRequest, call: Observable<VacationRequest>, successKey: string): void {
     this.savingId.set(v.id);
     this.alreadyResolved.set(false);
-    this.service.resolve(v.id, { resolution }).subscribe({
+    call.subscribe({
       next: () => {
         this.savingId.set(null);
-        this.notify.success(this.transloco.translate(resolution === 'APPROVED' ? 'vacations.approved' : 'vacations.rejected'));
+        this.notify.success(this.transloco.translate(successKey));
         this.reload();
       },
       error: (err: unknown) => {

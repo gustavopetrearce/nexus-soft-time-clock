@@ -46,6 +46,13 @@ Si la empresa agotó su cupo (ver arriba), el alta, la reactivación y la asigna
 ### Incidencias
 `/api/v1/incidents` → revisar incidencias (retardos, rechazos), **aprobar/rechazar** con comentario. Las incidencias por registro rechazado se crean automáticamente.
 
+### Vacaciones
+Portal **Vacaciones** (`vacation:approve`) y app (**Aprobar vacaciones**): la bandeja muestra las pendientes; **Aprobar** o **Rechazar** (rechazada = *negativa de la empresa*). El colaborador puede pedir **cancelar** una solicitud pendiente o una aprobada que aún no empieza, con motivo obligatorio; el filtro **Con cancelación solicitada** (pestaña *Cancelaciones* en la app) las reúne:
+- Pendiente con cancelación pedida: **Aprobar**, **Rechazar** o **Aceptar cancelación**. Aprobar o rechazar deniega la cancelación.
+- Aprobada con cancelación pedida: **Aceptar cancelación** (los días se liberan) o **Denegar cancelación** (sigue aprobada).
+
+*Cancelada* significa siempre «a petición del colaborador». API: `PATCH /api/v1/vacations/requests/{id}/resolve`, `PATCH /vacations/requests/{id}/cancellation/resolve`, `GET /vacations/requests?cancellation=PENDING`, `POST /api/v1/me/vacations/{id}/cancellation` (colaborador).
+
 ### Permisos (entradas tarde, salidas temprano, faltas)
 Portal **Permisos** (`permit:manage`: administrador, RR. HH., supervisor) → **Registrar permiso** para un colaborador: tipo (entrada tarde / salida temprano con la hora autorizada, o falta con rango de fechas), motivo (personal, incapacidad, cita médica, asunto familiar, trámite, otro) y observaciones. El permiso **queda aprobado** al registrarlo; no puede haber dos del mismo tipo traslapados. **Cancelar permiso** es definitivo.
 

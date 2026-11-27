@@ -25,6 +25,14 @@ class VacationsScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _openCancel(BuildContext context, WidgetRef ref, MyVacationRequest request) async {
+    final sent = await showNxHoja<bool>(context, (_) => VacationCancelSheet(request: request));
+    if (sent == true && context.mounted) {
+      _reload(ref);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.vacationsCancelSent)));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(vacationSummaryProvider);
@@ -58,7 +66,13 @@ class VacationsScreen extends ConsumerWidget {
                   if (requests.value!.isEmpty)
                     NxEstadoVacio(icon: Icons.beach_access_outlined, title: l10n.vacationsEmpty)
                   else
-                    NxLista(children: [for (final r in requests.value!) _RequestTile(request: r)]),
+                    NxLista(children: [
+                      for (final r in requests.value!)
+                        _RequestTile(
+                          request: r,
+                          onTap: r.canRequestCancellation ? () => _openCancel(context, ref, r) : null,
+                        ),
+                    ]),
                 ],
               ],
             ],
@@ -147,21 +161,128 @@ class _Stat extends StatelessWidget {
   }
 }
 
-/// Fila de una solicitud (R2): periodo, días y chip de estado.
+/// Fila de una solicitud (R2): periodo, días, chip de estado y, si aplica, el estado de la
+/// cancelación pedida. Tocable solo si aún se puede pedir cancelarla.
 class _RequestTile extends StatelessWidget {
-  const _RequestTile({required this.request});
+  const _RequestTile({required this.request, this.onTap});
   final MyVacationRequest request;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final r = request;
+    final denialNote = r.cancelResolutionNote?.trim();
     return NxListaFila(
       title: Text(
-        '${fullIsoDate(context, request.startDate)} – ${fullIsoDate(context, request.endDate)}',
+        '${fullIsoDate(context, r.startDate)} – ${fullIsoDate(context, r.endDate)}',
         style: const TextStyle(fontFeatures: [NxTokens.fontFeatureTabular]),
       ),
-      subtitle: [Text(l10n.vacationsDays(request.days))],
-      trailing: NxChip(label: vacationStatusLabel(l10n, request.status), tone: vacationStatusTone(request.status)),
+      subtitle: [
+        Text(l10n.vacationsDays(r.days)),
+        if (r.cancellationPending) Text(l10n.vacationsCancelPending),
+        if (r.cancelRequestStatus == 'DENIED')
+          Text(denialNote == null || denialNote.isEmpty ? l10n.vacationsCancelDenied : l10n.vacationsCancelDeniedNote(denialNote)),
+        if (r.status == 'REJECTED' && (r.resolutionNote ?? '').trim().isNotEmpty) Text(r.resolutionNote!.trim()),
+        if (onTap != null) Text(l10n.vacationsCancelHint),
+      ],
+      trailing: NxChip(label: vacationStatusLabel(l10n, r.status), tone: vacationStatusTone(r.status)),
+      onTap: onTap,
+    );
+  }
+}
+
+/// Solicitud de cancelación de unas vacaciones propias, en hoja inferior: motivo obligatorio
+/// (reagendar, ya no viaja…). Devuelve `true` por [Navigator.pop] si se envió.
+class VacationCancelSheet extends ConsumerStatefulWidget {
+  const VacationCancelSheet({super.key, required this.request});
+  final MyVacationRequest request;
+
+  static const reasonMaxLength = 500;
+
+  @override
+  ConsumerState<VacationCancelSheet> createState() => _VacationCancelSheetState();
+}
+
+class _VacationCancelSheetState extends ConsumerState<VacationCancelSheet> {
+  final _reason = TextEditingController();
+  bool _saving = false;
+  bool _attempted = false;
+  String? _serverError;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  bool get _missingReason => _reason.text.trim().isEmpty;
+
+  Future<void> _submit() async {
+    if (_saving) return;
+    setState(() => _attempted = true);
+    if (_missingReason) return;
+    setState(() {
+      _saving = true;
+      _serverError = null;
+    });
+    try {
+      await ref.read(vacationRepositoryProvider).requestCancellation(widget.request.id, reason: _reason.text.trim());
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      final l10n = context.l10n;
+      setState(() {
+        _saving = false;
+        // 409: ya se resolvió, ya empezó o ya hay una cancelación en revisión.
+        _serverError = e is DioException && e.response?.statusCode == 409 ? l10n.vacationsCancelConflict : l10n.vacationsCancelError;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final r = widget.request;
+    return NxHoja(
+      title: l10n.vacationsCancelTitle,
+      closeLabel: l10n.commonClose,
+      body: [
+        if (_serverError != null) NxAviso(key: ValueKey(_serverError), tone: NxTone.error, message: _serverError!),
+        NxDatoBloque(
+          label: l10n.adminVacationsPeriod,
+          value: '${fullIsoDate(context, r.startDate)} – ${fullIsoDate(context, r.endDate)}',
+        ),
+        NxDatoBloque(
+          label: l10n.adminVacationsStatus,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: NxChip(label: vacationStatusLabel(l10n, r.status), tone: vacationStatusTone(r.status)),
+          ),
+        ),
+        Text(l10n.vacationsCancelExplain, style: Theme.of(context).textTheme.bodyMedium),
+        NxCampo(
+          label: l10n.vacationsCancelReasonLabel,
+          hint: l10n.vacationsCancelReasonHint,
+          required: true,
+          controller: _reason,
+          errorText: _attempted && _missingReason ? l10n.vacationsCancelReasonRequired : null,
+          onChanged: (_) {
+            if (_attempted) setState(() {});
+          },
+          maxLength: VacationCancelSheet.reasonMaxLength,
+          minLines: 3,
+          maxLines: 6,
+          keyboardType: TextInputType.multiline,
+          textCapitalization: TextCapitalization.sentences,
+        ),
+      ],
+      footer: NxBoton(
+        label: l10n.vacationsCancelSubmit,
+        busy: _saving,
+        block: true,
+        onPressed: _submit,
+      ),
     );
   }
 }

@@ -15,6 +15,8 @@ class AdminVacationRequest {
     this.resolvedBy,
     this.resolvedAt,
     this.createdAt,
+    this.cancelRequestStatus,
+    this.cancelRequestReason,
   });
 
   final String id;
@@ -31,7 +33,12 @@ class AdminVacationRequest {
   final String? resolvedAt;
   final String? createdAt;
 
+  /// null | PENDING | ACCEPTED | DENIED: cancelación pedida por el colaborador.
+  final String? cancelRequestStatus;
+  final String? cancelRequestReason;
+
   bool get isPending => status == 'PENDING';
+  bool get cancellationPending => cancelRequestStatus == 'PENDING';
 
   /// Nombre a mostrar: prioriza el nombre del colaborador, cae al id si no viene.
   String get displayName => (userName != null && userName!.isNotEmpty) ? userName! : userId;
@@ -50,6 +57,8 @@ class AdminVacationRequest {
         resolvedBy: j['resolvedBy'] as String?,
         resolvedAt: j['resolvedAt'] as String?,
         createdAt: j['createdAt'] as String?,
+        cancelRequestStatus: j['cancelRequestStatus'] as String?,
+        cancelRequestReason: j['cancelRequestReason'] as String?,
       );
 }
 

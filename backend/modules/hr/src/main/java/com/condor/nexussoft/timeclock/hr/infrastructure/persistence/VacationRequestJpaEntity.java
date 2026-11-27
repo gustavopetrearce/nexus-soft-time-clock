@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.hr.infrastructure.persistence;
 
+import com.condor.nexussoft.timeclock.hr.domain.VacationRequest;
 import com.condor.nexussoft.timeclock.hr.domain.VacationStatus;
 import jakarta.persistence.*;
 import java.time.LocalDate;
@@ -43,6 +44,14 @@ public class VacationRequestJpaEntity {
     private String resolutionNote;
     private UUID resolvedBy;
     private OffsetDateTime resolvedAt;
+
+    @Enumerated(EnumType.STRING)
+    private VacationRequest.CancellationStatus cancelRequestStatus;
+    private String cancelRequestReason;
+    private OffsetDateTime cancelRequestedAt;
+    private UUID cancelResolvedBy;
+    private OffsetDateTime cancelResolvedAt;
+    private String cancelResolutionNote;
 
     @Column(updatable = false)
     private OffsetDateTime createdAt;
