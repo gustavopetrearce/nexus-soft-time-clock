@@ -40,7 +40,7 @@ Formato `recurso:acción`. Acciones: `read`, `create`, `update`, `delete`, `expo
 | `worksite:manage` | Gestión de centros de trabajo |
 | `project:manage` | Gestión de proyectos |
 | `schedule:manage` | Gestión de horarios y turnos |
-| `geofence:manage` | Gestión de geocercas |
+| `geofence:manage` | Gestión de geocercas y generación/rotación de QR (por centro y de empresa) |
 | `attendance:read` | Consulta de asistencias del ámbito autorizado |
 | `attendance:register` | Registrar asistencia propia (EMPLOYEE) |
 | `incident:approve` | Aprobar/rechazar incidencias |
@@ -48,6 +48,12 @@ Formato `recurso:acción`. Acciones: `read`, `create`, `update`, `delete`, `expo
 | `audit:read` | Consultar bitácora de auditoría |
 | `dashboard:read` | Ver dashboards y mapa en tiempo real |
 | `sync:read` | Ver estado de sincronización |
+| `vacation:request` | Solicitar vacaciones propias |
+| `vacation:approve` | Aprobar/rechazar solicitudes de vacaciones |
+| `vacation:manage` | Configurar la política de vacaciones |
+| `permit:manage` | Registrar, ver y cancelar permisos de colaboradores |
+| `permit:pay` | Decidir el goce de sueldo de un permiso |
+| `contract:manage` | Gestionar contratos (proyecto/turno) de colaboradores |
 
 ## 2.4 Matriz de autorización (resumen)
 
@@ -57,10 +63,10 @@ Formato `recurso:acción`. Acciones: `read`, `create`, `update`, `delete`, `expo
 | `company:capacity` | ✅ | — | — | — | — | — |
 | `user:manage` | — | ✅ | — | — | — | — |
 | `role:manage` | — | ✅ | — | — | — | — |
-| `worksite:manage` | — | ✅ | — | — | — | — |
+| `worksite:manage` | — | ✅ | ✅ | — | — | — |
 | `project:manage` | — | ✅ | ✅ | — | — | — |
 | `schedule:manage` | — | ✅ | ✅ | — | — | — |
-| `geofence:manage` | — | ✅ | — | — | — | — |
+| `geofence:manage` | — | ✅ | ✅ | — | — | — |
 | `attendance:read` | — | ✅ | ✅ | ✅ (su ámbito) | — | ✅ (propia) |
 | `attendance:register` | — | — | — | — | — | ✅ |
 | `incident:approve` | — | ✅ | ✅ | ✅ (su ámbito) | — | — |
@@ -68,6 +74,15 @@ Formato `recurso:acción`. Acciones: `read`, `create`, `update`, `delete`, `expo
 | `audit:read` | — | ✅ | — | — | ✅ | — |
 | `dashboard:read` | — | ✅ | ✅ | ✅ (su ámbito) | — | — |
 | `sync:read` | — | ✅ | — | ✅ | — | — |
+| `vacation:request` | — | ✅ | ✅ | — | — | ✅ |
+| `vacation:approve` | — | ✅ | ✅ | ✅ | — | — |
+| `vacation:manage` | — | ✅ | ✅ | — | — | — |
+| `permit:manage` | — | ✅ | ✅ | ✅ | — | — |
+| `permit:pay` | — | — | ✅ | — | — | — |
+| `contract:manage` | — | ✅ | ✅ | — | — | — |
+
+> **RR. HH. y centros de trabajo (V35).** HR_ADMIN recibe `worksite:manage` y `geofence:manage`
+> para dar de alta/modificar centros y generar sus códigos QR, sin obtener `user:manage`.
 
 > **SUPER_ADMIN es un administrador de plataforma, no cross-tenant.** Su único permiso es
 > `company:manage`: gestiona empresas (tenants) y configuración global, pero **no accede a los datos
