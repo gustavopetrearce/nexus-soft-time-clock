@@ -14,6 +14,11 @@ describe('permit.models', () => {
     expect(permitPhase({ ...absence, status: 'CANCELLED' }, '2026-11-18')).toBeNull();
   });
 
+  it('pendiente y rechazado tampoco tienen vigencia', () => {
+    expect(permitPhase({ ...absence, status: 'PENDING' }, '2026-11-18')).toBeNull();
+    expect(permitPhase({ ...absence, status: 'REJECTED' }, '2026-11-18')).toBeNull();
+  });
+
   it('acorta la hora a HH:mm', () => {
     expect(shortTime('10:30:00')).toBe('10:30');
     expect(shortTime(undefined)).toBe('');

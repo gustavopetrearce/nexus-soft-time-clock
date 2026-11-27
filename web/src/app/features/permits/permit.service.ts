@@ -21,7 +21,7 @@ export class PermitService {
   }
 
   /** Reporte de incapacidades completo (sin paginar): se filtra, ordena y exporta en el cliente. */
-  incapacities(filters: Pick<PermitFilters, 'from' | 'to'>): Observable<Permit[]> {
+  incapacities(filters: Pick<PermitFilters, 'from' | 'to' | 'status'>): Observable<Permit[]> {
     return this.http.get<Permit[]>(`${this.base}/incapacities`, { params: toParams(filters) });
   }
 
@@ -31,6 +31,11 @@ export class PermitService {
 
   cancel(id: string, note?: string): Observable<Permit> {
     return this.http.patch<Permit>(`${this.base}/${id}/cancel`, { note: note || undefined });
+  }
+
+  /** Aprobar o rechazar una solicitud de incapacidad del colaborador (PENDING). */
+  resolve(id: string, resolution: 'APPROVED' | 'REJECTED', note?: string): Observable<Permit> {
+    return this.http.patch<Permit>(`${this.base}/${id}/resolve`, { resolution, note: note || undefined });
   }
 
   decidePay(id: string, payStatus: Exclude<PayStatus, 'PENDING_REVIEW'>, note?: string): Observable<Permit> {

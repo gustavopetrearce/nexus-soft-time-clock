@@ -8,6 +8,8 @@ import com.condor.nexussoft.timeclock.hr.domain.PermitType;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.PermitUseCase.CancelCommand;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.PermitUseCase.CreateCommand;
 import com.condor.nexussoft.timeclock.hr.domain.port.in.PermitUseCase.DecidePayCommand;
+import com.condor.nexussoft.timeclock.hr.domain.port.in.PermitUseCase.RequestIncapacityCommand;
+import com.condor.nexussoft.timeclock.hr.domain.port.in.PermitUseCase.ResolveCommand;
 import com.condor.nexussoft.timeclock.hr.domain.port.out.PermitRepositoryPort;
 import com.condor.nexussoft.timeclock.hr.domain.port.out.VacationPolicyRepositoryPort;
 import com.condor.nexussoft.timeclock.shared.domain.AuthorizationException;
@@ -173,5 +175,82 @@ class PermitServiceTest {
         assertThat(c.cancelledBy()).isEqualTo(supervisor);
         assertThat(c.cancelNote()).isEqualTo("ya no aplica");
         assertThat(c.cancelledAt()).isNotNull();
+    }
+
+    // ---- solicitud de incapacidad del colaborador (V36) ----
+
+    private RequestIncapacityCommand incapacity(LocalDate start, LocalDate end, String notes) {
+        return new RequestIncapacityCommand(tenant, employee, start, end, notes);
+    }
+
+    @Test
+    void incapacidad_sinObservaciones_esInvalida() {
+        assertThatThrownBy(() -> service.requestIncapacity(incapacity(MON, MON, null)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.requestIncapacity(incapacity(MON, MON, "   ")))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(permits, never()).save(any());
+    }
+
+    @Test
+    void incapacidad_nacePendiente_comoFaltaPorIncapacidad() {
+        Permit p = service.requestIncapacity(incapacity(MON, MON.plusDays(2), " Gripe con fiebre, receta del IMSS "));
+
+        assertThat(p.status()).isEqualTo(PermitStatus.PENDING);
+        assertThat(p.type()).isEqualTo(PermitType.ABSENCE);
+        assertThat(p.reason()).isEqualTo(PermitReason.INCAPACIDAD);
+        assertThat(p.notes()).isEqualTo("Gripe con fiebre, receta del IMSS");
+        assertThat(p.requestedBy()).isEqualTo(employee);
+        assertThat(p.grantedBy()).isNull();
+        assertThat(p.payStatus()).isEqualTo(PayStatus.PENDING_REVIEW);
+        assertThat(p.days()).isEqualTo(3);
+    }
+
+    @Test
+    void incapacidad_traslapadaConOtraFaltaOSolicitud_esConflicto() {
+        when(permits.overlapsApprovedOrPending(tenant, employee, PermitType.ABSENCE, MON, MON)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.requestIncapacity(incapacity(MON, MON, "cirugía")))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void aprobarSolicitud_quienApruebaQuedaComoOtorgante() {
+        Permit pending = service.requestIncapacity(incapacity(MON, MON, "cirugía"));
+        when(permits.find(tenant, pending.id())).thenReturn(Optional.of(pending));
+
+        Permit approved = service.resolve(new ResolveCommand(tenant, pending.id(), supervisor, true, " ok "));
+
+        assertThat(approved.status()).isEqualTo(PermitStatus.APPROVED);
+        assertThat(approved.grantedBy()).isEqualTo(supervisor);
+        assertThat(approved.resolvedBy()).isEqualTo(supervisor);
+        assertThat(approved.resolutionNote()).isEqualTo("ok");
+        assertThat(approved.resolvedAt()).isNotNull();
+    }
+
+    @Test
+    void rechazarSolicitud_noSePuedeVolverAResolverNiCancelarNiDecidirGoce() {
+        Permit pending = service.requestIncapacity(incapacity(MON, MON, "cirugía"));
+        Permit rejected = pending.resolve(false, supervisor, "sin comprobante", OffsetDateTime.now());
+        when(permits.find(tenant, rejected.id())).thenReturn(Optional.of(rejected));
+
+        assertThat(rejected.status()).isEqualTo(PermitStatus.REJECTED);
+        assertThat(rejected.grantedBy()).isNull();
+        assertThatThrownBy(() -> service.resolve(new ResolveCommand(tenant, rejected.id(), supervisor, true, null)))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> service.cancel(new CancelCommand(tenant, rejected.id(), supervisor, null)))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> service.decidePay(new DecidePayCommand(tenant, rejected.id(), hr, PayStatus.WITH_PAY, null)))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void aprobarSolicitud_queSeTraslapaConUnPermisoAprobado_esConflicto() {
+        Permit pending = service.requestIncapacity(incapacity(MON, MON, "cirugía"));
+        when(permits.find(tenant, pending.id())).thenReturn(Optional.of(pending));
+        when(permits.overlaps(tenant, employee, PermitType.ABSENCE, MON, MON)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.resolve(new ResolveCommand(tenant, pending.id(), supervisor, true, null)))
+                .isInstanceOf(IllegalStateException.class);
     }
 }

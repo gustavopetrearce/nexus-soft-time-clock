@@ -107,6 +107,21 @@ public class PermitController {
         return toResponses(List.of(p)).get(0);
     }
 
+    /** Aprobar o rechazar una solicitud de incapacidad del colaborador (PENDING). */
+    @PatchMapping("/{id}/resolve")
+    @PreAuthorize("hasAuthority('permit:manage')")
+    public PermitResponse resolve(@PathVariable UUID id,
+                                  @Valid @RequestBody ResolvePermitRequest body,
+                                  Authentication auth) {
+        String resolution = body.resolution().trim().toUpperCase(Locale.ROOT);
+        if (!resolution.equals("APPROVED") && !resolution.equals("REJECTED")) {
+            throw new IllegalArgumentException("resolution debe ser APPROVED o REJECTED.");
+        }
+        Permit p = useCase.resolve(new PermitUseCase.ResolveCommand(
+                CurrentUser.tenantId(auth), id, CurrentUser.userId(auth), resolution.equals("APPROVED"), body.note()));
+        return toResponses(List.of(p)).get(0);
+    }
+
     @PatchMapping("/{id}/pay")
     @PreAuthorize("hasAuthority('permit:pay')")
     public PermitResponse decidePay(@PathVariable UUID id,
@@ -136,6 +151,7 @@ public class PermitController {
             if (p.grantedBy() != null) ids.add(p.grantedBy());
             if (p.cancelledBy() != null) ids.add(p.cancelledBy());
             if (p.payDecidedBy() != null) ids.add(p.payDecidedBy());
+            if (p.resolvedBy() != null) ids.add(p.resolvedBy());
         }
         Map<UUID, EmployeeDirectoryQuery.Info> names = directory.byIds(tenantId, ids);
         return permits.stream().map(p -> toResponse(p, names)).toList();
@@ -153,6 +169,7 @@ public class PermitController {
                 name(names, p.grantedBy()), name(names, p.cancelledBy()),
                 p.cancelledAt(), p.cancelNote(),
                 p.payStatus().name(), name(names, p.payDecidedBy()), p.payDecidedAt(), p.payNote(),
+                p.isRequest(), name(names, p.resolvedBy()), p.resolvedAt(), p.resolutionNote(),
                 p.createdAt());
     }
 

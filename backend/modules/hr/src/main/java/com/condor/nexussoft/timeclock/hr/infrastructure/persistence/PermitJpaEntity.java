@@ -67,6 +67,11 @@ public class PermitJpaEntity {
     private OffsetDateTime payDecidedAt;
     private String payNote;
 
+    private UUID requestedBy;
+    private UUID resolvedBy;
+    private OffsetDateTime resolvedAt;
+    private String resolutionNote;
+
     @Column(updatable = false)
     private OffsetDateTime createdAt;
 }

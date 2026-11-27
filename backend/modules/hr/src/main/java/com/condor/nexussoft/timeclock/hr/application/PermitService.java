@@ -5,6 +5,7 @@ import com.condor.nexussoft.timeclock.hr.domain.PagedResult;
 import com.condor.nexussoft.timeclock.hr.domain.PayStatus;
 import com.condor.nexussoft.timeclock.hr.domain.Permit;
 import com.condor.nexussoft.timeclock.hr.domain.PermitFilter;
+import com.condor.nexussoft.timeclock.hr.domain.PermitReason;
 import com.condor.nexussoft.timeclock.hr.domain.PermitStatus;
 import com.condor.nexussoft.timeclock.hr.domain.PermitType;
 import com.condor.nexussoft.timeclock.hr.domain.VacationPolicy;
@@ -24,7 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Permisos de colaboradores. Reglas:
  * <ul>
- *   <li>Lo registra el personal (admin, RR. HH., supervisor) y nace APROBADO; no hay solicitud.</li>
+ *   <li>Lo registra el personal (admin, RR. HH., supervisor) y nace APROBADO.</li>
+ *   <li>Excepción: el colaborador puede SOLICITAR una incapacidad (falta con motivo INCAPACIDAD) con
+ *       observaciones obligatorias; nace PENDIENTE y el personal la aprueba o rechaza. Solo lo
+ *       APROBADO cuenta en asistencia, traslapes y goce.</li>
  *   <li>Entrada tarde / salida temprano: un solo día y con la hora autorizada. Falta: rango de días.</li>
  *   <li>Sin traslape con otro permiso aprobado del mismo tipo.</li>
  *   <li>Los días de una falta se cuentan como en vacaciones (naturales o hábiles según la política).</li>
@@ -114,8 +118,57 @@ public class PermitService implements PermitUseCase {
                 start, end, days, absence ? null : c.timeAt(),
                 PermitStatus.APPROVED, c.grantedBy(), null, null, null,
                 payDecided ? c.payStatus() : PayStatus.PENDING_REVIEW,
-                payDecided ? c.grantedBy() : null, payDecided ? now : null, null, now);
+                payDecided ? c.grantedBy() : null, payDecided ? now : null, null,
+                null, null, null, null, now);
         return permits.save(permit);
+    }
+
+    @Override
+    @Transactional
+    public Permit requestIncapacity(RequestIncapacityCommand c) {
+        String notes = trimToNull(c.notes());
+        if (notes == null) {
+            throw new IllegalArgumentException("Describe en observaciones el motivo exacto de la incapacidad.");
+        }
+        if (notes.length() > 500) {
+            throw new IllegalArgumentException("Las observaciones no pueden exceder 500 caracteres.");
+        }
+        if (c.userId() == null || !permits.isCollaborator(c.tenantId(), c.userId())) {
+            throw new NoSuchElementException("Colaborador no encontrado.");
+        }
+        LocalDate start = c.startDate();
+        LocalDate end = c.endDate() == null ? start : c.endDate();
+        if (start == null || end.isBefore(start)) {
+            throw new IllegalArgumentException("El periodo es inválido: la fecha fin no puede ser anterior al inicio.");
+        }
+        if (permits.overlapsApprovedOrPending(c.tenantId(), c.userId(), PermitType.ABSENCE, start, end)) {
+            throw new IllegalStateException("Ya tienes una falta o solicitud de incapacidad que se traslapa con el periodo.");
+        }
+        VacationPolicy policy = policies.findByTenant(c.tenantId()).orElseGet(() -> VacationPolicy.defaults(c.tenantId()));
+        int days = DayCounter.count(start, end, policy.countBusinessDaysOnly());
+        if (days <= 0) {
+            throw new IllegalArgumentException("El periodo no contiene días válidos.");
+        }
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        return permits.save(new Permit(
+                UUID.randomUUID(), c.tenantId(), c.userId(), PermitType.ABSENCE, PermitReason.INCAPACIDAD, notes,
+                start, end, days, null, PermitStatus.PENDING, null, null, null, null,
+                PayStatus.PENDING_REVIEW, null, null, null,
+                c.userId(), null, null, null, now));
+    }
+
+    @Override
+    @Transactional
+    public Permit resolve(ResolveCommand c) {
+        Permit p = load(c.tenantId(), c.permitId());
+        if (p.status() != PermitStatus.PENDING) {
+            throw new IllegalStateException("La solicitud ya fue resuelta.");
+        }
+        if (c.approve() && permits.overlaps(c.tenantId(), p.userId(), p.type(), p.startDate(), p.endDate())) {
+            throw new IllegalStateException("El colaborador ya tiene un permiso aprobado que se traslapa con el periodo.");
+        }
+        return permits.save(p.resolve(c.approve(), c.resolvedBy(), trimToNull(c.note()),
+                OffsetDateTime.now(ZoneOffset.UTC)));
     }
 
     @Override
@@ -123,7 +176,9 @@ public class PermitService implements PermitUseCase {
     public Permit cancel(CancelCommand c) {
         Permit p = load(c.tenantId(), c.permitId());
         if (p.status() != PermitStatus.APPROVED) {
-            throw new IllegalStateException("El permiso ya fue cancelado.");
+            throw new IllegalStateException(p.status() == PermitStatus.CANCELLED
+                    ? "El permiso ya fue cancelado."
+                    : "Solo se cancela un permiso aprobado.");
         }
         return permits.save(p.cancel(c.cancelledBy(), trimToNull(c.note()), OffsetDateTime.now(ZoneOffset.UTC)));
     }
@@ -136,7 +191,7 @@ public class PermitService implements PermitUseCase {
         }
         Permit p = load(c.tenantId(), c.permitId());
         if (p.status() != PermitStatus.APPROVED) {
-            throw new IllegalStateException("No se puede decidir el goce de un permiso cancelado.");
+            throw new IllegalStateException("Solo se decide el goce de un permiso aprobado.");
         }
         return permits.save(p.decidePay(c.payStatus(), c.decidedBy(), trimToNull(c.note()),
                 OffsetDateTime.now(ZoneOffset.UTC)));

@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.hr.infrastructure.web.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
@@ -23,7 +24,7 @@ public final class PermitDtos {
             LocalDate endDate,
             int days,
             LocalTime timeAt,
-            String status,          // APPROVED | CANCELLED
+            String status,          // PENDING | APPROVED | REJECTED | CANCELLED
             String grantedBy,
             String grantedByName,
             String cancelledByName,
@@ -33,6 +34,10 @@ public final class PermitDtos {
             String payDecidedByName,
             OffsetDateTime payDecidedAt,
             String payNote,
+            boolean requestedByEmployee,   // solicitud del colaborador desde la app
+            String resolvedByName,
+            OffsetDateTime resolvedAt,
+            String resolutionNote,
             OffsetDateTime createdAt
     ) {}
 
@@ -46,6 +51,18 @@ public final class PermitDtos {
             @Size(max = 500) String notes,
             /** Opcional y solo con permit:pay: WITH_PAY | WITHOUT_PAY. */
             String payStatus
+    ) {}
+
+    /** Solicitud de incapacidad del colaborador; las observaciones (motivo exacto) son obligatorias. */
+    public record RequestIncapacityRequest(
+            @NotNull LocalDate startDate,
+            LocalDate endDate,
+            @NotBlank @Size(max = 500) String notes
+    ) {}
+
+    public record ResolvePermitRequest(
+            @NotNull String resolution,   // APPROVED | REJECTED
+            @Size(max = 500) String note
     ) {}
 
     public record CancelPermitRequest(@Size(max = 500) String note) {}

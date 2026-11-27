@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_provider.dart';
 import '../domain/permit_models.dart';
 
-/// Permisos propios del colaborador (solo lectura: los registra el personal desde el portal).
+/// Permisos propios del colaborador. Los registra el personal desde el portal; el colaborador solo
+/// puede solicitar una incapacidad, que queda pendiente hasta que el personal la resuelve.
 class PermitRepository {
   PermitRepository(this._dio);
   final Dio _dio;
@@ -12,6 +13,16 @@ class PermitRepository {
   Future<List<MyPermit>> myPermits() async {
     final res = await _dio.get<List<dynamic>>('/me/permits');
     return (res.data ?? const []).cast<Map<String, dynamic>>().map(MyPermit.fromJson).toList();
+  }
+
+  /// Solicita una incapacidad (`yyyy-MM-dd`). [notes] (motivo exacto) es obligatorio; 409 si se
+  /// traslapa con otra falta o solicitud.
+  Future<MyPermit> requestIncapacity({required String startDate, required String endDate, required String notes}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/me/permits/incapacity',
+      data: {'startDate': startDate, 'endDate': endDate, 'notes': notes},
+    );
+    return MyPermit.fromJson(res.data ?? const {});
   }
 }
 

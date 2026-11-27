@@ -289,7 +289,7 @@
   "homePermitsTitle": "Mis permisos",
   "homePermitsSubtitle": "Entradas tarde, salidas temprano y faltas",
   "permitsEmpty": "No tienes permisos registrados.",
-  "permitsEmptyHint": "Tu supervisor o RR. HH. los registra por ti.",
+  "permitsEmptyHint": "Tu supervisor o RR. HH. los registra por ti. Si estás incapacitado, solicítalo aquí.",
   "permitsGrantedBy": "Otorgado por {name}",
   "@permitsGrantedBy": { "placeholders": {"name": {"type": "String"}} },
   "permitTypeLateArrival": "Entrada tarde",
@@ -307,5 +307,23 @@
   "permitPayWith": "Con goce",
   "permitPayWithout": "Sin goce",
 
-  "historyToBeforeFrom": "La fecha final no puede ser anterior a la inicial."
+  "historyToBeforeFrom": "La fecha final no puede ser anterior a la inicial.",
+  "permitStatusPending": "Pendiente",
+  "permitStatusRejected": "Rechazado",
+  "permitsNotes": "Observaciones: {notes}",
+  "@permitsNotes": { "placeholders": {"notes": {"type": "String"}} },
+  "permitsResolutionNote": "Nota: {note}",
+  "@permitsResolutionNote": { "placeholders": {"note": {"type": "String"}} },
+  "permitsRejectedBy": "Rechazado por {name}",
+  "@permitsRejectedBy": { "placeholders": {"name": {"type": "String"}} },
+  "incapacityRequestAction": "Solicitar incapacidad",
+  "incapacityRequestTitle": "Solicitar incapacidad",
+  "incapacityRequestHint": "Tu supervisor o RR. HH. revisará la solicitud. Mientras tanto quedará pendiente.",
+  "incapacityNotesLabel": "Observaciones",
+  "incapacityNotesHint": "Describe el motivo exacto: diagnóstico, folio de la incapacidad, indicaciones…",
+  "incapacityNotesRequired": "Escribe el motivo exacto de la incapacidad.",
+  "incapacitySubmit": "Enviar solicitud",
+  "incapacityRequestSent": "Solicitud de incapacidad enviada.",
+  "incapacityOverlap": "Ya tienes una falta o solicitud de incapacidad en esas fechas.",
+  "incapacityRequestError": "No se pudo enviar la solicitud. Inténtalo de nuevo."
 }

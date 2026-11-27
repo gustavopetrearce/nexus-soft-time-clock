@@ -1143,7 +1143,6 @@
     "payAction": "Goce",
     "cancelAction": "Cancelar permiso",
     "empty": "No hay permisos registrados.",
-    "alreadyCancelled": "El permiso ya fue cancelado por otra persona.",
     "payDecided": "Goce de sueldo actualizado.",
     "cancelled": "Permiso cancelado.",
     "actionError": "No se pudo completar la acción.",
@@ -1161,7 +1160,9 @@
       "OTRO": "Otro"
     },
     "status": {
+      "PENDING": "Pendiente",
       "APPROVED": "Aprobado",
+      "REJECTED": "Rechazado",
       "CANCELLED": "Cancelado"
     },
     "payStatus": {
@@ -1201,7 +1202,24 @@
       "kpi": {
         "total": "Incapacidades",
         "days": "Días aprobados"
-      }
+      },
+      "notes": "Motivo (observaciones)"
+    },
+    "alreadyResolved": "El permiso ya fue resuelto o cancelado por otra persona.",
+    "requestedByEmployee": "Solicitado por el colaborador",
+    "approveAction": "Aprobar",
+    "rejectAction": "Rechazar",
+    "approved": "Solicitud aprobada.",
+    "rejected": "Solicitud rechazada.",
+    "approveDialog": {
+      "title": "Aprobar incapacidad",
+      "message": "Al aprobarla justificará las faltas del periodo. El goce de sueldo lo decide RR. HH.",
+      "submit": "Aprobar"
+    },
+    "rejectDialog": {
+      "title": "Rechazar incapacidad",
+      "message": "El colaborador verá la solicitud como rechazada; indica el motivo en la nota.",
+      "submit": "Rechazar"
     }
   },
   "contracts": {

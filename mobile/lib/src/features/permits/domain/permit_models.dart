@@ -1,5 +1,6 @@
 /// Permiso propio del colaborador (espejo de PermitResponse): entrada tarde, salida temprano o
-/// falta, registrado por admin/RR. HH./supervisor. El goce de sueldo lo decide RR. HH.
+/// falta, registrado por admin/RR. HH./supervisor, o incapacidad que el colaborador solicitó desde
+/// la app (nace PENDING). El goce de sueldo lo decide RR. HH.
 class MyPermit {
   const MyPermit({
     required this.id,
@@ -13,6 +14,10 @@ class MyPermit {
     this.timeAt,
     this.notes,
     this.grantedByName,
+    this.requestedByEmployee = false,
+    this.resolvedByName,
+    this.resolutionNote,
+    this.cancelNote,
   });
 
   final String id;
@@ -26,7 +31,7 @@ class MyPermit {
   final String endDate;
   final int days;
 
-  /// APPROVED | CANCELLED
+  /// PENDING | APPROVED | REJECTED | CANCELLED
   final String status;
 
   /// PENDING_REVIEW | WITH_PAY | WITHOUT_PAY
@@ -36,6 +41,12 @@ class MyPermit {
   final String? timeAt;
   final String? notes;
   final String? grantedByName;
+
+  /// Solicitud propia desde la app (incapacidad).
+  final bool requestedByEmployee;
+  final String? resolvedByName;
+  final String? resolutionNote;
+  final String? cancelNote;
 
   bool get isAbsence => type == 'ABSENCE';
 
@@ -54,5 +65,9 @@ class MyPermit {
         timeAt: j['timeAt'] as String?,
         notes: j['notes'] as String?,
         grantedByName: j['grantedByName'] as String?,
+        requestedByEmployee: j['requestedByEmployee'] as bool? ?? false,
+        resolvedByName: j['resolvedByName'] as String?,
+        resolutionNote: j['resolutionNote'] as String?,
+        cancelNote: j['cancelNote'] as String?,
       );
 }

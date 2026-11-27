@@ -142,6 +142,10 @@ public class PermitPersistenceAdapter implements PermitRepositoryPort {
         e.setPayDecidedBy(p.payDecidedBy());
         e.setPayDecidedAt(p.payDecidedAt());
         e.setPayNote(p.payNote());
+        e.setRequestedBy(p.requestedBy());
+        e.setResolvedBy(p.resolvedBy());
+        e.setResolvedAt(p.resolvedAt());
+        e.setResolutionNote(p.resolutionNote());
         if (e.getCreatedAt() == null) {
             e.setCreatedAt(p.createdAt());
         }
@@ -150,7 +154,13 @@ public class PermitPersistenceAdapter implements PermitRepositoryPort {
 
     @Override
     public boolean overlaps(UUID tenantId, UUID userId, PermitType type, LocalDate start, LocalDate end) {
-        return repository.overlaps(tenantId, userId, type, start, end, PermitStatus.APPROVED);
+        return repository.overlaps(tenantId, userId, type, start, end, List.of(PermitStatus.APPROVED));
+    }
+
+    @Override
+    public boolean overlapsApprovedOrPending(UUID tenantId, UUID userId, PermitType type, LocalDate start, LocalDate end) {
+        return repository.overlaps(tenantId, userId, type, start, end,
+                List.of(PermitStatus.APPROVED, PermitStatus.PENDING));
     }
 
     @Override
@@ -167,6 +177,7 @@ public class PermitPersistenceAdapter implements PermitRepositoryPort {
         return new Permit(e.getId(), e.getTenantId(), e.getUserId(), e.getType(), e.getReason(), e.getNotes(),
                 e.getStartDate(), e.getEndDate(), e.getDays(), e.getTimeAt(), e.getStatus(), e.getGrantedBy(),
                 e.getCancelledBy(), e.getCancelledAt(), e.getCancelNote(), e.getPayStatus(), e.getPayDecidedBy(),
-                e.getPayDecidedAt(), e.getPayNote(), e.getCreatedAt());
+                e.getPayDecidedAt(), e.getPayNote(), e.getRequestedBy(), e.getResolvedBy(), e.getResolvedAt(),
+                e.getResolutionNote(), e.getCreatedAt());
     }
 }

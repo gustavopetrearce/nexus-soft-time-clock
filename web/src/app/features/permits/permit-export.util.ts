@@ -19,7 +19,7 @@ const HEADER_KEYS: readonly string[] = [
   'common.status',
   'permits.phase.label',
   'permits.grantedBy',
-  'permits.notes',
+  'permits.incapacities.notes',
 ];
 
 /** dd/MM/yyyy desde yyyy-MM-dd, sin pasar por Date (evita el corrimiento de zona horaria). */
