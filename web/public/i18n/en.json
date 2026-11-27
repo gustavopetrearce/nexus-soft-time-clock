@@ -1085,7 +1085,9 @@
       "pending": "Pending",
       "approved": "Approved",
       "rejected": "Rejected",
-      "all": "All"
+      "all": "All",
+      "cancellation": "Cancellation requested",
+      "cancelled": "Cancelled"
     },
     "empty": "No requests to display.",
     "reason": "Reason",
@@ -1110,8 +1112,16 @@
     "status": {
       "PENDING": "Pending",
       "APPROVED": "Approved",
-      "REJECTED": "Rejected",
-      "CANCELLED": "Cancelled"
+      "REJECTED": "Rejected by the company",
+      "CANCELLED": "Cancelled at employee request"
+    },
+    "cancellation": {
+      "requested": "Cancellation requested",
+      "denied": "Cancellation denied",
+      "accept": "Accept cancellation",
+      "deny": "Deny cancellation",
+      "accepted": "Vacation cancelled at the employee request.",
+      "deniedDone": "Cancellation denied; the vacation stays approved."
     }
   },
   "support": {

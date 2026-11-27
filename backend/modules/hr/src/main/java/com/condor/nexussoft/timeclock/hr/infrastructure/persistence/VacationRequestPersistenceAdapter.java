@@ -33,11 +33,20 @@ public class VacationRequestPersistenceAdapter implements VacationRequestReposit
     }
 
     @Override
-    public PagedResult<VacationRequest> search(UUID tenantId, VacationStatus status, String search, int page, int size) {
+    public PagedResult<VacationRequest> search(UUID tenantId, VacationStatus status, boolean cancellationPending,
+                                               String search, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<VacationRequestJpaEntity> result = (status == null)
-                ? repository.findByTenantId(tenantId, pageable)
-                : repository.findByTenantIdAndStatus(tenantId, status, pageable);
+        VacationRequest.CancellationStatus pending = VacationRequest.CancellationStatus.PENDING;
+        Page<VacationRequestJpaEntity> result;
+        if (cancellationPending) {
+            result = status == null
+                    ? repository.findByTenantIdAndCancelRequestStatus(tenantId, pending, pageable)
+                    : repository.findByTenantIdAndStatusAndCancelRequestStatus(tenantId, status, pending, pageable);
+        } else {
+            result = status == null
+                    ? repository.findByTenantId(tenantId, pageable)
+                    : repository.findByTenantIdAndStatus(tenantId, status, pageable);
+        }
         List<VacationRequest> content = result.getContent().stream().map(VacationRequestPersistenceAdapter::toDomain).toList();
         return new PagedResult<>(content, result.getTotalElements(), page, size);
     }
@@ -69,6 +78,12 @@ public class VacationRequestPersistenceAdapter implements VacationRequestReposit
         e.setResolutionNote(r.resolutionNote());
         e.setResolvedBy(r.resolvedBy());
         e.setResolvedAt(r.resolvedAt());
+        e.setCancelRequestStatus(r.cancelRequestStatus());
+        e.setCancelRequestReason(r.cancelRequestReason());
+        e.setCancelRequestedAt(r.cancelRequestedAt());
+        e.setCancelResolvedBy(r.cancelResolvedBy());
+        e.setCancelResolvedAt(r.cancelResolvedAt());
+        e.setCancelResolutionNote(r.cancelResolutionNote());
         if (e.getCreatedAt() == null) {
             e.setCreatedAt(r.createdAt());
         }
@@ -83,6 +98,7 @@ public class VacationRequestPersistenceAdapter implements VacationRequestReposit
     static VacationRequest toDomain(VacationRequestJpaEntity e) {
         return new VacationRequest(e.getId(), e.getTenantId(), e.getUserId(), e.getStartDate(), e.getEndDate(),
                 e.getDays(), e.getReason(), e.getStatus(), e.getResolutionNote(), e.getResolvedBy(),
-                e.getResolvedAt(), e.getCreatedAt());
+                e.getResolvedAt(), e.getCancelRequestStatus(), e.getCancelRequestReason(), e.getCancelRequestedAt(),
+                e.getCancelResolvedBy(), e.getCancelResolvedAt(), e.getCancelResolutionNote(), e.getCreatedAt());
     }
 }

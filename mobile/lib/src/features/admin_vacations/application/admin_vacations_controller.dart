@@ -11,8 +11,11 @@ enum AdminVacationsError { load, loadMore }
 /// (otra persona la resolvió antes): la hoja lo avisa sin perder la nota escrita.
 enum ResolveOutcome { resolved, alreadyResolved, failed }
 
+/// Pestañas de la bandeja: solicitudes por decidir o cancelaciones pedidas por el colaborador.
+enum AdminVacationsTab { pending, cancellations }
+
 /// Estado de la bandeja de aprobación de vacaciones. Paginación por append ("Cargar más") sobre
-/// las solicitudes PENDING: la bandeja de la app solo muestra lo que queda por decidir (P10 R1).
+/// lo que queda por decidir (P10 R1): solicitudes PENDING o cancelaciones pedidas.
 class AdminVacationsState {
   const AdminVacationsState({
     this.items = const [],
@@ -21,6 +24,7 @@ class AdminVacationsState {
     this.saving = false,
     this.error,
     this.statusFilter = 'PENDING',
+    this.tab = AdminVacationsTab.pending,
     this.page = 0,
     this.total = 0,
   });
@@ -33,6 +37,7 @@ class AdminVacationsState {
 
   /// Filtro de estado enviado al servidor; cadena vacía = todas.
   final String statusFilter;
+  final AdminVacationsTab tab;
   final int page;
   final int total;
 
@@ -45,6 +50,7 @@ class AdminVacationsState {
     bool? saving,
     Object? error = _sentinel,
     String? statusFilter,
+    AdminVacationsTab? tab,
     int? page,
     int? total,
   }) =>
@@ -55,6 +61,7 @@ class AdminVacationsState {
         saving: saving ?? this.saving,
         error: identical(error, _sentinel) ? this.error : error as AdminVacationsError?,
         statusFilter: statusFilter ?? this.statusFilter,
+        tab: tab ?? this.tab,
         page: page ?? this.page,
         total: total ?? this.total,
       );
@@ -74,10 +81,26 @@ class AdminVacationsController extends Notifier<AdminVacationsState> {
 
   AdminVacationRepository get _repo => ref.read(adminVacationRepositoryProvider);
 
+  bool get _cancellations => state.tab == AdminVacationsTab.cancellations;
+
+  Future<PagedVacations> _fetch(int page) => _repo.list(
+        page: page,
+        size: _pageSize,
+        // Las cancelaciones pedidas pueden estar sobre una pendiente o una aprobada.
+        status: _cancellations ? null : state.statusFilter,
+        cancellationPending: _cancellations,
+      );
+
+  Future<void> selectTab(AdminVacationsTab tab) async {
+    if (tab == state.tab) return;
+    state = state.copyWith(tab: tab, items: const [], total: 0, page: 0);
+    await load();
+  }
+
   Future<void> load() async {
     state = state.copyWith(loading: true, error: null);
     try {
-      final result = await _repo.list(page: 0, size: _pageSize, status: state.statusFilter);
+      final result = await _fetch(0);
       state = state.copyWith(
         items: result.content,
         total: result.totalElements,
@@ -97,7 +120,7 @@ class AdminVacationsController extends Notifier<AdminVacationsState> {
     final nextPage = state.page + 1;
     state = state.copyWith(loadingMore: true);
     try {
-      final result = await _repo.list(page: nextPage, size: _pageSize, status: state.statusFilter);
+      final result = await _fetch(nextPage);
       state = state.copyWith(
         items: [...state.items, ...result.content],
         total: result.totalElements,
@@ -110,10 +133,17 @@ class AdminVacationsController extends Notifier<AdminVacationsState> {
   }
 
   /// Aprueba o rechaza una solicitud y recarga la bandeja.
-  Future<ResolveOutcome> resolve(AdminVacationRequest request, {required bool approve, String? note}) async {
+  Future<ResolveOutcome> resolve(AdminVacationRequest request, {required bool approve, String? note}) =>
+      _run(() => _repo.resolve(request.id, approve: approve, note: note));
+
+  /// Acepta o deniega la cancelación que pidió el colaborador y recarga la bandeja.
+  Future<ResolveOutcome> resolveCancellation(AdminVacationRequest request, {required bool accept, String? note}) =>
+      _run(() => _repo.resolveCancellation(request.id, accept: accept, note: note));
+
+  Future<ResolveOutcome> _run(Future<void> Function() call) async {
     state = state.copyWith(saving: true);
     try {
-      await _repo.resolve(request.id, approve: approve, note: note);
+      await call();
       state = state.copyWith(saving: false);
       await load();
       return ResolveOutcome.resolved;

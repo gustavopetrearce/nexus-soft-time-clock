@@ -9,7 +9,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface VacationRequestRepositoryPort {
-    PagedResult<VacationRequest> search(UUID tenantId, VacationStatus status, String search, int page, int size);
+    PagedResult<VacationRequest> search(UUID tenantId, VacationStatus status, boolean cancellationPending,
+                                        String search, int page, int size);
     List<VacationRequest> findByUser(UUID tenantId, UUID userId);
     Optional<VacationRequest> find(UUID tenantId, UUID id);
     VacationRequest save(VacationRequest request);

@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_provider.dart';
 import '../domain/vacation_models.dart';
 
-/// Vacaciones propias del colaborador: resumen por antigüedad, listado y alta de solicitud.
+/// Vacaciones propias del colaborador: resumen por antigüedad, listado, alta de solicitud y
+/// solicitud de cancelación.
 class VacationRepository {
   VacationRepository(this._dio);
   final Dio _dio;
@@ -28,6 +29,11 @@ class VacationRepository {
       'endDate': endDate,
       if (reason != null && reason.isNotEmpty) 'reason': reason,
     });
+  }
+
+  /// Pide cancelar una solicitud propia; [reason] es obligatorio. 409 si ya no se puede.
+  Future<void> requestCancellation(String id, {required String reason}) async {
+    await _dio.post<Map<String, dynamic>>('/me/vacations/$id/cancellation', data: {'reason': reason});
   }
 }
 

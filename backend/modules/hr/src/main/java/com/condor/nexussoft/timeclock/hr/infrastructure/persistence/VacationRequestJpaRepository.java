@@ -1,5 +1,6 @@
 package com.condor.nexussoft.timeclock.hr.infrastructure.persistence;
 
+import com.condor.nexussoft.timeclock.hr.domain.VacationRequest;
 import com.condor.nexussoft.timeclock.hr.domain.VacationStatus;
 import java.time.LocalDate;
 import java.util.List;
@@ -15,6 +16,12 @@ public interface VacationRequestJpaRepository extends JpaRepository<VacationRequ
     Page<VacationRequestJpaEntity> findByTenantId(UUID tenantId, Pageable pageable);
 
     Page<VacationRequestJpaEntity> findByTenantIdAndStatus(UUID tenantId, VacationStatus status, Pageable pageable);
+
+    Page<VacationRequestJpaEntity> findByTenantIdAndCancelRequestStatus(
+            UUID tenantId, VacationRequest.CancellationStatus cancelRequestStatus, Pageable pageable);
+
+    Page<VacationRequestJpaEntity> findByTenantIdAndStatusAndCancelRequestStatus(
+            UUID tenantId, VacationStatus status, VacationRequest.CancellationStatus cancelRequestStatus, Pageable pageable);
 
     List<VacationRequestJpaEntity> findByTenantIdAndUserIdOrderByStartDateDesc(UUID tenantId, UUID userId);
 

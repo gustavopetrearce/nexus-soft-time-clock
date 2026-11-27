@@ -1085,7 +1085,9 @@
       "pending": "Pendientes",
       "approved": "Aprobadas",
       "rejected": "Rechazadas",
-      "all": "Todas"
+      "all": "Todas",
+      "cancellation": "Con cancelación solicitada",
+      "cancelled": "Canceladas"
     },
     "empty": "No hay solicitudes para mostrar.",
     "reason": "Motivo",
@@ -1110,8 +1112,16 @@
     "status": {
       "PENDING": "Pendiente",
       "APPROVED": "Aprobada",
-      "REJECTED": "Rechazada",
-      "CANCELLED": "Cancelada"
+      "REJECTED": "Rechazada por la empresa",
+      "CANCELLED": "Cancelada a petición del colaborador"
+    },
+    "cancellation": {
+      "requested": "Cancelación solicitada",
+      "denied": "Cancelación denegada",
+      "accept": "Aceptar cancelación",
+      "deny": "Denegar cancelación",
+      "accepted": "Vacaciones canceladas a petición del colaborador.",
+      "deniedDone": "Cancelación denegada; las vacaciones siguen aprobadas."
     }
   },
   "support": {

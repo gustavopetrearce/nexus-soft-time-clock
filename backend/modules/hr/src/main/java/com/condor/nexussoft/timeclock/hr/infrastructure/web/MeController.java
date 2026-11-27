@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.VacationDtos.RequestVacationCancellation;
 import com.condor.nexussoft.timeclock.hr.infrastructure.web.dto.VacationDtos.VacationRequestResponse;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -32,6 +33,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -108,14 +110,20 @@ public class MeController {
     public List<VacationRequestResponse> vacations(Authentication auth) {
         UUID tenantId = CurrentUser.tenantId(auth);
         UUID userId = CurrentUser.userId(auth);
-        EmployeeDirectoryQuery.Info info = directory.byIds(tenantId, List.of(userId)).get(userId);
-        return requests.listForUser(tenantId, userId).stream().map(r -> new VacationRequestResponse(
-                r.id().toString(), r.userId().toString(),
-                info == null ? null : info.fullName(),
-                info == null ? null : info.employeeCode(),
-                r.startDate(), r.endDate(), r.days(), r.reason(), r.status().name(),
-                r.resolutionNote(), r.resolvedBy() == null ? null : r.resolvedBy().toString(),
-                r.resolvedAt(), r.createdAt())).toList();
+        return VacationController.toResponses(requests.listForUser(tenantId, userId), directory);
+    }
+
+    /**
+     * El colaborador pide cancelar su solicitud (pendiente, o aprobada que aún no empieza), con
+     * motivo obligatorio. RR. HH. la acepta o deniega desde la bandeja.
+     */
+    @PostMapping("/vacations/{id}/cancellation")
+    public VacationRequestResponse requestVacationCancellation(@PathVariable UUID id,
+                                                               @Valid @RequestBody RequestVacationCancellation body,
+                                                               Authentication auth) {
+        VacationRequest r = requests.requestCancellation(new VacationRequestUseCase.RequestCancellationCommand(
+                CurrentUser.tenantId(auth), id, CurrentUser.userId(auth), body.reason()));
+        return VacationController.toResponses(List.of(r), directory).get(0);
     }
 
     /** Permisos propios (entradas tarde, salidas temprano, faltas), con su goce de sueldo. */
