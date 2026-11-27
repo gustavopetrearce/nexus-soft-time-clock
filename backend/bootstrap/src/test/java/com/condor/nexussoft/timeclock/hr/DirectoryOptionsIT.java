@@ -101,6 +101,25 @@ class DirectoryOptionsIT extends PostgisIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /** V35: RR. HH. administra centros de trabajo y genera sus QR; supervisión sigue sin acceso. */
+    @Test
+    void rrhh_administraCentrosYGeneraQr() throws Exception {
+        String hr = token("hr");
+        JsonNode page = json.readTree(mvc.perform(get("/api/v1/work-sites")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + hr))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        String siteId = page.get("content").get(0).get("id").asText();
+
+        mvc.perform(post("/api/v1/work-sites/" + siteId + "/qr").header(HttpHeaders.AUTHORIZATION, "Bearer " + hr))
+                .andExpect(status().isCreated());
+
+        String sup = token("sup");
+        mvc.perform(get("/api/v1/work-sites").header(HttpHeaders.AUTHORIZATION, "Bearer " + sup))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/work-sites/" + siteId + "/qr").header(HttpHeaders.AUTHORIZATION, "Bearer " + sup))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void elColaboradorNoVeElDirectorio() throws Exception {
         mvc.perform(get("/api/v1/options/employees").header(HttpHeaders.AUTHORIZATION, "Bearer " + token("emp")))
